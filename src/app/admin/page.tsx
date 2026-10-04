@@ -2,9 +2,24 @@
 
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
 export default function AdminDashboard() {
   const { role, logout, devices, removeDevice } = useAuth();
+  const [childStats, setChildStats] = useState({ xp: 0, streak: 0 });
+
+  // Ascolta in tempo reale le statistiche della figlia dal database!
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "petralab_users", "studente_demo"), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setChildStats({ xp: data.xp || 0, streak: data.streak || 1 });
+      }
+    });
+    return () => unsub();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -92,17 +107,23 @@ export default function AdminDashboard() {
 
         {/* Sezione Statistiche Studio Figlia */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
             <span className="text-3xl">⭐</span>
             <h3 className="text-gray-500 text-xs font-bold uppercase mt-2">Punti XP Guadagnati</h3>
-            <p className="text-3xl font-black text-gray-900 mt-1">120 XP</p>
-            <p className="text-xs text-green-600 font-semibold mt-2">↑ +30 XP rispetto a ieri</p>
+            <p className="text-4xl font-black text-gray-900 mt-1">{childStats.xp} <span className="text-xl text-gray-400">XP</span></p>
+            <p className="text-xs text-green-600 font-semibold mt-2 flex items-center gap-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              In diretta dal server
+            </p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <span className="text-3xl">🔥</span>
             <h3 className="text-gray-500 text-xs font-bold uppercase mt-2">Costanza di Studio</h3>
-            <p className="text-3xl font-black text-gray-900 mt-1">3 Giorni</p>
+            <p className="text-3xl font-black text-gray-900 mt-1">{childStats.streak} Giorni</p>
             <p className="text-xs text-blue-600 font-semibold mt-2">Streak attiva consecutiva</p>
           </div>
 
