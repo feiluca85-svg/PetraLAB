@@ -130,17 +130,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const registerBiometrics = async () => {
+    if (!window.PublicKeyCredential) return false;
+    try {
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const userId = new Uint8Array(16);
+      crypto.getRandomValues(userId);
+
+      await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: "PetraLAB" },
+          user: { id: userId, name: "Studente", displayName: "Studente" },
+          pubKeyCredParams: [
+            { type: "public-key", alg: -7 },
+            { type: "public-key", alg: -257 }
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required",
+            requireResidentKey: true
+          },
+          timeout: 60000,
+        }
+      });
+      localStorage.setItem("petralab_has_passkey", "true");
+      return true;
+    } catch (e) {
+      console.error("Registrazione biometrica fallita:", e);
+      return false;
+    }
+  };
+
   const loginWithBiometrics = async (): Promise<boolean> => {
     try {
-      // Simula/Interroga la biometria nativa
       if (!window.PublicKeyCredential) return false;
-      // Per una demo WebAuthn locale possiamo concedere accesso immediato se supportato
+      
+      const hasPasskey = localStorage.getItem("petralab_has_passkey");
+      
+      if (!hasPasskey) {
+        // Se è la prima volta, crea la chiave biometrica (Passkey)
+        const registered = await registerBiometrics();
+        if (!registered) return false;
+      } else {
+        // Altrimenti, richiedi lo sblocco biometrico
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        
+        await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            userVerification: "required"
+          }
+        });
+      }
+
       setRole("student");
       sessionStorage.setItem("petralab_role", "student");
       registerCurrentDevice();
       router.push("/");
       return true;
-    } catch {
+    } catch (error) {
+      console.error("Autenticazione biometrica fallita:", error);
       return false;
     }
   };
