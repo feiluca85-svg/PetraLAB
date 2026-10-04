@@ -41,23 +41,6 @@ export async function sendMessage(
     return { success: true, text: result.response.text() };
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    try {
-      // Interroghiamo Google per sapere quali modelli sono realmente abilitati per questa chiave
-      const key = process.env.GEMINI_API_KEY || "";
-      const keyPreview = key ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "VUOTA";
-      
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-      const data = await res.json();
-      
-      if (data.models) {
-        const modelNames = data.models.map((m: any) => m.name.replace('models/', '')).slice(0, 5).join(', ');
-        return { success: false, error: `[DEBUG API] Chiave: ${keyPreview}. Modelli disponibili: ${modelNames}` };
-      } else {
-        return { success: false, error: `[DEBUG API] Chiave: ${keyPreview}. Risposta Google: ${JSON.stringify(data)}` };
-      }
-    } catch (e: any) {
-      const msg = error?.message || "Errore sconosciuto";
-      return { success: false, error: `[DEBUG API] ${msg}` };
-    }
+    return { success: false, error: "Scusa, ho avuto un momento di confusione. Riprova!" };
   }
 }
