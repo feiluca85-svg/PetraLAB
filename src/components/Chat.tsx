@@ -33,6 +33,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const wasVoiceInputRef = useRef<boolean>(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,6 +54,7 @@ export default function Chat() {
         recognitionRef.current.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
           setInput((prev) => prev + (prev ? " " : "") + transcript);
+          wasVoiceInputRef.current = true;
           setIsListening(false);
         };
 
@@ -190,6 +192,12 @@ export default function Chat() {
       setMessages([...newMessages, { role: "model", text: response.text }]);
       // Premia l'utente con 10 XP per ogni interazione!
       awardXP(10);
+      
+      // Auto-lettura se l'ultimo input era vocale
+      if (wasVoiceInputRef.current) {
+        speakText(response.text);
+        wasVoiceInputRef.current = false;
+      }
     } else {
       setMessages([...newMessages, { role: "model", text: response.error || "Errore di connessione." }]);
     }
@@ -366,18 +374,24 @@ export default function Chat() {
           <input 
             type="text" 
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              wasVoiceInputRef.current = false;
+            }}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={isListening ? "In ascolto..." : selectedImage ? "Aggiungi un commento alla foto..." : "Fai una domanda o trascina qui un'immagine..."}
-            className={`flex-1 px-5 py-3 rounded-full border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-gray-700 ${isListening ? 'border-red-300' : 'border-gray-200'}`}
+            placeholder={isListening ? "In ascolto..." : selectedImage ? "Aggiungi un commento..." : "Fai una domanda..."}
+            className={`flex-1 px-4 py-3 rounded-full border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-[15px] text-gray-700 min-w-0 ${isListening ? 'border-red-300' : 'border-gray-200'}`}
             disabled={isLoading}
           />
           <button 
             onClick={handleSend}
             disabled={isLoading || (!input.trim() && !selectedImage)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full flex-shrink-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center"
+            aria-label="Invia"
           >
-            Invia
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+            </svg>
           </button>
         </div>
       </div>
