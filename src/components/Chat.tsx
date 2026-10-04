@@ -278,10 +278,11 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         await uploadString(storageRef, dataUrl, 'data_url');
         localImageUrl = await getDownloadURL(storageRef);
       } catch (err) {
-        console.error("Errore nel caricamento dell'immagine:", err);
-        alert("Errore durante il caricamento dell'immagine su cloud.");
-        setIsLoading(false);
-        return;
+        console.warn("Firebase Storage non configurato o errore. Fallback alla memoria temporanea:", err);
+        // Fallback: usiamo l'immagine locale ma non verrà salvata su Firestore in modo permanente
+        const { base64, mimeType, dataUrl } = await fileToBase64(imgFile);
+        imagePayload = { base64, mimeType };
+        localImageUrl = dataUrl; 
       }
     }
 
@@ -384,7 +385,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           role: m.role,
           text: m.text,
           time: m.time,
-          imageUrl: m.imageUrl || null
+          imageUrl: (m.imageUrl && m.imageUrl.startsWith("http")) ? m.imageUrl : null
         }));
       });
 
