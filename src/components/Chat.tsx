@@ -18,6 +18,12 @@ type UIMessage = {
   role: "user" | "model";
   text: string;
   imageUrl?: string;
+  time?: string;
+};
+
+type SubjectChatData = {
+  messages: UIMessage[];
+  lastUpdated?: string;
 };
 
 export default function Chat() {
@@ -25,9 +31,10 @@ export default function Chat() {
   const levelInfo = getLevelInfo(stats.xp);
   
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
-  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [chatsByTutor, setChatsByTutor] = useState<Record<string, SubjectChatData>>({});
   const [subjectsMemory, setSubjectsMemory] = useState<Record<string, SubjectMemory>>({});
   const [showGradesModal, setShowGradesModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -42,7 +49,13 @@ export default function Chat() {
   const recognitionRef = useRef<any>(null);
   const wasVoiceInputRef = useRef<boolean>(false);
 
-  // Ascolta la memoria di tutte le materie da Firestore in tempo reale
+  // Formatta l'orario attuale stile WhatsApp (es: 19:20)
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  // Ascolta le chat e la memoria da Firestore in tempo reale
   useEffect(() => {
     const userRef = doc(db, "petralab_users", "studente_demo");
     const unsub = onSnapshot(userRef, (snapshot) => {
@@ -51,33 +64,59 @@ export default function Chat() {
         if (data.subjectsMemory) {
           setSubjectsMemory(data.subjectsMemory);
         }
+        if (data.chatsByTutor) {
+          setChatsByTutor(data.chatsByTutor);
+        }
       }
     });
     return () => unsub();
   }, []);
 
-  // Quando viene selezionato un tutor, carica la sua conversazione e il saluto iniziale
-  const handleSelectTutor = (tutor: Tutor) => {
-    setSelectedTutor(tutor);
-    const mem = subjectsMemory[tutor.id];
-    
-    // Frase di saluto personalizzata con memoria
-    let initialGreeting = tutor.greeting;
-    if (mem && mem.grades && mem.grades.length > 0) {
-      const lastGrade = mem.grades[mem.grades.length - 1];
-      initialGreeting = `Bentornata! Ricordo che l'ultimo voto che mi hai detto era ${lastGrade.grade}${lastGrade.topic ? ` in '${lastGrade.topic}'` : ''}. Come stanno andando le lezioni in questi giorni? Ci sono novità o verifiche? Di cosa ci occupiamo oggi?`;
-    }
+  // I messaggi del tutor attualmente selezionato
+  const currentMessages: UIMessage[] = selectedTutor 
+    ? (chatsByTutor[selectedTutor.id]?.messages || [
+        { 
+          role: "model", 
+          text: selectedTutor.greeting,
+          time: getCurrentTime()
+        }
+      ])
+    : [];
 
-    setMessages([
-      { role: "model", text: initialGreeting }
-    ]);
+  // Seleziona un tutor aprendo la sua chat stile WhatsApp
+  const handleOpenChat = (tutor: Tutor) => {
+    setSelectedTutor(tutor);
+    
+    // Se non ci sono ancora messaggi per questo tutor, inizializza con il saluto personalizzato
+    if (!chatsByTutor[tutor.id] || chatsByTutor[tutor.id].messages.length === 0) {
+      const mem = subjectsMemory[tutor.id];
+      let greeting = tutor.greeting;
+      if (mem?.grades && mem.grades.length > 0) {
+        const lastGrade = mem.grades[mem.grades.length - 1];
+        greeting = `Bentornata! Ricordo che l'ultimo voto che mi hai detto era ${lastGrade.grade}${lastGrade.topic ? ` in '${lastGrade.topic}'` : ''}. Come stanno andando le lezioni in questi giorni? Ci sono novità o verifiche? Di cosa ci occupiamo oggi?`;
+      }
+      
+      const initialMsgs: UIMessage[] = [{ role: "model", text: greeting, time: getCurrentTime() }];
+      const updatedChats = {
+        ...chatsByTutor,
+        [tutor.id]: { messages: initialMsgs, lastUpdated: getCurrentTime() }
+      };
+      setChatsByTutor(updatedChats);
+      
+      const userRef = doc(db, "petralab_users", "studente_demo");
+      setDoc(userRef, { chatsByTutor: updatedChats }, { merge: true }).catch(console.error);
+    }
   };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => scrollToBottom(), [messages]);
+  useEffect(() => {
+    if (selectedTutor) {
+      scrollToBottom();
+    }
+  }, [selectedTutor, chatsByTutor]);
 
   // Setup Riconoscimento Vocale
   useEffect(() => {
@@ -112,7 +151,7 @@ export default function Chat() {
 
   const toggleMicrophone = () => {
     if (!recognitionRef.current) {
-      alert("Il tuo browser non supporta il riconoscimento vocale. Usa Chrome o Edge.");
+      alert("Il tuo browser non supporta il riconoscimento vocale.");
       return;
     }
     if (isListening) {
@@ -166,7 +205,7 @@ export default function Chat() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // Gestione Drag & Drop
+  // Drag & drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -208,7 +247,7 @@ export default function Chat() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() && !selectedImage) return;
+    if (!selectedTutor || (!input.trim() && !selectedImage)) return;
 
     const userText = input.trim();
     setInput("");
@@ -225,29 +264,48 @@ export default function Chat() {
       localImageUrl = dataUrl;
     }
 
+    const tutorId = selectedTutor.id;
+    const nowTime = getCurrentTime();
+    const prevMsgs = currentMessages;
+
     const newMessages: UIMessage[] = [
-      ...messages, 
-      { role: "user", text: userText, imageUrl: localImageUrl }
+      ...prevMsgs, 
+      { role: "user", text: userText, imageUrl: localImageUrl, time: nowTime }
     ];
-    setMessages(newMessages);
+
+    // Aggiorna stato locale
+    const updatedChats = {
+      ...chatsByTutor,
+      [tutorId]: { messages: newMessages, lastUpdated: nowTime }
+    };
+    setChatsByTutor(updatedChats);
     setIsLoading(true);
 
-    const history: Content[] = messages.slice(1).map(m => {
+    const history: Content[] = prevMsgs.map(m => {
       const parts: any[] = [];
       if (m.text) parts.push({ text: m.text });
       return { role: m.role, parts: parts };
     });
 
-    const currentMem = selectedTutor ? subjectsMemory[selectedTutor.id] : undefined;
-    const response = await sendMessage(userText, history, imagePayload, selectedTutor?.id, currentMem);
+    const currentMem = subjectsMemory[tutorId];
+    const response = await sendMessage(userText, history, imagePayload, tutorId, currentMem);
     
     if (response.success && response.text) {
-      setMessages([...newMessages, { role: "model", text: response.text }]);
+      const finalMsgs: UIMessage[] = [
+        ...newMessages, 
+        { role: "model", text: response.text, time: getCurrentTime() }
+      ];
+      
+      const finalChats = {
+        ...chatsByTutor,
+        [tutorId]: { messages: finalMsgs, lastUpdated: getCurrentTime() }
+      };
+      setChatsByTutor(finalChats);
       awardXP(10);
       
-      // Se il tutor ha intercettato un voto o una lacuna, salvala su Firebase!
-      if (selectedTutor && response.trackData) {
-        const tutorId = selectedTutor.id;
+      // Se c'è un voto o una lacuna intercettata dall'IA, aggiorna la memoria
+      let updatedMemMap = { ...subjectsMemory };
+      if (response.trackData) {
         const existingMem: SubjectMemory = subjectsMemory[tutorId] || { grades: [], weaknesses: [] };
         const updatedGrades = [...(existingMem.grades || [])];
         const updatedWeaknesses = [...(existingMem.weaknesses || [])];
@@ -265,7 +323,7 @@ export default function Chat() {
           updatedWeaknesses.push(response.trackData.weakness);
         }
 
-        const newSubjectsMemory = {
+        updatedMemMap = {
           ...subjectsMemory,
           [tutorId]: {
             ...existingMem,
@@ -274,25 +332,30 @@ export default function Chat() {
             lastTopic: response.trackData.topic || existingMem.lastTopic || ""
           }
         };
-
-        // Salva su Firestore
-        const userRef = doc(db, "petralab_users", "studente_demo");
-        setDoc(userRef, { subjectsMemory: newSubjectsMemory }, { merge: true }).catch(console.error);
+        setSubjectsMemory(updatedMemMap);
       }
 
-      // Salva cronologia generale per il monitoraggio genitori
+      // Salva sia le chat separate per tutor sia la memoria su Firestore
       const userRef = doc(db, "petralab_users", "studente_demo");
-      const recent = [...newMessages, { role: "model", text: response.text }]
-        .slice(-20)
-        .map(m => ({ role: m.role, text: m.text }));
-      setDoc(userRef, { chatHistory: recent }, { merge: true }).catch(console.error);
+      setDoc(userRef, { 
+        chatsByTutor: finalChats,
+        subjectsMemory: updatedMemMap,
+        chatHistory: finalMsgs.slice(-20).map(m => ({ role: m.role, text: m.text }))
+      }, { merge: true }).catch(console.error);
       
       if (wasVoiceInputRef.current) {
         speakText(response.text);
         wasVoiceInputRef.current = false;
       }
     } else {
-      setMessages([...newMessages, { role: "model", text: response.error || "Errore di connessione." }]);
+      const finalMsgs: UIMessage[] = [
+        ...newMessages, 
+        { role: "model", text: response.error || "Errore di connessione.", time: getCurrentTime() }
+      ];
+      setChatsByTutor({
+        ...chatsByTutor,
+        [tutorId]: { messages: finalMsgs, lastUpdated: getCurrentTime() }
+      });
     }
     
     setIsLoading(false);
@@ -300,229 +363,317 @@ export default function Chat() {
 
   const currentTutorMemory = selectedTutor ? subjectsMemory[selectedTutor.id] : null;
 
+  // Filtra i tutor nella schermata di ricerca stile WhatsApp
+  const filteredTutors = TUTORS.filter(t => 
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    t.subject.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div 
-      className={`flex flex-col h-[82vh] w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl border overflow-hidden transition-all duration-200 ${
-        isDragging ? "border-blue-500 ring-4 ring-blue-500/20" : "border-gray-100"
+      className={`flex flex-col h-[85vh] w-full max-w-md md:max-w-xl mx-auto bg-white rounded-3xl shadow-2xl border overflow-hidden transition-all duration-200 select-none ${
+        isDragging ? "ring-4 ring-emerald-500/30" : "border-slate-200"
       }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Header Gamification */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 flex justify-between items-center shadow-md z-10">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setSelectedTutor(null)}
-            className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-2xl transition-all shadow-inner"
-            title="Torna alla scelta delle materie"
-          >
-            {selectedTutor ? selectedTutor.avatar : "🦉"}
-          </button>
-          <div>
+      {/* ============================================================== */}
+      {/* 1. SCHERMATA LISTA CHAT (Stile WhatsApp Home)                    */}
+      {/* ============================================================== */}
+      {!selectedTutor ? (
+        <div className="flex flex-col h-full bg-white">
+          {/* Header WhatsApp Top */}
+          <div className="bg-[#008069] text-white px-4 pt-4 pb-3 flex justify-between items-center shadow-md">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">PetraLAB</h1>
+              <p className="text-[11px] text-emerald-100 flex items-center gap-1">
+                <span>{levelInfo.title}</span> • <span>{stats.xp} XP</span>
+              </p>
+            </div>
+
             <div className="flex items-center gap-2">
-              <h2 className="font-bold text-lg leading-tight">
-                {selectedTutor ? selectedTutor.name : "PetraLAB"}
-              </h2>
-              {selectedTutor && (
-                <button
-                  onClick={() => setShowGradesModal(true)}
-                  className="text-[11px] bg-white/20 hover:bg-white/30 text-white px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 transition-all"
-                  title="Diario Voti e Memoria Tutor"
-                >
-                  📝 {currentTutorMemory?.grades?.length || 0} Voti
-                </button>
+              <div className="flex items-center gap-1 font-bold text-xs bg-black/20 px-2 py-1 rounded-full">
+                <span className="text-orange-300">🔥</span>
+                <span>{stats.streak}</span>
+              </div>
+
+              <button
+                onClick={() => window.location.reload()}
+                className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white"
+                title="Ricarica applicazione"
+              >
+                🔄
+              </button>
+
+              <Link
+                href="/admin"
+                className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white"
+                title="Pannello Amministratore"
+              >
+                🛡️
+              </Link>
+            </div>
+          </div>
+
+          {/* Barra di Ricerca Stile WhatsApp */}
+          <div className="p-3 bg-white border-b border-slate-100">
+            <div className="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2 text-sm text-slate-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all border border-transparent focus-within:border-emerald-500">
+              <span>🔍</span>
+              <input
+                type="text"
+                placeholder="Cerca materia o tutor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent border-none outline-none w-full text-slate-800 placeholder-slate-400 text-sm"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-slate-400 text-xs">✕</button>
               )}
             </div>
-            <p className="text-xs text-blue-100 opacity-90">
-              {selectedTutor ? selectedTutor.subject : "Scegli una materia"}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-2 sm:gap-3 items-center">
-          <div className="flex flex-col gap-1 bg-white/20 px-3 py-1.5 rounded-xl backdrop-blur-sm border border-white/10 min-w-[120px]">
-            <div className="flex justify-between items-center text-xs font-bold w-full">
-              <span>{levelInfo.title}</span>
-              <span className="text-yellow-300">{stats.xp} XP</span>
-            </div>
-            {levelInfo.nextLevelXP && (
-              <div className="w-full bg-white/20 rounded-full h-1.5 mt-0.5">
-                <div 
-                  className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500" 
-                  style={{ width: `${levelInfo.progress}%` }}
-                ></div>
-              </div>
-            )}
           </div>
 
-          <div className="flex items-center gap-1 font-bold text-sm bg-white/20 px-2.5 py-1.5 rounded-xl backdrop-blur-sm border border-white/10">
-            <span className="text-orange-400 text-lg">🔥</span>
-            <span>{stats.streak}</span>
+          {/* Filtri orizzontali */}
+          <div className="flex gap-2 px-3 py-2 border-b border-slate-50 text-xs">
+            <span className="bg-emerald-100 text-emerald-800 font-semibold px-3 py-1 rounded-full">Tutte</span>
+            <span className="bg-slate-100 text-slate-600 font-medium px-3 py-1 rounded-full">Compiti</span>
+            <span className="bg-slate-100 text-slate-600 font-medium px-3 py-1 rounded-full">Verifiche</span>
           </div>
 
-          <button
-            onClick={() => window.location.reload()}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-sm"
-            title="Ricarica applicazione"
-          >
-            🔄
-          </button>
+          {/* Lista delle Chat (Tutor per Materia) */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {filteredTutors.map((tutor) => {
+              const tutorChat = chatsByTutor[tutor.id];
+              const mem = subjectsMemory[tutor.id];
+              const lastMsg = tutorChat?.messages && tutorChat.messages.length > 0 
+                ? tutorChat.messages[tutorChat.messages.length - 1] 
+                : null;
+              const lastGrade = mem?.grades && mem.grades.length > 0 
+                ? mem.grades[mem.grades.length - 1] 
+                : null;
 
-          <Link
-            href="/admin"
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white"
-            title="Pannello Amministratore"
-          >
-            🛡️
-          </Link>
-        </div>
-      </div>
+              return (
+                <div
+                  key={tutor.id}
+                  onClick={() => handleOpenChat(tutor)}
+                  className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition-colors"
+                >
+                  {/* Foto Profilo Circolare con Badge */}
+                  <div className="relative">
+                    <div className="w-13 h-13 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl shadow-xs">
+                      {tutor.avatar}
+                    </div>
+                    {lastGrade && (
+                      <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                        {lastGrade.grade.toString().charAt(0)}
+                      </span>
+                    )}
+                  </div>
 
-      {dbError && (
-        <div className="bg-red-50 text-red-600 text-xs text-center py-1">
-          {dbError}
-        </div>
-      )}
-
-      {/* Modal Diario Voti & Lacune per la materia */}
-      {showGradesModal && selectedTutor && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
-            <div className="flex justify-between items-center border-b pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-3xl">{selectedTutor.avatar}</span>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-lg">Memoria di {selectedTutor.name}</h3>
-                  <p className="text-xs text-gray-500">{selectedTutor.subject}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowGradesModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase text-gray-500 mb-2">📊 Voti Registrati</h4>
-              {(!currentTutorMemory?.grades || currentTutorMemory.grades.length === 0) ? (
-                <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg text-center">
-                  Nessun voto registrato ancora. Dì a {selectedTutor.name} che voto hai preso nell&apos;ultima verifica!
-                </p>
-              ) : (
-                <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                  {currentTutorMemory.grades.map((g, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-blue-50/60 border border-blue-100 p-2 rounded-lg text-xs">
-                      <div>
-                        <span className="font-bold text-blue-900">{g.topic || "Verifica"}</span>
-                        <span className="text-[10px] text-gray-400 ml-2">{g.date}</span>
-                      </div>
-                      <span className="font-black text-sm text-blue-700 bg-white px-2 py-0.5 rounded shadow-sm">
-                        {g.grade}
+                  {/* Informazioni Contatto e Ultimo Messaggio */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <h2 className="font-bold text-slate-900 text-[15px] truncate flex items-center gap-1.5">
+                        {tutor.name}
+                        <span className="text-[11px] font-normal text-slate-400">• {tutor.subject.split(' ')[0]}</span>
+                      </h2>
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        {tutorChat?.lastUpdated || "Oggi"}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <div>
-              <h4 className="text-xs font-bold uppercase text-gray-500 mb-2">🎯 Lacune & Argomenti su cui migliorare</h4>
-              {(!currentTutorMemory?.weaknesses || currentTutorMemory.weaknesses.length === 0) ? (
-                <p className="text-xs text-green-700 bg-green-50 p-3 rounded-lg text-center">
-                  Nessuna difficoltà particolare riscontrata finora! Ottimo lavoro!
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {currentTutorMemory.weaknesses.map((w, idx) => (
-                    <span key={idx} className="bg-amber-100 text-amber-800 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-amber-200">
-                      ⚠️ {w}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button 
-              onClick={() => setShowGradesModal(false)}
-              className="w-full bg-blue-600 text-white font-bold py-2 rounded-xl hover:bg-blue-700 transition-colors text-sm"
-            >
-              Chiudi Diario
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Se nessun tutor è selezionato: Schermata Scelta Materie */}
-      {!selectedTutor ? (
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center space-y-6 bg-gradient-to-b from-gray-50/50 to-indigo-50/30">
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-black text-gray-800 tracking-tight">Cosa studiamo oggi?</h2>
-            <p className="text-sm text-gray-500 max-w-sm">
-              Scegli una materia per fare compiti con il tuo tutor dedicato. Si ricorderà dei tuoi voti e di dove ti eri fermata!
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
-            {TUTORS.map((tutor) => {
-              const mem = subjectsMemory[tutor.id];
-              const lastGrade = mem?.grades && mem.grades.length > 0 ? mem.grades[mem.grades.length - 1] : null;
-              
-              return (
-                <button
-                  key={tutor.id}
-                  onClick={() => handleSelectTutor(tutor)}
-                  className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-500 hover:shadow-md transition-all text-left group"
-                >
-                  <span className="text-4xl bg-gray-50 p-2.5 rounded-2xl group-hover:scale-110 transition-transform">
-                    {tutor.avatar}
-                  </span>
-                  <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-gray-800 text-base">{tutor.name}</h3>
+                      <p className="text-xs text-slate-500 truncate pr-2">
+                        {lastMsg ? (
+                          <>
+                            {lastMsg.role === "user" && <span className="text-slate-400 font-medium">Tu: </span>}
+                            {lastMsg.text}
+                          </>
+                        ) : (
+                          <span className="text-emerald-700 italic">Tocca per iniziare i compiti</span>
+                        )}
+                      </p>
+                      
                       {lastGrade && (
-                        <span className="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap">
                           Voto: {lastGrade.grade}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-blue-600 font-medium">{tutor.subject}</p>
-                    <p className="text-[11px] text-gray-400 truncate mt-1">
-                      {mem?.weaknesses?.length ? `Focus: ${mem.weaknesses[0]}` : "Pronto per iniziare"}
-                    </p>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         </div>
       ) : (
-        /* Schermata Chat attiva con il Tutor scelto */
-        <>
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gray-50/50 relative">
-            {isDragging && (
-              <div className="absolute inset-0 bg-blue-50/90 z-10 flex items-center justify-center backdrop-blur-sm">
-                <div className="text-blue-600 font-bold text-xl flex flex-col items-center gap-3">
-                  <span className="text-4xl">📎</span>
-                  Rilascia l&apos;immagine qui!
+        /* ============================================================== */
+        /* 2. SCHERMATA CHAT SINGOLA (Stile Conversazione WhatsApp)         */
+        /* ============================================================== */
+        <div className="flex flex-col h-full bg-[#EFEAE2]">
+          {/* Header Singola Chat WhatsApp */}
+          <div className="bg-[#008069] text-white px-3 py-2.5 flex items-center justify-between shadow-md z-20">
+            <div className="flex items-center gap-2">
+              {/* Tasto Indietro Stile WhatsApp */}
+              <button 
+                onClick={() => setSelectedTutor(null)}
+                className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors flex items-center gap-0.5 text-white"
+                title="Torna alle chat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                </svg>
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xl shadow-xs">
+                  {selectedTutor.avatar}
                 </div>
-              </div>
-            )}
+              </button>
 
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl text-[15px] sm:text-base flex flex-col gap-2 relative group ${
-                  msg.role === "user" 
-                    ? "bg-blue-600 text-white rounded-tr-sm shadow-sm" 
-                    : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm shadow-sm"
-                }`}>
-                  {msg.imageUrl && (
-                    <img src={msg.imageUrl} alt="Caricata dall'utente" className="rounded-lg max-h-64 object-contain self-start bg-white/10" />
+              <div className="min-w-0">
+                <h2 className="font-bold text-[15px] leading-tight truncate">
+                  {selectedTutor.name}
+                </h2>
+                <p className="text-[11px] text-emerald-200 flex items-center gap-1 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                  online • {selectedTutor.subject.split(' ')[0]}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowGradesModal(true)}
+                className="bg-black/15 hover:bg-black/25 text-white text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 transition-all"
+                title="Diario Voti e Lacune"
+              >
+                📝 <span className="hidden sm:inline">Voti</span> ({currentTutorMemory?.grades?.length || 0})
+              </button>
+
+              <button
+                onClick={() => window.location.reload()}
+                className="p-1.5 rounded-full hover:bg-black/10 text-white"
+                title="Ricarica"
+              >
+                🔄
+              </button>
+
+              <Link
+                href="/admin"
+                className="p-1.5 rounded-full hover:bg-black/10 text-white"
+                title="Pannello Amministratore"
+              >
+                🛡️
+              </Link>
+            </div>
+          </div>
+
+          {/* Modal Diario Voti & Lacune per la materia */}
+          {showGradesModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl bg-slate-100 p-2 rounded-2xl">{selectedTutor.avatar}</span>
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-lg">Memoria di {selectedTutor.name}</h3>
+                      <p className="text-xs text-slate-500">{selectedTutor.subject}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowGradesModal(false)}
+                    className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold uppercase text-slate-400 mb-2">📊 Voti Registrati</h4>
+                  {(!currentTutorMemory?.grades || currentTutorMemory.grades.length === 0) ? (
+                    <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-xl text-center">
+                      Nessun voto registrato ancora. Scrivi a {selectedTutor.name} cosa hai preso nell&apos;ultima verifica per farlo ricordare!
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                      {currentTutorMemory.grades.map((g, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-emerald-50/70 border border-emerald-100 p-2 rounded-xl text-xs">
+                          <div>
+                            <span className="font-bold text-emerald-950">{g.topic || "Verifica"}</span>
+                            <span className="text-[10px] text-slate-400 ml-2">{g.date}</span>
+                          </div>
+                          <span className="font-black text-sm text-emerald-700 bg-white px-2.5 py-0.5 rounded-lg shadow-xs">
+                            {g.grade}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold uppercase text-slate-400 mb-2">🎯 Lacune su cui lavorare</h4>
+                  {(!currentTutorMemory?.weaknesses || currentTutorMemory.weaknesses.length === 0) ? (
+                    <p className="text-xs text-emerald-800 bg-emerald-50 p-3 rounded-xl text-center">
+                      Nessuna difficoltà segnalata finora! Sei bravissima! ✨
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {currentTutorMemory.weaknesses.map((w, idx) => (
+                        <span key={idx} className="bg-amber-100 text-amber-900 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-amber-200">
+                          ⚠️ {w}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => setShowGradesModal(false)}
+                  className="w-full bg-[#008069] text-white font-bold py-2.5 rounded-2xl hover:bg-[#00705c] transition-colors text-sm shadow-md"
+                >
+                  Chiudi Diario
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Area Messaggi Chat Stile WhatsApp */}
+          <div 
+            className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 relative"
+            style={{ 
+              backgroundImage: "radial-gradient(#d3cbbf 0.75px, transparent 0.75px)", 
+              backgroundSize: "16px 16px" 
+            }}
+          >
+            {/* Pillola Data Centrata */}
+            <div className="flex justify-center my-2">
+              <span className="bg-white/90 text-slate-600 text-[11px] font-semibold px-3 py-1 rounded-lg shadow-xs uppercase tracking-wider">
+                OGGI
+              </span>
+            </div>
+
+            {currentMessages.map((msg, idx) => (
+              <div 
+                key={idx} 
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div 
+                  className={`max-w-[85%] sm:max-w-[78%] px-3.5 py-2.5 rounded-2xl text-[14.5px] leading-relaxed relative shadow-xs group ${
+                    msg.role === "user"
+                      ? "bg-[#D9FDD3] text-slate-900 rounded-tr-xs"
+                      : "bg-white text-slate-900 rounded-tl-xs"
+                  }`}
+                >
+                  {msg.imageUrl && (
+                    <img 
+                      src={msg.imageUrl} 
+                      alt="Allegato" 
+                      className="rounded-xl max-h-60 object-contain mb-2 bg-black/5" 
+                    />
+                  )}
+
                   {msg.text && (
-                    <div className={msg.role === "model" ? "prose prose-sm max-w-none prose-blue" : ""}>
+                    <div className={msg.role === "model" ? "prose prose-sm max-w-none prose-emerald" : ""}>
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm, remarkMath]} 
                         rehypePlugins={[rehypeKatex]}
@@ -531,44 +682,52 @@ export default function Chat() {
                       </ReactMarkdown>
                     </div>
                   )}
-                  
-                  {msg.role === "model" && (
-                    <button 
-                      onClick={() => speakText(msg.text)}
-                      className="absolute -right-3 -top-3 bg-white border border-gray-200 text-gray-500 rounded-full p-2 shadow hover:text-blue-600 hover:border-blue-200 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Leggi ad alta voce"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
-                      </svg>
-                    </button>
-                  )}
+
+                  {/* Orario e spunte di lettura stile WhatsApp */}
+                  <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-slate-400 select-none">
+                    <span>{msg.time || "19:00"}</span>
+                    {msg.role === "user" && (
+                      <span className="text-[#53bdeb] font-bold text-xs">✓✓</span>
+                    )}
+
+                    {/* Tasto Lettura Vocale per i messaggi del tutor */}
+                    {msg.role === "model" && (
+                      <button
+                        onClick={() => speakText(msg.text)}
+                        className="ml-1 p-0.5 text-slate-400 hover:text-emerald-700 transition-colors"
+                        title="Ascolta audio"
+                      >
+                        🔊
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white text-gray-400 border border-gray-200 p-4 rounded-2xl rounded-tl-sm shadow-sm animate-pulse flex space-x-2 items-center">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                <div className="bg-white text-slate-400 px-4 py-3 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 font-medium">{selectedTutor.name} sta scrivendo</span>
+                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Area Input & Preview Immagine */}
-          <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-3 z-20">
+          {/* Barra Input Stile WhatsApp */}
+          <div className="p-2 sm:p-3 bg-[#F0F2F5] flex flex-col gap-2 z-20 border-t border-slate-200">
             {selectedImage && (
-              <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100 relative w-max shadow-sm">
+              <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 relative w-max shadow-xs">
                 <img 
                   src={URL.createObjectURL(selectedImage)} 
                   alt="Preview" 
-                  className="h-16 w-16 object-cover rounded-md" 
+                  className="h-14 w-14 object-cover rounded-lg" 
                 />
-                <span className="text-sm text-blue-800 font-medium truncate max-w-[150px]">
+                <span className="text-xs text-slate-700 truncate max-w-[140px] font-medium">
                   {selectedImage.name}
                 </span>
                 <button 
@@ -576,14 +735,15 @@ export default function Chat() {
                     setSelectedImage(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-600 shadow"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600 shadow"
                 >
                   ✕
                 </button>
               </div>
             )}
 
-            <div className="flex gap-2 items-center">
+            <div className="flex items-center gap-2">
+              {/* Bottone Allegato Graffetta */}
               <input 
                 type="file" 
                 accept="image/*"
@@ -593,27 +753,14 @@ export default function Chat() {
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0"
-                title="Allega una foto o trascinala qui"
+                className="p-2.5 text-slate-500 hover:text-emerald-700 hover:bg-white rounded-full transition-colors flex-shrink-0"
+                title="Allega foto esercizio"
                 disabled={isLoading}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                </svg>
+                📎
               </button>
 
-              <button 
-                onClick={toggleMicrophone}
-                className={`p-3 rounded-full transition-colors flex-shrink-0 ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                title="Detta a voce"
-                disabled={isLoading}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                </svg>
-              </button>
-
+              {/* Input del Messaggio Arrotondato */}
               <input 
                 type="text" 
                 value={input}
@@ -622,23 +769,44 @@ export default function Chat() {
                   wasVoiceInputRef.current = false;
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder={isListening ? "In ascolto..." : selectedImage ? "Aggiungi un commento..." : "Fai una domanda..."}
-                className={`flex-1 px-4 py-3 rounded-full border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-[15px] text-gray-700 min-w-0 ${isListening ? 'border-red-300' : 'border-gray-200'}`}
+                placeholder={isListening ? "Parla pure..." : "Messaggio..."}
+                className={`flex-1 px-4 py-2.5 rounded-full bg-white border border-transparent focus:outline-none focus:border-slate-300 text-[15px] text-slate-800 placeholder-slate-400 shadow-xs ${
+                  isListening ? 'ring-2 ring-red-400' : ''
+                }`}
                 disabled={isLoading}
               />
-              <button 
-                onClick={handleSend}
-                disabled={isLoading || (!input.trim() && !selectedImage)}
-                className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full flex-shrink-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center"
-                aria-label="Invia"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                  <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-                </svg>
-              </button>
+
+              {/* Bottone Tondo Verde: Microfono o Invio */}
+              {input.trim() || selectedImage ? (
+                <button 
+                  onClick={handleSend}
+                  disabled={isLoading}
+                  className="w-10 h-10 bg-[#008069] hover:bg-[#00705c] active:scale-95 text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all"
+                  aria-label="Invia messaggio"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-0.5">
+                    <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                  </svg>
+                </button>
+              ) : (
+                <button 
+                  onClick={toggleMicrophone}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
+                    isListening 
+                      ? 'bg-red-500 text-white animate-pulse' 
+                      : 'bg-[#008069] hover:bg-[#00705c] active:scale-95 text-white'
+                  }`}
+                  title="Messaggio vocale"
+                  disabled={isLoading}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
