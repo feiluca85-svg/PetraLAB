@@ -285,10 +285,17 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     setChatsByTutor(updatedChats);
     setIsLoading(true);
 
-    const history: Content[] = prevMsgs.map(m => {
-      const parts: any[] = [];
-      if (m.text) parts.push({ text: m.text });
-      return { role: m.role, parts: parts };
+    const history: Content[] = [];
+    prevMsgs.forEach(m => {
+      const textToPush = m.text || (m.imageUrl ? "[Immagine inviata dall'utente]" : "");
+      if (!textToPush) return;
+      
+      const last = history[history.length - 1];
+      if (last && last.role === m.role) {
+        last.parts.push({ text: "\n" + textToPush });
+      } else {
+        history.push({ role: m.role, parts: [{ text: textToPush }] });
+      }
     });
 
     let response;
@@ -346,8 +353,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
       // Salva sia le chat separate per tutor sia la memoria su Firestore
       const userRef = doc(db, "petralab_users", "studente_demo");
+      
+      // Crea una copia sicura senza i base64 pesanti per non bloccare Firestore
+      const safeChats: any = JSON.parse(JSON.stringify(finalChats));
+      Object.keys(safeChats).forEach(tid => {
+        safeChats[tid].messages = safeChats[tid].messages.map((m: any) => ({
+          role: m.role,
+          text: m.text,
+          time: m.time
+        }));
+      });
+
       setDoc(userRef, { 
-        chatsByTutor: finalChats,
+        chatsByTutor: safeChats,
         subjectsMemory: updatedMemMap,
         chatHistory: finalMsgs.slice(-20).map(m => ({ role: m.role, text: m.text }))
       }, { merge: true }).catch(console.error);
