@@ -298,6 +298,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       }
     });
 
+    const currentMem = subjectsMemory[tutorId];
     let response;
     try {
       response = await sendMessage(userText, history, imagePayload, selectedTutor, currentMem);
@@ -434,21 +435,25 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 </button>
               )}
 
-              <button
-                onClick={() => window.location.reload()}
-                className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white"
-                title="Ricarica applicazione"
-              >
-                🔄
-              </button>
+              <div className="relative group">
+                <button className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M10.5 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-lg border p-2 hidden group-hover:block z-50 ${isDarkMode ? 'bg-[#202C33] border-[#222E35]' : 'bg-white border-slate-100'}`}>
+                  <div className={`px-4 py-2 text-xs font-bold border-b mb-1 ${isDarkMode ? 'text-[#8696A0] border-[#222E35]' : 'text-slate-400 border-slate-100'}`}>
+                    Versione: v1.0.2
+                  </div>
+                  <button onClick={() => window.location.reload()} className={`w-full text-left px-4 py-2 text-sm rounded-lg ${isDarkMode ? 'text-gray-200 hover:bg-[#111B21]' : 'text-slate-700 hover:bg-slate-50'}`}>
+                    Aggiorna App
+                  </button>
+                  <Link href="/admin" className={`block w-full text-left px-4 py-2 text-sm rounded-lg ${isDarkMode ? 'text-gray-200 hover:bg-[#111B21]' : 'text-slate-700 hover:bg-slate-50'}`}>
+                    Pannello Genitore
+                  </Link>
+                </div>
+              </div>
 
-              <Link
-                href="/admin"
-                className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white"
-                title="Pannello Amministratore"
-              >
-                🛡️
-              </Link>
             </div>
           </div>
 
