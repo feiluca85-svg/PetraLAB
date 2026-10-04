@@ -65,7 +65,14 @@ export async function sendMessage(
     console.error("Gemini Error:", error);
     const msg = error?.message || String(error);
     
-    // FOR DEBUGGING ONLY: Dump the exact raw error so the user can show it in a screenshot
-    return { success: false, error: `[DEBUG API] ${msg}` };
+    if (msg.includes("503") || msg.includes("high demand")) {
+      return { success: false, error: "I server di Google sono momentaneamente sovraccarichi per le troppe richieste. Riprova tra qualche secondo! ⏳" };
+    }
+    
+    if (msg.includes("429") || msg.includes("exceeded your current quota")) {
+      return { success: false, error: "Ops! Abbiamo esaurito i messaggi magici disponibili per oggi. Torna a trovarmi domani per continuare a studiare insieme! 🌙" };
+    }
+    
+    return { success: false, error: "Scusa, ho avuto un momento di confusione. Riprova!" };
   }
 }
