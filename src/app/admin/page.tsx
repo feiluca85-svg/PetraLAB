@@ -9,6 +9,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 export default function AdminDashboard() {
   const { role, logout, devices, removeDevice } = useAuth();
   const [childStats, setChildStats] = useState({ xp: 0, streak: 0 });
+  const [childChat, setChildChat] = useState<{role: string, text: string}[]>([]);
 
   // Ascolta in tempo reale le statistiche della figlia dal database!
   useEffect(() => {
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
       if (doc.exists()) {
         const data = doc.data();
         setChildStats({ xp: data.xp || 0, streak: data.streak || 1 });
+        setChildChat(data.chatHistory || []);
       }
     });
     return () => unsub();
@@ -132,6 +134,45 @@ export default function AdminDashboard() {
             <h3 className="text-gray-500 text-xs font-bold uppercase mt-2">Materia Principale</h3>
             <p className="text-3xl font-black text-gray-900 mt-1">Matematica</p>
             <p className="text-xs text-gray-400 font-medium mt-2">Addizioni in colonna ed equazioni</p>
+          </div>
+        </section>
+
+        {/* Sezione Cronologia Chat in Diretta */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-8">
+          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                💬 Cronologia Conversazioni
+                <span className="relative flex h-3 w-3 ml-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </span>
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Leggi in tempo reale le domande che sta facendo all'IA per capire le sue difficoltà.
+              </p>
+            </div>
+          </div>
+          
+          <div className="p-6 bg-gray-50/50 max-h-96 overflow-y-auto flex flex-col gap-4">
+            {childChat.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm py-8">Nessuna conversazione recente.</p>
+            ) : (
+              childChat.map((msg, idx) => (
+                <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <span className="text-[10px] font-bold text-gray-400 mb-1 px-1 uppercase tracking-wider">
+                    {msg.role === 'user' ? 'Tua Figlia' : 'Athena (Tutor)'}
+                  </span>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
+                    msg.role === 'user' 
+                      ? 'bg-blue-600 text-white rounded-tr-sm' 
+                      : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 

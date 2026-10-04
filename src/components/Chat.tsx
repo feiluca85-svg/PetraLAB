@@ -9,6 +9,8 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { useGamification } from "@/hooks/useGamification";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 type UIMessage = {
   role: "user" | "model";
@@ -21,6 +23,15 @@ export default function Chat() {
   const [messages, setMessages] = useState<UIMessage[]>([
     { role: "model", text: "Ciao! Sono il tuo tutor. Su quale materia o argomento ti stai bloccando oggi?" }
   ]);
+  
+  // Sincronizza messaggi su Firestore (max ultimi 20)
+  useEffect(() => {
+    if (messages.length > 1) {
+      const userRef = doc(db, "petralab_users", "studente_demo");
+      const recent = messages.slice(-20).map(m => ({ role: m.role, text: m.text }));
+      updateDoc(userRef, { chatHistory: recent }).catch(console.error);
+    }
+  }, [messages]);
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
