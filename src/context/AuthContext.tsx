@@ -32,6 +32,7 @@ const STUDENT_PIN = "1430";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AuthRole>(null);
+  const [isReady, setIsReady] = useState(false);
   const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
   const [devices, setDevices] = useState<DeviceSession[]>([]);
   const router = useRouter();
@@ -62,16 +63,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDevices(initialDevices);
       localStorage.setItem("petralab_devices", JSON.stringify(initialDevices));
     }
+    
+    setIsReady(true);
   }, []);
 
   // Protezione rotte
   useEffect(() => {
+    if (!isReady) return; // Aspetta di aver letto il localStorage!
+    
     if (!role && pathname !== "/login") {
       router.push("/login");
     } else if (role === "student" && pathname.startsWith("/admin")) {
       router.push("/");
+    } else if (role && pathname === "/login") {
+      router.push(role === "admin" ? "/admin" : "/");
     }
-  }, [role, pathname, router]);
+  }, [role, pathname, router, isReady]);
 
   const registerCurrentDevice = () => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
