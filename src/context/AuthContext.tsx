@@ -39,15 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Rileva supporto biometria & carica sessioni
   useEffect(() => {
-    // Controllo WebAuthn / Biometria (Touch ID / Face ID)
-    if (window.PublicKeyCredential) {
-      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.()
-        .then((available) => setIsBiometricsAvailable(available))
-        .catch(() => setIsBiometricsAvailable(false));
-    }
-
-    // Carica stato auth da sessionStorage
-    const savedRole = sessionStorage.getItem("petralab_role") as AuthRole;
+    // Carica stato auth da localStorage per mantenerlo permanente (evita logout su reload)
+    const savedRole = localStorage.getItem("petralab_role") as AuthRole;
     if (savedRole) {
       setRole(savedRole);
     }
@@ -64,20 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           type: "desktop",
           lastActive: "Adesso",
           isCurrent: true,
-        },
-        {
-          id: "dev-iphone-daughter",
-          name: "iPhone di Mia Figlia",
-          type: "mobile",
-          lastActive: "2 ore fa",
-          isCurrent: false,
-        },
-        {
-          id: "dev-phone-admin",
-          name: "Smartphone Amministratore",
-          type: "mobile",
-          lastActive: "Ieri, 19:30",
-          isCurrent: false,
         },
       ];
       setDevices(initialDevices);
@@ -122,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginAsStudent = (pin: string) => {
     if (pin === STUDENT_PIN) {
       setRole("student");
-      sessionStorage.setItem("petralab_role", "student");
+      localStorage.setItem("petralab_role", "student"); // Permanente!
       registerCurrentDevice();
       router.push("/");
       return true;
@@ -130,78 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const registerBiometrics = async () => {
-    if (!window.PublicKeyCredential) return false;
-    try {
-      const challenge = new Uint8Array(32);
-      crypto.getRandomValues(challenge);
-      const userId = new Uint8Array(16);
-      crypto.getRandomValues(userId);
-
-      await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: "PetraLAB" },
-          user: { id: userId, name: "Studente", displayName: "Studente" },
-          pubKeyCredParams: [
-            { type: "public-key", alg: -7 },
-            { type: "public-key", alg: -257 }
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "required",
-            requireResidentKey: true
-          },
-          timeout: 60000,
-        }
-      });
-      localStorage.setItem("petralab_has_passkey", "true");
-      return true;
-    } catch (e) {
-      console.error("Registrazione biometrica fallita:", e);
-      return false;
-    }
-  };
-
   const loginWithBiometrics = async (): Promise<boolean> => {
-    try {
-      if (!window.PublicKeyCredential) return false;
-      
-      const hasPasskey = localStorage.getItem("petralab_has_passkey");
-      
-      if (!hasPasskey) {
-        // Se è la prima volta, crea la chiave biometrica (Passkey)
-        const registered = await registerBiometrics();
-        if (!registered) return false;
-      } else {
-        // Altrimenti, richiedi lo sblocco biometrico
-        const challenge = new Uint8Array(32);
-        crypto.getRandomValues(challenge);
-        
-        await navigator.credentials.get({
-          publicKey: {
-            challenge,
-            userVerification: "required"
-          }
-        });
-      }
-
-      setRole("student");
-      sessionStorage.setItem("petralab_role", "student");
-      registerCurrentDevice();
-      router.push("/");
-      return true;
-    } catch (error) {
-      console.error("Autenticazione biometrica fallita:", error);
-      return false;
-    }
+    return false; // Disabilitato come richiesto
   };
 
   const loginAsAdmin = (user: string, pass: string) => {
-    // Credenziali demo amministratore (personalizzabili)
     if (user.trim().toLowerCase() === "admin" && pass === "3019") {
       setRole("admin");
-      sessionStorage.setItem("petralab_role", "admin");
+      localStorage.setItem("petralab_role", "admin"); // Permanente!
       registerCurrentDevice();
       router.push("/admin");
       return true;
@@ -211,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setRole(null);
-    sessionStorage.removeItem("petralab_role");
+    localStorage.removeItem("petralab_role");
     router.push("/login");
   };
 
