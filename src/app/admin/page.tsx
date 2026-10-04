@@ -6,11 +6,13 @@ import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getLevelInfo } from "@/lib/levels";
+import { TUTORS, SubjectMemory } from "@/lib/tutors";
 
 export default function AdminDashboard() {
   const { role, logout, devices, removeDevice } = useAuth();
   const [childStats, setChildStats] = useState({ xp: 0, streak: 0 });
   const [childChat, setChildChat] = useState<{role: string, text: string}[]>([]);
+  const [subjectsMemory, setSubjectsMemory] = useState<Record<string, SubjectMemory>>({});
 
   // Ascolta in tempo reale le statistiche della figlia dal database!
   useEffect(() => {
@@ -19,6 +21,9 @@ export default function AdminDashboard() {
         const data = doc.data();
         setChildStats({ xp: data.xp || 0, streak: data.streak || 1 });
         setChildChat(data.chatHistory || []);
+        if (data.subjectsMemory) {
+          setSubjectsMemory(data.subjectsMemory);
+        }
       }
     });
     return () => unsub();
@@ -149,6 +154,77 @@ export default function AdminDashboard() {
             <h3 className="text-gray-500 text-xs font-bold uppercase mt-2">Materia Principale</h3>
             <p className="text-3xl font-black text-gray-900 mt-1">Matematica</p>
             <p className="text-xs text-gray-400 font-medium mt-2">Addizioni in colonna ed equazioni</p>
+          </div>
+        </section>
+
+        {/* Sezione Registro Voti & Lacune per Materia */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                📊 Registro Voti & Lacune per Materia
+                <span className="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full">
+                  Memoria Tutor AI
+                </span>
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                I tutor registrano proattivamente i voti comunicati dall&apos;alunna e individuano le lacune su cui lavorare.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {TUTORS.map((tutor) => {
+              const mem = subjectsMemory[tutor.id];
+              const grades = mem?.grades || [];
+              const weaknesses = mem?.weaknesses || [];
+
+              return (
+                <div key={tutor.id} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-3xl bg-white p-2 rounded-xl shadow-xs">{tutor.avatar}</span>
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{tutor.name}</h3>
+                        <p className="text-xs text-blue-600 font-medium">{tutor.subject}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">Voti Raccolti</span>
+                        {grades.length === 0 ? (
+                          <span className="text-xs text-gray-400 italic">Nessun voto registrato</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {grades.map((g, idx) => (
+                              <span key={idx} className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded shadow-xs" title={`${g.topic || 'Verifica'} - ${g.date}`}>
+                                {g.grade} <span className="text-[10px] font-normal text-blue-600">({g.date})</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-1">
+                        <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">Punti Deboli / Lacune</span>
+                        {weaknesses.length === 0 ? (
+                          <span className="text-xs text-green-600 font-medium">Nessuna difficoltà segnalata</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {weaknesses.map((w, idx) => (
+                              <span key={idx} className="bg-amber-100 text-amber-900 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-200">
+                                ⚠️ {w}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 

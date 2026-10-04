@@ -2,6 +2,7 @@
 
 import { genAI, SYSTEM_INSTRUCTION } from "@/lib/gemini";
 import { Content, Part } from "@google/generative-ai";
+import { TUTORS, buildTutorPrompt, SubjectMemory } from "@/lib/tutors";
 
 const FALLBACK_MODELS = [
   "gemini-3.5-flash-lite", // 500 RPD
@@ -16,9 +17,19 @@ export async function sendMessage(
   message: string, 
   history: Content[],
   image?: { base64: string; mimeType: string },
-  systemInstruction?: string
+  tutorId?: string,
+  subjectMemory?: SubjectMemory
 ) {
   try {
+    // Calcola l'istruzione di sistema specifica per il tutor e la sua memoria
+    let dynamicInstruction = SYSTEM_INSTRUCTION;
+    if (tutorId) {
+      const tutor = TUTORS.find(t => t.id === tutorId);
+      if (tutor) {
+        dynamicInstruction = buildTutorPrompt(tutor, subjectMemory);
+      }
+    }
+
     // Costruisci il payload: testo ed eventuale immagine
     const parts: Part[] = [];
     
@@ -35,7 +46,6 @@ export async function sendMessage(
       });
     }
 
-    // Se l'utente invia solo l'immagine senza testo, aggiungiamo una descrizione base
     if (parts.length === 1 && image) {
       parts.unshift({ text: "Spiegami cosa vedi in questa immagine e aiutami a risolverlo passo passo." });
     }
@@ -48,49 +58,63 @@ export async function sendMessage(
       try {
         const currentModel = genAI.getGenerativeModel({
           model: modelName,
-          systemInstruction: systemInstruction || SYSTEM_INSTRUCTION
+          systemInstruction: dynamicInstruction
         });
         
-        // Inizializza la chat per questo specifico modello passando la cronologia
         const chat = currentModel.startChat({ history: history });
         
-        // Retry interno in caso di temporaneo sovraccarico 503 per questo modello
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             result = await chat.sendMessage(parts);
-            break; // Successo su questo tentativo!
+            break;
           } catch (err: any) {
             const msg = err?.message || String(err);
             if ((msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) && attempt < 2) {
               await new Promise((resolve) => setTimeout(resolve, 1200));
               continue;
             }
-            throw err; // Non è 503 oppure abbiamo esaurito i tentativi 503, quindi ribalta l'errore al ciclo dei modelli
+            throw err;
           }
         }
         
-        if (result) break; // Se ha risposto, usciamo dal ciclo dei modelli!
+        if (result) break;
 
       } catch (err: any) {
         lastError = err;
         const msg = err?.message || String(err);
         console.error(`Gemini Error on ${modelName}:`, msg);
         
-        // Se il modello ha esaurito la quota (429) o non è abilitato (403/404), passa al modello successivo!
         if (msg.includes("429") || msg.includes("exceeded your current quota") || msg.includes("403") || msg.includes("404")) {
           continue; 
         }
-        
-        // Altrimenti (es. bad request, immagini troppo grandi), rompiamo il ciclo
         break;
       }
     }
 
     if (!result && lastError) {
-      throw lastError; // Tutti i modelli hanno fallito
+      throw lastError;
     }
     
-    return { success: true, text: result!.response.text() };
+    let rawText = result!.response.text();
+    let trackData: { grade?: string; topic?: string; weakness?: string } | null = null;
+
+    // Cerca eventuali tag di tracciamento inseriti dal tutor (<!-- TRACK: {...} -->)
+    const trackMatch = rawText.match(/<!--\s*TRACK:\s*({[\s\S]*?})\s*-->/);
+    if (trackMatch) {
+      try {
+        trackData = JSON.parse(trackMatch[1]);
+      } catch (e) {
+        console.error("Errore parsing track data:", e);
+      }
+      // Rimuovi il tag invisibile dal testo finale mostrato all'alunna
+      rawText = rawText.replace(/<!--\s*TRACK:\s*({[\s\S]*?})\s*-->/g, "").trim();
+    }
+    
+    return { 
+      success: true, 
+      text: rawText,
+      trackData 
+    };
   } catch (error: any) {
     console.error("All Gemini Fallbacks Failed:", error);
     const msg = error?.message || String(error);
