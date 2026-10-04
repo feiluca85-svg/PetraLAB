@@ -298,6 +298,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       }
     });
 
+    // Gemini API requires the first message to ALWAYS be from the 'user'.
+    // Since our chats start with a 'model' greeting, we prepend a hidden user prompt.
+    if (history.length > 0 && history[0].role === "model") {
+      history.unshift({ role: "user", parts: [{ text: "Ciao, eccomi. Possiamo iniziare." }] });
+    }
+
     const currentMem = subjectsMemory[tutorId];
     let response;
     try {
