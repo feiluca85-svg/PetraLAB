@@ -9,6 +9,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { useGamification } from "@/hooks/useGamification";
+import { getLevelInfo } from "@/lib/levels";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 
@@ -20,6 +21,8 @@ type UIMessage = {
 
 export default function Chat() {
   const { stats, awardXP, dbError } = useGamification();
+  const levelInfo = getLevelInfo(stats.xp);
+  
   const [messages, setMessages] = useState<UIMessage[]>([
     { role: "model", text: "Ciao! Sono il tuo tutor. Su quale materia o argomento ti stai bloccando oggi?" }
   ]);
@@ -235,21 +238,28 @@ export default function Chat() {
           </div>
         </div>
         <div className="flex gap-3 items-center">
-          <div className="flex gap-4 items-center bg-white/20 px-3 py-1.5 rounded-xl backdrop-blur-sm border border-white/10">
-            <div className="flex items-center gap-1 font-bold text-sm">
-              <span className="text-yellow-300 text-lg">⭐</span>
-              <span>{stats.xp} XP</span>
+          <div className="flex flex-col gap-1 bg-white/20 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/10 min-w-[140px]">
+            <div className="flex justify-between items-center text-xs font-bold w-full">
+              <span>{levelInfo.title}</span>
+              <span className="text-yellow-300">{stats.xp} XP</span>
             </div>
-            <div className="w-px h-5 bg-white/30"></div>
-            <div className="flex items-center gap-1 font-bold text-sm">
-              <span className="text-orange-400 text-lg">🔥</span>
-              <span>{stats.streak} Giorni</span>
-            </div>
+            {levelInfo.nextLevelXP && (
+              <div className="w-full bg-white/20 rounded-full h-1.5 mt-0.5">
+                <div 
+                  className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500" 
+                  style={{ width: `${levelInfo.progress}%` }}
+                ></div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 font-bold text-sm bg-white/20 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/10">
+            <span className="text-orange-400 text-lg">🔥</span>
+            <span>{stats.streak}</span>
           </div>
 
           {/* Icona Gestione / Esci */}
           <Link
-            href="/admin"
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white"
             title="Pannello Amministratore"
           >

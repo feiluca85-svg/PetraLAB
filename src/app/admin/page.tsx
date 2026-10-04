@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
+import { getLevelInfo } from "@/lib/levels";
 
 export default function AdminDashboard() {
   const { role, logout, devices, removeDevice } = useAuth();
@@ -113,6 +114,20 @@ export default function AdminDashboard() {
             <span className="text-3xl">⭐</span>
             <h3 className="text-gray-500 text-xs font-bold uppercase mt-2">Punti XP Guadagnati</h3>
             <p className="text-4xl font-black text-gray-900 mt-1">{childStats.xp} <span className="text-xl text-gray-400">XP</span></p>
+            <div className="mt-2 mb-1 bg-gray-100 rounded-lg p-2 border border-gray-200">
+              <div className="flex justify-between items-center text-xs font-bold text-gray-700 mb-1">
+                <span>{getLevelInfo(childStats.xp).title}</span>
+                {getLevelInfo(childStats.xp).nextLevelXP && (
+                  <span className="text-gray-400 font-medium">Next: {getLevelInfo(childStats.xp).nextLevelXP}</span>
+                )}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500" 
+                  style={{ width: `${getLevelInfo(childStats.xp).progress}%` }}
+                ></div>
+              </div>
+            </div>
             <p className="text-xs text-green-600 font-semibold mt-2 flex items-center gap-1">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
