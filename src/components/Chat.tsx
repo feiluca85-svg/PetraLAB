@@ -119,8 +119,17 @@ export default function Chat() {
     
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'it-IT';
-    utterance.pitch = 1.1; // Voce un po' più amichevole
-    utterance.rate = 0.95; // Leggermente più lenta per chiarezza
+    
+    // Cerchiamo la voce migliore tra quelle installate nel dispositivo
+    const voices = window.speechSynthesis.getVoices();
+    // Le voci "Google", "Siri" o "Premium" sono solitamente molto più naturali
+    const premiumVoice = voices.find(v => v.lang.includes('it') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Siri') || v.name.includes('Alice')));
+    if (premiumVoice) {
+      utterance.voice = premiumVoice;
+    }
+    
+    utterance.pitch = 1.05; // Tono naturale
+    utterance.rate = 1.15; // Velocità aumentata (prima era 0.95, troppo lenta!)
     
     utterance.onend = () => setIsSpeaking(false);
     
