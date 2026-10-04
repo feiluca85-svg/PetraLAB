@@ -124,6 +124,6 @@ export async function sendMessage(
       return { success: false, error: "Ops! Abbiamo esaurito i messaggi magici disponibili su tutti i modelli per oggi. Torna a trovarmi domani per continuare a studiare insieme! 🌙" };
     }
     
-    return { success: false, error: "Scusa, ho avuto un momento di confusione. Riprova!" };
+    return { success: false, error: `[DEBUG] Errore di connessione: ${msg}` };
   }
 }
