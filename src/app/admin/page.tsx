@@ -8,11 +8,16 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { getLevelInfo } from "@/lib/levels";
 import { TUTORS, SubjectMemory } from "@/lib/tutors";
 
+import TutorManager from "@/components/TutorManager";
+import { useTutors } from "@/hooks/useTutors";
+
 export default function AdminDashboard() {
   const { role, logout, devices, removeDevice } = useAuth();
   const [childStats, setChildStats] = useState({ xp: 0, streak: 0 });
   const [childChat, setChildChat] = useState<{role: string, text: string}[]>([]);
   const [subjectsMemory, setSubjectsMemory] = useState<Record<string, SubjectMemory>>({});
+  
+  const { tutors } = useTutors();
 
   // Ascolta in tempo reale le statistiche della figlia dal database!
   useEffect(() => {
@@ -156,9 +161,12 @@ export default function AdminDashboard() {
             <p className="text-xs text-gray-400 font-medium mt-2">Addizioni in colonna ed equazioni</p>
           </div>
         </section>
+        
+        {/* Gestione Tutor AI (CRUD) */}
+        <TutorManager />
 
         {/* Sezione Registro Voti & Lacune per Materia */}
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-8">
           <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -174,7 +182,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {TUTORS.map((tutor) => {
+            {tutors.map((tutor) => {
               const mem = subjectsMemory[tutor.id];
               const grades = mem?.grades || [];
               const weaknesses = mem?.weaknesses || [];

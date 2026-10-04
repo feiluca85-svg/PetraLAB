@@ -1,17 +1,18 @@
 export type LevelInfo = {
   level: number;
   title: string;
+  icon: string;
   nextLevelXP: number | null;
   progress: number; // 0 to 100
 };
 
-const LEVELS = [
-  { xpReq: 0, title: "Novellino 🌱" },
-  { xpReq: 50, title: "Apprendista 📖" },
-  { xpReq: 150, title: "Esploratore 🧭" },
-  { xpReq: 300, title: "Studioso 🔬" },
-  { xpReq: 500, title: "Saggio 🔮" },
-  { xpReq: 1000, title: "Maestro 👑" },
+export const LEVELS = [
+  { xpReq: 0, title: "Novellino", icon: "🌱" },
+  { xpReq: 50, title: "Apprendista", icon: "📖" },
+  { xpReq: 150, title: "Esploratore", icon: "🧭" },
+  { xpReq: 300, title: "Studioso", icon: "🔬" },
+  { xpReq: 500, title: "Saggio", icon: "🔮" },
+  { xpReq: 1000, title: "Maestro", icon: "👑" },
 ];
 
 export function getLevelInfo(xp: number): LevelInfo {
@@ -38,6 +39,7 @@ export function getLevelInfo(xp: number): LevelInfo {
   return {
     level: currentLevelIndex + 1,
     title: currentLevel.title,
+    icon: currentLevel.icon,
     nextLevelXP: nextLevel ? nextLevel.xpReq : null,
     progress: progress,
   };

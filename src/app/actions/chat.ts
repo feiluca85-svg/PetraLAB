@@ -2,7 +2,7 @@
 
 import { genAI, SYSTEM_INSTRUCTION } from "@/lib/gemini";
 import { Content, Part } from "@google/generative-ai";
-import { TUTORS, buildTutorPrompt, SubjectMemory } from "@/lib/tutors";
+import { buildTutorPrompt, SubjectMemory, Tutor } from "@/lib/tutors";
 
 const FALLBACK_MODELS = [
   "gemini-3.5-flash-lite", // 500 RPD
@@ -17,17 +17,14 @@ export async function sendMessage(
   message: string, 
   history: Content[],
   image?: { base64: string; mimeType: string },
-  tutorId?: string,
+  tutor?: Tutor,
   subjectMemory?: SubjectMemory
 ) {
   try {
     // Calcola l'istruzione di sistema specifica per il tutor e la sua memoria
     let dynamicInstruction = SYSTEM_INSTRUCTION;
-    if (tutorId) {
-      const tutor = TUTORS.find(t => t.id === tutorId);
-      if (tutor) {
-        dynamicInstruction = buildTutorPrompt(tutor, subjectMemory);
-      }
+    if (tutor) {
+      dynamicInstruction = buildTutorPrompt(tutor, subjectMemory);
     }
 
     // Costruisci il payload: testo ed eventuale immagine
