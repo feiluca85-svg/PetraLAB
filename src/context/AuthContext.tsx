@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { recordAccess } from "@/lib/accessLogger";
 
 export type DeviceSession = {
   id: string;
@@ -110,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole("student");
       localStorage.setItem("petralab_role", "student"); // Permanente!
       registerCurrentDevice();
+      recordAccess("Petra (Alunna)", "student");
       router.push("/");
       return true;
     }
@@ -125,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole("admin");
       localStorage.setItem("petralab_role", "admin"); // Permanente!
       registerCurrentDevice();
+      recordAccess("Genitore (Admin)", "admin");
       router.push("/admin");
       return true;
     }

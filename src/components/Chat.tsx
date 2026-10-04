@@ -418,42 +418,57 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       {/* ============================================================== */}
       {!selectedTutor ? (
         <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
-          {/* Header WhatsApp Top */}
-          <div className={`${isDarkMode ? 'bg-[#202C33]' : 'bg-[#008069]'} text-white px-4 pt-3.5 pb-3 flex justify-between items-center shadow-md relative z-30`}>
+          {/* Header WhatsApp Top Moderno */}
+          <div className={`${
+            isDarkMode ? 'bg-[#111B21] border-b border-[#222E35]' : 'bg-white border-b border-slate-100'
+          } px-4 pt-3.5 pb-2.5 flex justify-between items-center relative z-30 transition-colors`}>
             <div className="flex items-center gap-2.5">
               <img 
                 src="/icon.png" 
                 alt="PetraLAB" 
-                className="w-9 h-9 rounded-full border border-white/25 object-cover shadow-xs bg-emerald-950 shrink-0" 
+                className="w-8 h-8 rounded-full border border-emerald-500/30 object-cover shadow-xs bg-emerald-950 shrink-0" 
               />
               <div>
-                <h1 className="text-xl font-bold tracking-tight">PetraLAB</h1>
-                <p className={`text-[11px] ${isDarkMode ? 'text-gray-300' : 'text-emerald-100'} flex items-center gap-1`}>
-                  <span>{levelInfo.title}</span> • <span>{stats.xp} XP</span>
+                <h1 className={`text-[22px] font-black tracking-tight leading-none ${
+                  isDarkMode ? 'text-[#25D366]' : 'text-[#1DA851]'
+                }`}>
+                  PetraLAB
+                </h1>
+                <p className={`text-[11px] font-medium mt-0.5 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
+                  {levelInfo.title} • <span className="font-semibold text-emerald-600">{stats.xp} XP</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-1 font-bold text-xs bg-black/20 px-2 py-1 rounded-full mr-1">
-                <span className="text-orange-300">🔥</span>
+            <div className="flex items-center gap-1.5">
+              {/* Badge Streak Fiamma */}
+              <div className={`flex items-center gap-1 font-bold text-xs px-2.5 py-1 rounded-full ${
+                isDarkMode ? 'bg-[#202C33] text-orange-400 border border-[#2A3942]' : 'bg-orange-50 text-orange-600 border border-orange-100'
+              }`}>
+                <span>🔥</span>
                 <span>{stats.streak}</span>
               </div>
 
+              {/* Tasto Tema Chiaro/Scuro */}
               {toggleTheme && (
                 <button
                   onClick={toggleTheme}
-                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white"
-                  title="Cambia tema"
+                  className={`p-2 rounded-full transition-colors ${
+                    isDarkMode ? 'hover:bg-[#202C33] text-gray-300' : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                  title={isDarkMode ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
                 >
                   {isDarkMode ? '☀️' : '🌙'}
                 </button>
               )}
 
+              {/* Menu a 3 Puntini */}
               <div className="relative">
                 <button 
                   onClick={() => setShowHomeMenu(prev => !prev)}
-                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white active:scale-95"
+                  className={`p-2 rounded-full transition-colors active:scale-95 ${
+                    isDarkMode ? 'hover:bg-[#202C33] text-gray-300' : 'hover:bg-slate-100 text-slate-700'
+                  }`}
                   title="Altre opzioni"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -467,7 +482,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       className="fixed inset-0 z-40" 
                       onClick={() => setShowHomeMenu(false)}
                     />
-                    <div className={`absolute right-0 top-full mt-2 w-52 rounded-2xl shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                    <div className={`absolute right-0 top-full mt-1.5 w-52 rounded-2xl shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
                       isDarkMode 
                         ? 'bg-[#233138] border-[#2E3C44] text-[#E9EDEF]' 
                         : 'bg-white border-slate-100 text-slate-800'
@@ -476,7 +491,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.0.4</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.0.5</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -505,32 +520,54 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             </div>
           </div>
 
-          {/* Barra di Ricerca Stile WhatsApp */}
-          <div className={`p-3 border-b ${isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-100'}`}>
-            <div className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all border ${
+          {/* Barra di Ricerca Stile WhatsApp Moderno (Senza bordi netti, pillola morbida) */}
+          <div className={`px-4 pt-2.5 pb-2 ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
+            <div className={`flex items-center gap-2.5 rounded-full px-4 py-2.5 transition-all ${
               isDarkMode 
-                ? 'bg-[#202C33] text-gray-200 border-transparent focus-within:border-emerald-500/50 focus-within:bg-[#202C33]' 
-                : 'bg-slate-100 text-slate-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 border-transparent focus-within:border-emerald-500'
+                ? 'bg-[#202C33] text-gray-200 focus-within:ring-1 focus-within:ring-[#00A884]' 
+                : 'bg-[#F0F2F5] text-slate-800 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/20'
             }`}>
-              <span>🔍</span>
+              {/* Icona circolare sfumata Meta AI style */}
+              <div className="w-4 h-4 rounded-full border-2 border-emerald-500/70 border-t-blue-500 shrink-0" />
               <input
                 type="text"
-                placeholder="Cerca materia o tutor..."
+                placeholder="Chiedi all'IA o cerca tutor..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`bg-transparent border-none outline-none w-full text-sm ${isDarkMode ? 'text-gray-200 placeholder-gray-400' : 'text-slate-800 placeholder-slate-400'}`}
+                className={`bg-transparent border-none outline-none w-full text-[14.5px] ${
+                  isDarkMode ? 'text-gray-200 placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-400'
+                }`}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="text-slate-400 text-xs">✕</button>
+                <button onClick={() => setSearchQuery("")} className="text-slate-400 text-xs p-1">✕</button>
               )}
             </div>
           </div>
 
-          {/* Filtri orizzontali */}
-          <div className={`flex gap-2 px-3 py-2 border-b text-xs ${isDarkMode ? 'border-[#222E35]' : 'border-slate-50'}`}>
-            <span className={`${isDarkMode ? 'bg-[#00A884]/20 text-[#00A884]' : 'bg-emerald-100 text-emerald-800'} font-semibold px-3 py-1 rounded-full`}>Tutte</span>
-            <span className={`${isDarkMode ? 'bg-[#202C33] text-gray-300' : 'bg-slate-100 text-slate-600'} font-medium px-3 py-1 rounded-full`}>Compiti</span>
-            <span className={`${isDarkMode ? 'bg-[#202C33] text-gray-300' : 'bg-slate-100 text-slate-600'} font-medium px-3 py-1 rounded-full`}>Verifiche</span>
+          {/* Filtri Orizzontali Stile WhatsApp (Pillole arrotondate morbide) */}
+          <div className={`flex gap-2 px-4 py-2 text-xs overflow-x-auto no-scrollbar border-b ${
+            isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-100'
+          }`}>
+            <span className={`${
+              isDarkMode ? 'bg-[#00A884]/25 text-[#00A884]' : 'bg-[#D8FDD2] text-[#0A332C]'
+            } font-semibold px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}>
+              Tutte
+            </span>
+            <span className={`${
+              isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200'
+            } font-medium px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}>
+              Compiti
+            </span>
+            <span className={`${
+              isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200'
+            } font-medium px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}>
+              Verifiche
+            </span>
+            <span className={`${
+              isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200'
+            } font-medium px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}>
+              Voti Recenti
+            </span>
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
@@ -553,17 +590,20 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     isDarkMode ? 'hover:bg-[#202C33] active:bg-[#222E35]' : 'hover:bg-slate-50 active:bg-slate-100'
                   }`}
                 >
-                  {/* Foto Profilo Circolare con Badge */}
-                  <div className="relative">
-                    <div className={`w-13 h-13 rounded-full flex items-center justify-center text-2xl shadow-xs border ${
-                      isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-100 border-slate-200'
-                    }`}>
-                      {tutor.avatar}
+                  {/* Foto Profilo Circolare 52px con Anello di Stato Verde */}
+                  <div className="relative shrink-0">
+                    <div className={`w-[52px] h-[52px] rounded-full flex items-center justify-center text-2xl shadow-xs transition-transform ${
+                      lastGrade
+                        ? 'p-0.5 ring-2 ring-emerald-500' 
+                        : (isDarkMode ? 'p-0.5 ring-1 ring-[#2A3942]' : 'p-0.5 ring-1 ring-slate-200')
+                    } ${isDarkMode ? 'bg-[#202C33]' : 'bg-slate-100'}`}>
+                      <span>{tutor.avatar}</span>
                     </div>
+
                     {lastGrade && (
                       <span className={`absolute -bottom-1 -right-1 font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 shadow-xs ${
-                        isDarkMode ? 'bg-[#00A884] text-[#111B21] border-[#111B21]' : 'bg-emerald-600 text-white border-white'
-                      }`}>
+                        isDarkMode ? 'bg-[#00A884] text-[#111B21] border-[#111B21]' : 'bg-[#25D366] text-white border-white'
+                      }`} title={`Ultimo voto: ${lastGrade.grade}`}>
                         {lastGrade.grade.toString().charAt(0)}
                       </span>
                     )}
@@ -571,31 +611,55 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
                   {/* Informazioni Contatto e Ultimo Messaggio */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-0.5">
-                      <h2 className={`font-bold text-[15px] truncate flex items-center gap-1.5 ${isDarkMode ? 'text-gray-200' : 'text-slate-900'}`}>
-                        {tutor.name}
-                        <span className={`text-[11px] font-normal ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>• {tutor.subject.split(' ')[0]}</span>
-                      </h2>
-                      <span className={`text-[11px] font-medium ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
+                    <div className="flex justify-between items-baseline mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h2 className={`font-bold text-[16px] truncate ${
+                          isDarkMode ? 'text-[#E9EDEF]' : 'text-slate-900'
+                        }`}>
+                          {tutor.name}
+                        </h2>
+                        <span className={`text-[11px] font-semibold px-2 py-0.2 rounded-full shrink-0 ${
+                          isDarkMode ? 'bg-[#00A884]/20 text-[#00A884]' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        }`}>
+                          {tutor.subject.split(' ')[0]}
+                        </span>
+                      </div>
+                      <span className={`text-xs font-medium shrink-0 ml-2 ${
+                        lastMsg?.role === "user" 
+                          ? (isDarkMode ? 'text-[#8696A0]' : 'text-slate-400')
+                          : 'text-[#25D366] font-semibold'
+                      }`}>
                         {tutorChat?.lastUpdated || "Oggi"}
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center">
-                      <p className={`text-xs truncate pr-2 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`text-[13.5px] truncate flex items-center gap-1.5 ${
+                        isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'
+                      }`}>
                         {lastMsg ? (
                           <>
-                            {lastMsg.role === "user" && <span className={isDarkMode ? 'text-[#8696A0] font-medium' : 'text-slate-400 font-medium'}>Tu: </span>}
-                            {lastMsg.text}
+                            {lastMsg.role === "user" ? (
+                              <span className="text-[#53BDEB] font-bold text-xs shrink-0">✓✓ Tu: </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs shrink-0">✓ </span>
+                            )}
+                            <span className="truncate">{lastMsg.text}</span>
                           </>
                         ) : (
-                          <span className={isDarkMode ? 'text-[#00A884] italic' : 'text-emerald-700 italic'}>Tocca per iniziare i compiti</span>
+                          <span className={`italic font-medium ${
+                            isDarkMode ? 'text-[#00A884]' : 'text-emerald-700'
+                          }`}>
+                            Tocca per iniziare i compiti 💬
+                          </span>
                         )}
                       </p>
                       
                       {lastGrade && (
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border whitespace-nowrap ${
-                          isDarkMode ? 'bg-[#00A884]/10 text-[#00A884] border-[#00A884]/20' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+                          isDarkMode 
+                            ? 'bg-[#00A884]/15 text-[#00A884] border border-[#00A884]/30' 
+                            : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                         }`}>
                           Voto: {lastGrade.grade}
                         </span>
