@@ -11,8 +11,9 @@ import rehypeKatex from "rehype-katex";
 import { useGamification } from "@/hooks/useGamification";
 import { getLevelInfo } from "@/lib/levels";
 import { Tutor, SubjectMemory } from "@/lib/tutors";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 type UIMessage = {
   role: "user" | "model";
@@ -261,13 +262,27 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     
+    setIsLoading(true);
+
     let imagePayload = undefined;
     let localImageUrl = undefined;
 
     if (imgFile) {
-      const { base64, mimeType, dataUrl } = await fileToBase64(imgFile);
-      imagePayload = { base64, mimeType };
-      localImageUrl = dataUrl;
+      try {
+        const { base64, mimeType, dataUrl } = await fileToBase64(imgFile);
+        imagePayload = { base64, mimeType };
+        
+        // Carica su Firebase Storage per mantenere la memoria permanente
+        const safeName = imgFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storageRef = ref(storage, `chat_images/studente_demo_${Date.now()}_${safeName}`);
+        await uploadString(storageRef, dataUrl, 'data_url');
+        localImageUrl = await getDownloadURL(storageRef);
+      } catch (err) {
+        console.error("Errore nel caricamento dell'immagine:", err);
+        alert("Errore durante il caricamento dell'immagine su cloud.");
+        setIsLoading(false);
+        return;
+      }
     }
 
     const tutorId = selectedTutor.id;
@@ -285,7 +300,6 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       [tutorId]: { messages: newMessages, lastUpdated: nowTime }
     };
     setChatsByTutor(updatedChats);
-    setIsLoading(true);
 
     const history: Content[] = [];
     prevMsgs.forEach(m => {
@@ -369,7 +383,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         safeChats[tid].messages = safeChats[tid].messages.map((m: any) => ({
           role: m.role,
           text: m.text,
-          time: m.time
+          time: m.time,
+          imageUrl: m.imageUrl || null
         }));
       });
 
