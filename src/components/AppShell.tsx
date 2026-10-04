@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Chat from "./Chat";
 import GamificationProfile from "./GamificationProfile";
 import { useTutors } from "@/hooks/useTutors";
+import TutorManager from "./TutorManager";
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<"chat" | "profile">("chat");
@@ -27,6 +28,7 @@ export default function AppShell() {
   };
 
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isTutorManagerOpen, setIsTutorManagerOpen] = useState(false);
 
   if (loading) {
     return (
@@ -48,9 +50,44 @@ export default function AppShell() {
         )}
       </div>
 
+      {/* FAB: Aggiungi/Gestisci Tutor (visibile solo nella lista chat) */}
+      {activeTab === "chat" && !isChatOpen && (
+        <button
+          onClick={() => setIsTutorManagerOpen(true)}
+          className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center transition-transform active:scale-95 z-40 ${
+            isDarkMode ? 'bg-[#00A884] text-[#111B21]' : 'bg-[#008069] text-white'
+          }`}
+          aria-label="Gestisci Tutor"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+      )}
+
+      {/* Modal Gestione Tutor */}
+      {isTutorManagerOpen && (
+        <div className="absolute inset-0 z-50 flex flex-col bg-white overflow-y-auto">
+          <div className="sticky top-0 z-10 flex items-center gap-4 p-4 bg-white border-b border-gray-200 shadow-sm">
+            <button 
+              onClick={() => setIsTutorManagerOpen(false)}
+              className="p-2 -ml-2 rounded-full hover:bg-gray-100"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+              </svg>
+            </button>
+            <h2 className="font-bold text-lg text-gray-800">Gestione Tutor</h2>
+          </div>
+          <div className="p-4 bg-gray-50 flex-1">
+            <TutorManager />
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation Bar (Hidden when chat is open) */}
       {!isChatOpen && (
-        <div className={`flex items-center justify-around border-t pb-safe z-50 ${isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-200'}`}>
+        <div className={`flex items-center justify-around border-t pb-safe z-30 ${isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-200'}`}>
           <button 
             onClick={() => setActiveTab("chat")}
             className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors ${

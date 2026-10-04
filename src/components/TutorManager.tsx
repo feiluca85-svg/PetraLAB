@@ -44,9 +44,10 @@ export default function TutorManager() {
       await setDoc(doc(db, "petralab_tutors", formData.id), formData);
       setEditingTutor(null);
       setIsCreating(false);
-    } catch (e) {
+      alert("Tutor salvato con successo!");
+    } catch (e: any) {
       console.error(e);
-      alert("Errore durante il salvataggio");
+      alert(`Errore durante il salvataggio: ${e.message}`);
     }
   };
 
@@ -54,8 +55,10 @@ export default function TutorManager() {
     if (confirm("Sei sicuro di voler eliminare questo tutor?")) {
       try {
         await deleteDoc(doc(db, "petralab_tutors", id));
-      } catch (e) {
+        alert("Tutor eliminato!");
+      } catch (e: any) {
         console.error(e);
+        alert(`Errore durante l'eliminazione: ${e.message}`);
       }
     }
   };

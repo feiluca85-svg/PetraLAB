@@ -291,8 +291,13 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       return { role: m.role, parts: parts };
     });
 
-    const currentMem = subjectsMemory[tutorId];
-    const response = await sendMessage(userText, history, imagePayload, selectedTutor, currentMem);
+    let response;
+    try {
+      response = await sendMessage(userText, history, imagePayload, selectedTutor, currentMem);
+    } catch (e: any) {
+      console.error("Critical chat error:", e);
+      response = { success: false, error: "Si è verificato un errore critico di connessione con l'AI." };
+    }
     
     if (response.success && response.text) {
       const finalMsgs: UIMessage[] = [
