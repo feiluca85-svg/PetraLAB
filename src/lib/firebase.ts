@@ -3,12 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC12o-f0D7yEUGb6LdQQK2KthGp10pMR2w",
-  authDomain: "apptito-44c72.firebaseapp.com",
-  projectId: "apptito-44c72",
-  storageBucket: "apptito-44c72.firebasestorage.app",
-  messagingSenderId: "730853120876",
-  appId: "1:730853120876:web:3c582359cf0f18ed563149"
+  apiKey: "AIzaSyDnj9WskuYQJ-Y4aTtCo79ntXCbuktMSyE",
+  authDomain: "petralab-e1536.firebaseapp.com",
+  projectId: "petralab-e1536",
+  storageBucket: "petralab-e1536.firebasestorage.app",
+  messagingSenderId: "196108112105",
+  appId: "1:196108112105:web:0ab0a49964e7a05d6be078",
+  measurementId: "G-P07JFHN5EZ"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
