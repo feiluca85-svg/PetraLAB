@@ -39,8 +39,9 @@ export async function sendMessage(
     const result = await chat.sendMessage(parts);
     
     return { success: true, text: result.response.text() };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Error:", error);
-    return { success: false, error: "Scusa, ho avuto un momento di confusione. Riprova!" };
+    const msg = error?.message || "Errore sconosciuto";
+    return { success: false, error: `[DEBUG API] ${msg}` };
   }
 }
