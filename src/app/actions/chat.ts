@@ -41,7 +41,12 @@ export async function sendMessage(
     return { success: true, text: result.response.text() };
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    const msg = error?.message || "Errore sconosciuto";
-    return { success: false, error: `[DEBUG API] ${msg}` };
+    const msg = error?.message || "";
+    
+    if (msg.includes("503 Service Unavailable") || msg.includes("high demand")) {
+      return { success: false, error: "I server di Google sono momentaneamente sovraccarichi per le troppe richieste. Riprova tra qualche secondo! ⏳" };
+    }
+    
+    return { success: false, error: "Scusa, ho avuto un momento di confusione. Riprova!" };
   }
 }
