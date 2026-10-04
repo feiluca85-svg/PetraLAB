@@ -36,6 +36,7 @@ export default function Chat() {
     }
   }, [messages]);
   const [input, setInput] = useState("");
+  const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -106,34 +107,37 @@ export default function Chat() {
   };
 
   const speakText = (text: string) => {
-    if (!window.speechSynthesis) return;
+    if (!("speechSynthesis" in window)) return;
     
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-
-    // Pulisce il testo dal markdown per una lettura migliore
-    const cleanText = text.replace(/[*#_`]/g, '').replace(/\$\$.*?\$\$/g, 'un\'equazione');
+    window.speechSynthesis.cancel();
     
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'it-IT';
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.text = text.replace(/[*#_]/g, '');
     
-    // Cerchiamo la voce migliore tra quelle installate nel dispositivo
+    utterance.lang = selectedTutor?.voiceLang || "it-IT";
+    utterance.rate = 1.15;
+    
     const voices = window.speechSynthesis.getVoices();
-    // Le voci "Google", "Siri" o "Premium" sono solitamente molto più naturali
-    const premiumVoice = voices.find(v => v.lang.includes('it') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Siri') || v.name.includes('Alice')));
-    if (premiumVoice) {
-      utterance.voice = premiumVoice;
+    
+    if (voices.length > 0) {
+      const langVoices = voices.filter(v => v.lang.startsWith(utterance.lang.substring(0,2)));
+      let chosenVoice = null;
+      
+      if (selectedTutor?.gender === "female") {
+        chosenVoice = langVoices.find(v => (v.name.includes("Premium") || v.name.includes("Alice") || v.name.includes("Elsa") || v.name.includes("Samantha")) && !v.name.includes("Male"));
+      } else if (selectedTutor?.gender === "male") {
+        chosenVoice = langVoices.find(v => v.name.includes("Luca") || v.name.includes("Giorgio") || v.name.includes("Arthur") || v.name.includes("Daniel") || v.name.includes("Male"));
+      }
+      
+      if (!chosenVoice) {
+        chosenVoice = langVoices.find(v => v.name.includes("Premium") || v.name.includes("Enhanced") || v.name.includes("Google")) || langVoices[0];
+      }
+      
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
+      }
     }
     
-    utterance.pitch = 1.05; // Tono naturale
-    utterance.rate = 1.15; // Velocità aumentata (prima era 0.95, troppo lenta!)
-    
-    utterance.onend = () => setIsSpeaking(false);
-    
-    setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
 

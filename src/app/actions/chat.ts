@@ -15,7 +15,8 @@ const FALLBACK_MODELS = [
 export async function sendMessage(
   message: string, 
   history: Content[],
-  image?: { base64: string; mimeType: string }
+  image?: { base64: string; mimeType: string },
+  systemInstruction?: string
 ) {
   try {
     // Costruisci il payload: testo ed eventuale immagine
@@ -47,7 +48,7 @@ export async function sendMessage(
       try {
         const currentModel = genAI.getGenerativeModel({
           model: modelName,
-          systemInstruction: SYSTEM_INSTRUCTION
+          systemInstruction: systemInstruction || SYSTEM_INSTRUCTION
         });
         
         // Inizializza la chat per questo specifico modello passando la cronologia
