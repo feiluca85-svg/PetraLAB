@@ -443,7 +443,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 </button>
                 <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-lg border p-2 hidden group-hover:block z-50 ${isDarkMode ? 'bg-[#202C33] border-[#222E35]' : 'bg-white border-slate-100'}`}>
                   <div className={`px-4 py-2 text-xs font-bold border-b mb-1 ${isDarkMode ? 'text-[#8696A0] border-[#222E35]' : 'text-slate-400 border-slate-100'}`}>
-                    Versione: v1.0.2
+                    Versione: v1.0.3
                   </div>
                   <button onClick={() => window.location.reload()} className={`w-full text-left px-4 py-2 text-sm rounded-lg ${isDarkMode ? 'text-gray-200 hover:bg-[#111B21]' : 'text-slate-700 hover:bg-slate-50'}`}>
                     Aggiorna App
