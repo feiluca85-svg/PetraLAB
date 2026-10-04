@@ -5,8 +5,8 @@ const apiKey = process.env.GEMINI_API_KEY || '';
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// We use the flash model for fast interactions as required by the Socratic tutor
+// We use the standard pro model for reliability
 export const tutorModel = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-pro",
   systemInstruction: "Sei un tutor socratico amichevole per ragazzi delle scuole medie (12-13 anni). Non dare mai la soluzione diretta, ma fai domande mirate per sbloccare il ragionamento. Usa un linguaggio semplice e incoraggiante."
 });
