@@ -28,7 +28,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // PIN predefinito per la figlia (configurabile)
-const STUDENT_PIN = "1234";
+const STUDENT_PIN = "1430";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AuthRole>(null);
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginAsAdmin = (user: string, pass: string) => {
     // Credenziali demo amministratore (personalizzabili)
-    if (user.trim().toLowerCase() === "admin" && pass === "admin123") {
+    if (user.trim().toLowerCase() === "admin" && pass === "3019") {
       setRole("admin");
       sessionStorage.setItem("petralab_role", "admin");
       registerCurrentDevice();
