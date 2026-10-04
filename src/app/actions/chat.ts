@@ -41,7 +41,6 @@ export async function sendMessage(
     return { success: true, text: result.response.text() };
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    const msg = error?.message || "Errore sconosciuto";
-    return { success: false, error: `[DEBUG API] Errore 2.5: ${msg}` };
+    return { success: false, error: "Scusa, ho avuto un momento di confusione. Riprova!" };
   }
 }
