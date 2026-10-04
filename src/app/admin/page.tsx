@@ -163,7 +163,9 @@ export default function AdminDashboard() {
         </section>
         
         {/* Gestione Tutor AI (CRUD) */}
-        <TutorManager />
+        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm mt-8">
+          <TutorManager />
+        </div>
 
         {/* Sezione Registro Voti & Lacune per Materia */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-8">

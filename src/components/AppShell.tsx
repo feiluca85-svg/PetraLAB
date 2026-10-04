@@ -67,21 +67,11 @@ export default function AppShell() {
 
       {/* Modal Gestione Tutor */}
       {isTutorManagerOpen && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-white overflow-y-auto">
-          <div className="sticky top-0 z-10 flex items-center gap-4 p-4 bg-white border-b border-gray-200 shadow-sm">
-            <button 
-              onClick={() => setIsTutorManagerOpen(false)}
-              className="p-2 -ml-2 rounded-full hover:bg-gray-100"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-              </svg>
-            </button>
-            <h2 className="font-bold text-lg text-gray-800">Gestione Tutor</h2>
-          </div>
-          <div className="p-4 bg-gray-50 flex-1">
-            <TutorManager />
-          </div>
+        <div className="absolute inset-0 z-50 flex flex-col overflow-hidden animate-in fade-in duration-200">
+          <TutorManager 
+            isDarkMode={isDarkMode} 
+            onClose={() => setIsTutorManagerOpen(false)} 
+          />
         </div>
       )}
 

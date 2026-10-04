@@ -35,6 +35,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [subjectsMemory, setSubjectsMemory] = useState<Record<string, SubjectMemory>>({});
   const [showGradesModal, setShowGradesModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showHomeMenu, setShowHomeMenu] = useState(false);
+  const [showChatMenu, setShowChatMenu] = useState(false);
 
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -417,12 +419,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       {!selectedTutor ? (
         <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
           {/* Header WhatsApp Top */}
-          <div className={`${isDarkMode ? 'bg-[#202C33]' : 'bg-[#008069]'} text-white px-4 pt-4 pb-3 flex justify-between items-center shadow-md`}>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">PetraLAB</h1>
-              <p className={`text-[11px] ${isDarkMode ? 'text-gray-300' : 'text-emerald-100'} flex items-center gap-1`}>
-                <span>{levelInfo.title}</span> • <span>{stats.xp} XP</span>
-              </p>
+          <div className={`${isDarkMode ? 'bg-[#202C33]' : 'bg-[#008069]'} text-white px-4 pt-3.5 pb-3 flex justify-between items-center shadow-md relative z-30`}>
+            <div className="flex items-center gap-2.5">
+              <img 
+                src="/icon.png" 
+                alt="PetraLAB" 
+                className="w-9 h-9 rounded-full border border-white/25 object-cover shadow-xs bg-emerald-950 shrink-0" 
+              />
+              <div>
+                <h1 className="text-xl font-bold tracking-tight">PetraLAB</h1>
+                <p className={`text-[11px] ${isDarkMode ? 'text-gray-300' : 'text-emerald-100'} flex items-center gap-1`}>
+                  <span>{levelInfo.title}</span> • <span>{stats.xp} XP</span>
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-1">
@@ -441,23 +450,56 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 </button>
               )}
 
-              <div className="relative group">
-                <button className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white">
+              <div className="relative">
+                <button 
+                  onClick={() => setShowHomeMenu(prev => !prev)}
+                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white active:scale-95"
+                  title="Altre opzioni"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                     <path fillRule="evenodd" d="M10.5 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" clipRule="evenodd" />
                   </svg>
                 </button>
-                <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-lg border p-2 hidden group-hover:block z-50 ${isDarkMode ? 'bg-[#202C33] border-[#222E35]' : 'bg-white border-slate-100'}`}>
-                  <div className={`px-4 py-2 text-xs font-bold border-b mb-1 ${isDarkMode ? 'text-[#8696A0] border-[#222E35]' : 'text-slate-400 border-slate-100'}`}>
-                    Versione: v1.0.3
-                  </div>
-                  <button onClick={() => window.location.reload()} className={`w-full text-left px-4 py-2 text-sm rounded-lg ${isDarkMode ? 'text-gray-200 hover:bg-[#111B21]' : 'text-slate-700 hover:bg-slate-50'}`}>
-                    Aggiorna App
-                  </button>
-                  <Link href="/admin" className={`block w-full text-left px-4 py-2 text-sm rounded-lg ${isDarkMode ? 'text-gray-200 hover:bg-[#111B21]' : 'text-slate-700 hover:bg-slate-50'}`}>
-                    Pannello Genitore
-                  </Link>
-                </div>
+
+                {showHomeMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowHomeMenu(false)}
+                    />
+                    <div className={`absolute right-0 top-full mt-2 w-52 rounded-2xl shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                      isDarkMode 
+                        ? 'bg-[#233138] border-[#2E3C44] text-[#E9EDEF]' 
+                        : 'bg-white border-slate-100 text-slate-800'
+                    }`}>
+                      <div className={`px-4 py-2 border-b text-xs flex justify-between items-center ${
+                        isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
+                      }`}>
+                        <span>Versione App</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.0.4</span>
+                      </div>
+                      <button 
+                        onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>🔄</span>
+                        <span>Ricarica / Aggiorna</span>
+                      </button>
+                      <Link 
+                        href="/admin" 
+                        onClick={() => setShowHomeMenu(false)}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>⚙️</span>
+                        <span>Pannello Genitore</span>
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
 
             </div>
@@ -602,27 +644,72 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowGradesModal(true)}
-                className="bg-black/15 hover:bg-black/25 text-white text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 transition-all"
+                className="bg-black/15 hover:bg-black/25 text-white text-xs px-2.5 py-1.5 rounded-full font-semibold flex items-center gap-1 transition-all active:scale-95"
                 title="Diario Voti e Lacune"
               >
                 📝 <span className="hidden sm:inline">Voti</span> ({currentTutorMemory?.grades?.length || 0})
               </button>
 
-              <button
-                onClick={() => window.location.reload()}
-                className="p-1.5 rounded-full hover:bg-black/10 text-white"
-                title="Ricarica"
-              >
-                🔄
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowChatMenu(prev => !prev)}
+                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white active:scale-95"
+                  title="Altre opzioni"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M10.5 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" clipRule="evenodd" />
+                  </svg>
+                </button>
 
-              <Link
-                href="/admin"
-                className="p-1.5 rounded-full hover:bg-black/10 text-white"
-                title="Pannello Amministratore"
-              >
-                🛡️
-              </Link>
+                {showChatMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowChatMenu(false)}
+                    />
+                    <div className={`absolute right-0 top-full mt-2 w-52 rounded-2xl shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                      isDarkMode 
+                        ? 'bg-[#233138] border-[#2E3C44] text-[#E9EDEF]' 
+                        : 'bg-white border-slate-100 text-slate-800'
+                    }`}>
+                      <div className={`px-4 py-2 border-b text-xs flex justify-between items-center ${
+                        isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
+                      }`}>
+                        <span>Versione App</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.0.4</span>
+                      </div>
+                      <button 
+                        onClick={() => { setShowChatMenu(false); setShowGradesModal(true); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>📊</span>
+                        <span>Diario Voti & Lacune</span>
+                      </button>
+                      <button 
+                        onClick={() => { setShowChatMenu(false); window.location.reload(); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>🔄</span>
+                        <span>Ricarica Chat</span>
+                      </button>
+                      <Link 
+                        href="/admin" 
+                        onClick={() => setShowChatMenu(false)}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>⚙️</span>
+                        <span>Pannello Genitore</span>
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

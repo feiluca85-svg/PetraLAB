@@ -4,8 +4,8 @@
   "description": "Tutor Socratico Intelligente",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e3a8a",
-  "theme_color": "#2563eb",
+  "background_color": "#111B21",
+  "theme_color": "#008069",
   "icons": [
     {
       "src": "/icon.png",
