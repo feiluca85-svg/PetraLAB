@@ -267,8 +267,18 @@ export default function Chat() {
             <span>{stats.streak}</span>
           </div>
 
+          {/* Bottone Ricarica */}
+          <button
+            onClick={() => window.location.reload()}
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-sm"
+            title="Ricarica applicazione"
+          >
+            🔄
+          </button>
+
           {/* Icona Gestione / Esci */}
           <Link
+            href="/admin"
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white"
             title="Pannello Amministratore"
           >

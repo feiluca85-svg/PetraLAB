@@ -35,15 +35,37 @@ export async function sendMessage(
       parts.unshift({ text: "Spiegami cosa vedi in questa immagine e aiutami a risolverlo passo passo." });
     }
 
-    // Invia il nuovo messaggio
-    const result = await chat.sendMessage(parts);
+    // Invia il nuovo messaggio con retry automatico in caso di temporaneo sovraccarico 503
+    let result = null;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        result = await chat.sendMessage(parts);
+        break; // Successo!
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || "";
+        if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) {
+          // Attendi 1.2 secondi prima di riprovare
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+          continue;
+        }
+        // Se è un altro errore, esci subito
+        throw err;
+      }
+    }
+
+    if (!result && lastError) {
+      throw lastError;
+    }
     
-    return { success: true, text: result.response.text() };
+    return { success: true, text: result!.response.text() };
   } catch (error: any) {
     console.error("Gemini Error:", error);
     const msg = error?.message || "";
     
-    if (msg.includes("503 Service Unavailable") || msg.includes("high demand")) {
+    if (msg.includes("503") || msg.includes("high demand")) {
       return { success: false, error: "I server di Google sono momentaneamente sovraccarichi per le troppe richieste. Riprova tra qualche secondo! ⏳" };
     }
     
