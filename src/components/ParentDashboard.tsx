@@ -19,7 +19,7 @@ export default function ParentDashboard({
   const { devices, removeDevice, logout } = useAuth();
   const { tutors } = useTutors();
 
-  const [activeSubTab, setActiveSubTab] = useState<"security" | "grades" | "chats" | "tutors">("security");
+  const [activeSubTab, setActiveSubTab] = useState<"security" | "grades" | "chats" | "tutors" | "agenda">("agenda");
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [childStats, setChildStats] = useState({ xp: 0, streak: 1 });
   const [childChat, setChildChat] = useState<Array<{ role: string; text: string }>>([]);
@@ -120,6 +120,17 @@ export default function ParentDashboard({
         isDarkMode ? "bg-[#111B21] border-[#222E35]" : "bg-white border-slate-100"
       }`}>
         <button
+          onClick={() => setActiveSubTab("agenda")}
+          className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all flex gap-1 items-center ${
+            activeSubTab === "agenda"
+              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
+              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
+          }`}
+        >
+          <span className="text-emerald-500">✨</span> Diario Nuvola
+        </button>
+
+        <button
           onClick={() => setActiveSubTab("security")}
           className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
             activeSubTab === "security"
@@ -167,6 +178,57 @@ export default function ParentDashboard({
       {/* Contenuto principale a schede */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
         
+        {/* ========================================================= */}
+        {/* 0. SEZIONE DIARIO E NUVOLA (SCREENSHOT MAGICO)            */}
+        {/* ========================================================= */}
+        {activeSubTab === "agenda" && (
+          <div className="space-y-4">
+            <div className={`p-5 rounded-2xl border ${
+              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            }`}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                  📸
+                </div>
+                <div>
+                  <h3 className="font-bold text-base flex items-center gap-2">
+                    Lo Screenshot Magico
+                    <span className="text-[9px] uppercase tracking-wider bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">New</span>
+                  </h3>
+                  <p className={`text-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                    Carica i compiti da Nuvola in 3 secondi netti.
+                  </p>
+                </div>
+              </div>
+              
+              <div className={`p-4 rounded-xl border-2 border-dashed text-center flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                isDarkMode ? 'border-[#2A3942] hover:bg-[#2A3942]/50' : 'border-slate-300 hover:bg-slate-50'
+              }`}>
+                <span className="text-3xl mb-2 opacity-50">📱</span>
+                <p className={`font-bold text-sm ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>Tocca per caricare lo screenshot</p>
+                <p className={`text-xs mt-1 max-w-[250px] ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
+                  L'IA leggerà l'immagine e aggiungerà automaticamente compiti e verifiche al Diario di Petra.
+                </p>
+              </div>
+            </div>
+
+            {/* List of current agenda items (Mock) */}
+            <div className={`rounded-2xl border overflow-hidden ${
+              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            }`}>
+              <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? "border-[#2A3942]" : "border-slate-100"}`}>
+                <h3 className="font-bold text-sm">Compiti in Sospeso</h3>
+                <span className="text-xs font-semibold text-slate-400">0 Attivi</span>
+              </div>
+              <div className="p-8 text-center opacity-60">
+                <span className="text-3xl mb-2 block">🧹</span>
+                <p className="text-sm font-semibold">Tutto pulito!</p>
+                <p className="text-xs">Nessun compito inserito finora.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ========================================================= */}
         {/* 1. SEZIONE CHI ACCEDE & DISPOSITIVI (SICUREZZA GENITORE)  */}
         {/* ========================================================= */}
