@@ -841,7 +841,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                          const parts = ds.split('-');
                          if (parts.length === 3) {
                             const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
-                            return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+                            const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                            return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
                          }
                          return ds;
                       };
