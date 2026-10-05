@@ -226,6 +226,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     utterance.lang = selectedTutor?.voiceLang || "it-IT";
     utterance.rate = voiceSpeed;
     
+    if (selectedTutor?.voiceURI) {
+      const voices = window.speechSynthesis.getVoices();
+      const exactVoice = voices.find(v => v.voiceURI === selectedTutor.voiceURI);
+      if (exactVoice) utterance.voice = exactVoice;
+    }
+    
     const voices = window.speechSynthesis.getVoices();
     
     if (voices.length > 0) {

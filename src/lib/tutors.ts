@@ -18,6 +18,7 @@ export type Tutor = {
   avatar: string;
   gender: "male" | "female";
   voiceLang: string;
+  voiceURI?: string;
   prompt: string;
   greeting: string;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tutor } from "@/lib/tutors";
 import { useTutors } from "@/hooks/useTutors";
 import { db } from "@/lib/firebase";
@@ -27,6 +27,15 @@ export default function TutorManager({
   const [isCreating, setIsCreating] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Tutor>>({});
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const loadVoices = () => setAvailableVoices(window.speechSynthesis.getVoices());
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
 
   const handleEdit = (tutor: Tutor) => {
     setEditingTutor(tutor);
@@ -63,6 +72,7 @@ export default function TutorManager({
         avatar: formData.avatar || "🦉",
         gender: formData.gender || "male",
         voiceLang: formData.voiceLang || "it-IT",
+        voiceURI: formData.voiceURI,
         greeting: formData.greeting || "Ciao! Come posso aiutarti oggi?",
         prompt: formData.prompt || "Sei un tutor socratico amichevole per ragazzi delle scuole medie."
       });
