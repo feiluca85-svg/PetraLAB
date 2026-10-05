@@ -46,6 +46,20 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   
   // Voice states
   const [isListening, setIsListening] = useState(false);
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
+
+  useEffect(() => {
+    const savedSpeed = localStorage.getItem("petralab_voice_speed");
+    if (savedSpeed) setVoiceSpeed(parseFloat(savedSpeed));
+  }, []);
+
+  const toggleVoiceSpeed = () => {
+    setVoiceSpeed(prev => {
+      const next = prev === 1.0 ? 0.8 : prev === 0.8 ? 1.2 : 1.0;
+      localStorage.setItem("petralab_voice_speed", next.toString());
+      return next;
+    });
+  };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -186,7 +200,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     utterance.text = text.replace(/[*#_`]/g, '');
     
     utterance.lang = selectedTutor?.voiceLang || "it-IT";
-    utterance.rate = 1.15;
+    utterance.rate = voiceSpeed;
     
     const voices = window.speechSynthesis.getVoices();
     
@@ -784,7 +798,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.0.4</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.1.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowChatMenu(false); setShowGradesModal(true); }}
@@ -803,6 +817,15 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       >
                         <span>🔄</span>
                         <span>Ricarica Chat</span>
+                      </button>
+                      <button 
+                        onClick={() => { toggleVoiceSpeed(); setShowChatMenu(false); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{voiceSpeed === 1.0 ? '🐇' : voiceSpeed === 1.2 ? '🚀' : '🐢'}</span>
+                        <span>Velocità Voce: {voiceSpeed === 1.0 ? 'Normale' : voiceSpeed === 1.2 ? 'Veloce' : 'Lenta'}</span>
                       </button>
                       <Link 
                         href="/admin" 

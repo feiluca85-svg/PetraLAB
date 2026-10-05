@@ -15,11 +15,16 @@ export default function AppShell() {
   
   const { tutors, loading } = useTutors();
 
-  // Carica preferenza tema scuro/chiaro
   useEffect(() => {
     const savedTheme = localStorage.getItem("petralab_theme");
     if (savedTheme === "dark") {
       setIsDarkMode(true);
+    } else if (savedTheme === "light") {
+      setIsDarkMode(false);
+    } else {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setIsDarkMode(true);
+      }
     }
   }, []);
 

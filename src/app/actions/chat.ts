@@ -26,6 +26,13 @@ export async function sendMessage(
     if (tutor) {
       dynamicInstruction = buildTutorPrompt(tutor, subjectMemory);
     }
+    
+    // Regola per forzare il rendering matematico
+    dynamicInstruction += `\n\nREGOLE DI FORMATTAZIONE MATEMATICA: 
+- Usa SEMPRE la formattazione LaTeX per numeri, formule ed espressioni. 
+- Usa il doppio dollaro $$ per le formule centrate su nuova riga (es. $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}$$).
+- Usa il dollaro singolo $ per formule e numeri all'interno del testo (es. $x = 5$).
+- Non usare mai testo normale per espressioni come x^2, usa $x^2$.`;
 
     // Costruisci il payload: testo ed eventuale immagine
     const parts: Part[] = [];
