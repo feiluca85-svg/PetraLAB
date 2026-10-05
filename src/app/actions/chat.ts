@@ -154,37 +154,39 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non include
 }`;
 
     let result = null;
+    let lastError = null;
 
-    // Proviamo con il modello migliore per vision
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+    for (const modelName of FALLBACK_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Image,
+              mimeType: mimeType,
+            }
+          }
+        ]);
+        break;
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || String(err);
+        console.warn(`Fallback in parseNuvola (${modelName}):`, msg);
+        
+        if (msg.includes("429") || msg.includes("exceeded") || msg.includes("403") || msg.includes("404") || msg.includes("503")) {
+          continue; 
+        }
+        break;
+      }
+    }
 
-    try {
-      result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: base64Image,
-            mimeType: mimeType,
-          }
-        }
-      ]);
-    } catch (err: any) {
-      // Fallback a flash se pro fallisce (es. quota superata)
-      console.warn("Fallback a flash per parseNuvola", err);
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
-      result = await fallbackModel.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: base64Image,
-            mimeType: mimeType,
-          }
-        }
-      ]);
+    if (!result) {
+      throw lastError || new Error("Tutti i modelli di fallback sono falliti.");
     }
 
     let text = result.response.text();
-    text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+    text = text.replace(/\s*```json/gi, "").replace(/```/g, "").trim();
 
     try {
       const data = JSON.parse(text);
