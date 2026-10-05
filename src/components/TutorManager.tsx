@@ -6,7 +6,14 @@ import { useTutors } from "@/hooks/useTutors";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
-const EMOJI_PRESETS = ["🦉", "📐", "🏛️", "🧪", "🌍", "🇬🇧", "🎨", "📜", "💻", "🔬", "⚽", "📖"];
+const EMOJI_PRESETS = [
+  "👩‍🏫", "👨‍🏫", "👩‍🔬", "👨‍🔬", "👩‍💻", "👨‍💻", "👩‍🚀", "👨‍🚀", "👩‍🎨", "👨‍🎨", "🥷", "🧙‍♀️", "🧙‍♂️", 
+  "🦉", "🦊", "🦁", "🐙", "🦖", "🦄", "🤖", "👽", "👻",
+  "📐", "🧮", "🧬", "🧪", "🔬", "🔭", "📡", "💻", "⌨️", 
+  "🏛️", "🌍", "🗺️", "🌋", "🏺", "📜", "📚", "📖", "📝",
+  "🇬🇧", "🇫🇷", "🇪🇸", "🇩🇪", "🇮🇹", "🎭", "🎨", "🎬", "🎸", 
+  "⚽", "🏀", "🎾", "🥋", "♟️", "🧩", "💡", "🧠", "🌱"
+];
 
 export default function TutorManager({ 
   isDarkMode = false, 

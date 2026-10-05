@@ -178,19 +178,63 @@ export default function ParentDashboard({
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-500">
-                  Controllo Accessi Attivo
+                  Stato Sicurezza
                 </span>
                 <span className="flex items-center gap-1.5 text-xs font-bold text-green-500">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  Server Cloud Connesso
+                  Protetto da PIN
                 </span>
               </div>
               <p className={`text-sm ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
-                Qui puoi verificare in tempo reale quando tua figlia o tu effettuate l&apos;accesso a PetraLAB e da quale dispositivo (telefono o computer).
+                L'app è protetta da PIN. Per far accedere tua figlia da un nuovo dispositivo (come il suo tablet), visita il sito e inserisci il PIN Studente: <strong className="text-emerald-500">1430</strong>.
               </p>
             </div>
 
-            {/* Cronologia Accessi in Tempo Reale */}
+            {/* Sessioni Attive (Dispositivi Autorizzati) */}
+            <div className={`rounded-2xl border overflow-hidden ${
+              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            }`}>
+              <div className={`p-4 border-b ${isDarkMode ? "border-[#2A3942]" : "border-slate-100"}`}>
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  <span>🟢</span>
+                  <span>Dispositivi Attualmente Connessi</span>
+                </h3>
+                <p className={`text-xs mt-1 ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                  Questi sono i telefoni o computer che non hanno bisogno del PIN perché hanno già fatto l'accesso.
+                </p>
+              </div>
+              <div className={`divide-y ${isDarkMode ? "divide-[#2A3942]" : "divide-slate-100"}`}>
+                {devices.map((dev) => (
+                  <div key={dev.id} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${
+                        dev.isCurrent ? (isDarkMode ? "bg-emerald-950/60 text-emerald-400" : "bg-emerald-100 text-emerald-700") : (isDarkMode ? "bg-[#111B21] text-gray-400" : "bg-slate-100 text-slate-500")
+                      }`}>
+                        {dev.name.includes("iPhone") || dev.name.includes("Android") ? "📱" : "💻"}
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm block">
+                          {dev.name} {dev.isCurrent && "(Questo Dispositivo)"}
+                        </span>
+                        <span className={`text-[11px] ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                          {dev.isCurrent ? "In uso proprio ora" : `Visto l'ultima volta il ${dev.lastActive}`}
+                        </span>
+                      </div>
+                    </div>
+                    {!dev.isCurrent && (
+                      <button
+                        onClick={() => removeDevice(dev.id)}
+                        className="text-red-500 hover:text-white hover:bg-red-500 font-bold px-3 py-1.5 rounded-full text-xs transition-colors border border-red-500/30"
+                      >
+                        Scollega
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cronologia Accessi */}
             <div className={`rounded-2xl border overflow-hidden ${
               isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
@@ -199,24 +243,19 @@ export default function ParentDashboard({
               }`}>
                 <div>
                   <h3 className="font-bold text-base flex items-center gap-2">
-                    <span>📱</span>
-                    <span>Registro Ultimi Accessi</span>
+                    <span>🕒</span>
+                    <span>Storico Accessi</span>
                   </h3>
                   <p className={`text-xs mt-0.5 ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
-                    Sincronizzato da tutti i dispositivi
+                    Chi ha inserito il PIN recentemente
                   </p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                  isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-emerald-50 text-emerald-800"
-                }`}>
-                  {accessLogs.length} rilevati
-                </span>
               </div>
 
               <div className={`divide-y ${isDarkMode ? "divide-[#2A3942]" : "divide-slate-100"}`}>
                 {accessLogs.length === 0 ? (
                   <div className="p-6 text-center text-sm text-gray-400">
-                    Nessun accesso recente registrato nel cloud. Fai login per vederlo apparire qui!
+                    Nessun accesso recente registrato.
                   </div>
                 ) : (
                   accessLogs.map((log) => (
@@ -230,21 +269,11 @@ export default function ParentDashboard({
                           {log.role === "student" ? "👧" : "🛡️"}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm truncate">
-                              {log.who}
-                            </span>
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${
-                              log.role === "student"
-                                ? "bg-purple-500/10 text-purple-400"
-                                : "bg-blue-500/10 text-blue-400"
-                            }`}>
-                              {log.role === "student" ? "Alunna" : "Genitore"}
-                            </span>
-                          </div>
+                          <span className="font-bold text-sm block truncate">
+                            {log.role === "student" ? "Alunna (1430)" : "Genitore (admin)"}
+                          </span>
                           <p className={`text-xs truncate ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                            {log.deviceType === "mobile" ? "📱 " : "💻 "}
-                            {log.device}
+                            da {log.device}
                           </p>
                         </div>
                       </div>
@@ -262,38 +291,6 @@ export default function ParentDashboard({
                     </div>
                   ))
                 )}
-              </div>
-            </div>
-
-            {/* Sessioni Attive del Dispositivo */}
-            <div className={`p-4 rounded-2xl border ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
-            }`}>
-              <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-                <span>💻</span>
-                <span>Sessioni e Dispositivi Riconosciuti</span>
-              </h3>
-              <div className="space-y-2">
-                {devices.map((dev) => (
-                  <div key={dev.id} className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
-                    isDarkMode ? "bg-[#111B21] border-[#2A3942]" : "bg-slate-50 border-slate-200"
-                  }`}>
-                    <div>
-                      <span className="font-bold">{dev.name}</span>
-                      <span className="block text-[11px] text-gray-400 mt-0.5">
-                        {dev.isCurrent ? "Dispositivo corrente • Attivo ora" : `Ultima attività: ${dev.lastActive}`}
-                      </span>
-                    </div>
-                    {!dev.isCurrent && (
-                      <button
-                        onClick={() => removeDevice(dev.id)}
-                        className="text-red-500 hover:text-red-600 font-bold px-2 py-1"
-                      >
-                        Revoca
-                      </button>
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
           </div>

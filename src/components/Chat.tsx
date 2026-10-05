@@ -244,12 +244,40 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(",")[1];
-        resolve({ base64, mimeType: file.type, dataUrl: result });
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Compressione: max 1024x1024
+          const MAX_SIZE = 1024;
+          if (width > height && width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          } else if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            const result = reader.result as string;
+            return resolve({ base64: result.split(",")[1], mimeType: file.type, dataUrl: result });
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          const base64 = dataUrl.split(',')[1];
+          resolve({ base64, mimeType: 'image/jpeg', dataUrl });
+        };
+        img.onerror = reject;
+        img.src = event.target?.result as string;
       };
-      reader.onerror = (error) => reject(error);
+      reader.onerror = reject;
     });
   };
 
