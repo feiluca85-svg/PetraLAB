@@ -153,11 +153,14 @@ export async function sendMessage(
   }
 }
 
-export async function parseNuvolaScreenshot(base64Image: string, mimeType: string) {
+export async function parseNuvolaScreenshot(base64Image: string, mimeType: string, fallbackDate?: string) {
   try {
     const prompt = `
 Sei un assistente per un registro elettronico scolastico (Nuvola Madisoft).
 Analizza questa immagine (uno screenshot del registro) ed estrai i compiti assegnati e le verifiche in programma.
+Data di default (se non si vede nell'immagine): ${fallbackDate || "Prossima lezione"}
+Se l'immagine taglia l'intestazione, usa la data di default come dueDate per tutti i compiti.
+Attenzione ai duplicati: ignora cose non pertinenti.
 Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non includere blocchi \`\`\`json, ma solo il JSON nudo e crudo:
 {
   "agendaItems": [

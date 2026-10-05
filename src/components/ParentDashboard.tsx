@@ -28,6 +28,7 @@ export default function ParentDashboard({
   const [isTutorManagerOpen, setIsTutorManagerOpen] = useState(false);
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
   const [isUploadingNuvola, setIsUploadingNuvola] = useState(false);
+  const [nuvolaDate, setNuvolaDate] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -77,13 +78,33 @@ export default function ParentDashboard({
       const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
       const base64Data = parts[1];
       
-      const res = await parseNuvolaScreenshot(base64Data, mimeType);
+      const res = await parseNuvolaScreenshot(base64Data, mimeType, nuvolaDate);
       
       if (res.success && res.items) {
-        // Merge with existing items
-        const newItems = [...agendaItems, ...res.items];
+        // Logica Anti-Duplicati
+        let addedCount = 0;
+        const itemsToAdd = res.items.filter((newItem: any) => {
+          const normNew = (newItem.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+          // Controlla se c'è già un compito con la stessa materia e descrizione molto simile
+          const isDuplicate = agendaItems.some(ex => {
+            const normEx = (ex.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normEx === normNew) return true;
+            // Se le descrizioni sono lunghe e si sovrappongono per più di 20 caratteri, è un duplicato
+            if (normEx.length > 20 && normNew.length > 20 && (normEx.includes(normNew.substring(0,20)) || normNew.includes(normEx.substring(0,20)))) return true;
+            return false;
+          });
+          if (!isDuplicate) addedCount++;
+          return !isDuplicate;
+        });
+
+        const newItems = [...agendaItems, ...itemsToAdd];
         await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: newItems }, { merge: true });
-        alert("Completato! " + res.items.length + " compiti/verifiche inseriti nel Diario.");
+        
+        if (addedCount === 0) {
+           alert("Nessun compito nuovo trovato. Erano già tutti nel Diario!");
+        } else {
+           alert("Completato! " + addedCount + " nuovi compiti inseriti (ignorati eventuali duplicati).");
+        }
       } else {
         alert("Errore durante la lettura: " + res.error);
       }
@@ -275,6 +296,20 @@ export default function ParentDashboard({
               </div>
               
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleNuvolaUpload} />
+              
+              {/* Selettore Data Opzionale */}
+              <div className="mb-3">
+                <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>Data di scadenza (opzionale se l'immagine è tagliata):</label>
+                <input 
+                  type="date" 
+                  value={nuvolaDate}
+                  onChange={(e) => setNuvolaDate(e.target.value)}
+                  className={`w-full text-sm px-3 py-2 rounded-lg border ${
+                    isDarkMode ? 'bg-[#111B21] border-[#2A3942] text-white' : 'bg-white border-slate-300 text-slate-800'
+                  }`}
+                />
+              </div>
+              
               <div onClick={() => fileInputRef.current?.click()} className={`p-4 rounded-xl border-2 border-dashed text-center flex flex-col items-center justify-center cursor-pointer transition-colors ${
                 isDarkMode ? 'border-[#2A3942] hover:bg-[#2A3942]/50' : 'border-slate-300 hover:bg-slate-50'
               }`}>
