@@ -191,11 +191,11 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non include
       return { success: true, items: data.agendaItems || [] };
     } catch (parseErr) {
       console.error("Failed to parse JSON from Gemini", text);
-      return { success: false, error: "L'IA non è riuscita a leggere il formato correttamente." };
+      return { success: false, error: "L'IA non è riuscita a estrarre i dati. Risposta grezza: " + text.substring(0, 100) };
     }
 
   } catch (error: any) {
     console.error("Error parsing screenshot", error);
-    return { success: false, error: "Errore di connessione durante la lettura dell'immagine." };
+    return { success: false, error: error?.message || "Errore di connessione." };
   }
 }
