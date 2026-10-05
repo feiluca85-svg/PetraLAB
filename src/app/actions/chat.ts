@@ -156,7 +156,7 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non include
     let result = null;
 
     // Proviamo con il modello migliore per vision
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
     try {
       result = await model.generateContent([
@@ -171,7 +171,7 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non include
     } catch (err: any) {
       // Fallback a flash se pro fallisce (es. quota superata)
       console.warn("Fallback a flash per parseNuvola", err);
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
       result = await fallbackModel.generateContent([
         prompt,
         {
