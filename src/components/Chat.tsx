@@ -777,11 +777,11 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {listFilter === "compiti" ? "📝 Diario Compiti" : "🚨 Prossime Verifiche"}
                   </h3>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-200 text-slate-600"}`}>
-                    {agendaItems.filter(item => item.type === (listFilter === 'compiti' ? 'compito' : 'verifica')).length} da fare
+                    {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica')).length} da fare
                   </span>
                 </div>
                 
-                {agendaItems.filter(item => item.type === (listFilter === 'compiti' ? 'compito' : 'verifica')).length === 0 ? (
+                {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica')).length === 0 ? (
                   <div className={`p-6 rounded-2xl border text-center flex flex-col items-center justify-center mt-4 shadow-sm ${
                     isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-slate-50 border-slate-200"
                   }`}>
@@ -796,7 +796,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   </div>
                 ) : (
                   <div className="mt-4 flex flex-col gap-3">
-                    {agendaItems.filter(item => item.type === (listFilter === 'compiti' ? 'compito' : 'verifica')).map((item, idx) => (
+                    {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica')).map((item, idx) => (
                       <div key={idx} className={`p-4 rounded-xl border flex gap-3 shadow-sm ${
                         isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200"
                       }`}>

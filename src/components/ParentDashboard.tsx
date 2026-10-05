@@ -304,7 +304,7 @@ export default function ParentDashboard({
               <div className={`divide-y ${isDarkMode ? 'divide-[#2A3942]' : 'divide-slate-100'}`}>
                 {agendaItems.map((item, idx) => (
                   <div key={idx} className="p-3 flex items-start gap-3">
-                    <span className="text-xl shrink-0">{item.type === 'verifica' ? '🚨' : '📝'}</span>
+                    <span className="text-xl shrink-0">{item.type?.toLowerCase() === 'verifica' ? '🚨' : '📝'}</span>
                     <div>
                       <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-200' : 'text-slate-800'}`}>{item.subject}</h4>
                       <p className={`text-xs ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>{item.description}</p>
