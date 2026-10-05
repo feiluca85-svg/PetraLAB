@@ -6,14 +6,27 @@ import { useTutors } from "@/hooks/useTutors";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
-const EMOJI_PRESETS = [
-  "👨‍🏫", "👩‍🏫", "👨‍🔬", "👩‍🔬", "🧙‍♂️", "🧙‍♀️", "🧚‍♀️", "🧛‍♂️",
-  "🦊", "🦁", "🐯", "🐶", "🐱", "🐼", "🐨", "🐸",
-  "🦉", "🦄", "🐙", "🦖", "🐢", "🦋", "🐞", "🐝",
-  "🤖", "👾", "👽", "👻", "🤡", "💩", "💀", "🎃",
-  "👑", "🎩", "🧢", "🎓", "🦸‍♂️", "🦸‍♀️", "🥷", "🕵️‍♂️",
-  "🍎", "🌍", "🪐", "⭐", "🔥", "💧", "⚡", "❄️",
-  "📚", "🎨", "🎭", "🧩", "🔮", "💡", "🔬", "🔭"
+const EMOJI_CATEGORIES = [
+  {
+    label: "Persone e Professioni",
+    emojis: ["👨‍🏫", "👩‍🏫", "👨‍🔬", "👩‍🔬", "👨‍🚀", "👩‍🚀", "👨‍🎨", "👩‍🎨", "🕵️‍♂️", "🕵️‍♀️", "🥷", "🦸‍♂️", "🦸‍♀️", "🧙‍♂️", "🧙‍♀️", "🧚‍♂️", "🧚‍♀️", "🧛‍♂️", "🧛‍♀️", "🧜‍♂️", "🧜‍♀️", "🤴", "👸"]
+  },
+  {
+    label: "Animali",
+    emojis: ["🦊", "🦁", "🐯", "🐶", "🐱", "🐭", "🐹", "🐰", "🐻", "🐼", "🐨", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋", "🐌", "🐞", "🐜", "🦟", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐊", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏", "🐪", "🐫", "🦒", "🦘", "🐃", "🐂", "🐄", "🐎", "🐖", "🐏", "🐑", "🦙", "🐐", "🦌", "🐕", "🐩", "🦮", "🐕‍🦺", "🐈", "🐈‍⬛", "🐓", "🦃", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦨", "🦡", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"]
+  },
+  {
+    label: "Mostri e Alieni",
+    emojis: ["👾", "👽", "👻", "👹", "👺", "🤡", "💩", "💀", "☠️", "🎃", "🤖"]
+  },
+  {
+    label: "Oggetti Magici e Studio",
+    emojis: ["📚", "📖", "📜", "🖍️", "🖊️", "🖋️", "✒️", "✏️", "📝", "💼", "📁", "📂", "📅", "📆", "📇", "📈", "📉", "📊", "📋", "📌", "📍", "📎", "📏", "📐", "✂️", "🔒", "🔓", "🔏", "🔐", "🔑", "🗝️", "🔨", "🪓", "🛠️", "🗡️", "⚔️", "🔫", "🏹", "🛡️", "🔧", "🔩", "⚙️", "🗜️", "⚖️", "🦯", "🔗", "⛓️", "🧲", "⚗️", "🧪", "🧫", "🧬", "🔬", "🔭", "📡", "💉", "🩸", "💊", "🩹", "🩺", "🚪", "🛏️", "🛋️", "🪑", "🚽", "🚿", "🛁", "🪒", "🧴", "🧷", "🧹", "🧺", "🧻", "🧼", "🧽", "🧯", "🛒"]
+  },
+  {
+    label: "Natura e Spazio",
+    emojis: ["🌍", "🌎", "🌏", "🌕", "🌖", "🌗", "🌘", "🌑", "🌒", "🌓", "🌔", "🌙", "🌚", "🌛", "🌜", "☀️", "🌝", "🌞", "⭐", "🌟", "🌠", "🌌", "☁️", "⛅", "⛈️", "🌤️", "🌥️", "🌦️", "🌧️", "🌨️", "🌩️", "🌪️", "🌫️", "🌬️", "🌀", "🌈", "🌂", "☂️", "☔", "⛱️", "⚡", "❄️", "☃️", "⛄", "☄️", "🔥", "💧", "🌊"]
+  }
 ];
 
 export default function TutorManager({ 
@@ -28,15 +41,7 @@ export default function TutorManager({
   const [isCreating, setIsCreating] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Tutor>>({});
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      const loadVoices = () => setAvailableVoices(window.speechSynthesis.getVoices());
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, []);
+  
 
   const handleEdit = (tutor: Tutor) => {
     setEditingTutor(tutor);
@@ -185,33 +190,24 @@ export default function TutorManager({
                 }`}>
                   Scegli Avatar (Emoji)
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {EMOJI_PRESETS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, avatar: emoji })}
-                      className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${
-                        formData.avatar === emoji 
-                          ? (isDarkMode ? 'bg-[#00A884]/30 ring-2 ring-[#00A884]' : 'bg-emerald-100 ring-2 ring-emerald-500')
-                          : (isDarkMode ? 'bg-[#111B21] hover:bg-[#2A3942]' : 'bg-slate-100 hover:bg-slate-200')
-                      }`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-                <input 
-                  type="text"
-                  placeholder="Oppure inserisci qualsiasi emoji personalizzata..."
-                  value={formData.avatar || ""}
+                <select 
+                  value={formData.avatar || "🦉"}
                   onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                  className={`w-full rounded-xl px-3.5 py-2.5 text-sm border outline-none transition-colors ${
+                  className={`w-full rounded-xl px-3 py-2 text-2xl border outline-none transition-colors ${
                     isDarkMode 
                       ? 'bg-[#111B21] border-[#2A3942] text-white focus:border-[#00A884]' 
                       : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
                   }`}
-                />
+                >
+                  <option value={formData.avatar || "🦉"}>{formData.avatar || "🦉"} (Attuale)</option>
+                  {EMOJI_CATEGORIES.map(cat => (
+                    <optgroup key={cat.label} label={cat.label}>
+                      {cat.emojis.map(emoji => (
+                        <option key={emoji} value={emoji}>{emoji}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
 
               {/* Nome & Materia */}
@@ -293,36 +289,26 @@ export default function TutorManager({
 
                 <div>
                   <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
-                    Voce del Tutor (TTS)
+                    Lingua del Tutor (TTS)
                   </label>
                   <select 
-                    value={formData.voiceURI || ""} 
-                    onChange={(e) => {
-                      const v = availableVoices.find(x => x.voiceURI === e.target.value);
-                      if (v) {
-                        setFormData({...formData, voiceURI: v.voiceURI, voiceLang: v.lang});
-                      } else {
-                        setFormData({...formData, voiceURI: "", voiceLang: "it-IT"});
-                      }
-                    }}
+                    value={formData.voiceLang || "it-IT"} 
+                    onChange={(e) => setFormData({...formData, voiceLang: e.target.value, voiceURI: undefined})}
                     className={`w-full rounded-xl px-3 py-2 text-[13px] border outline-none font-medium transition-colors ${
                       isDarkMode 
                         ? 'bg-[#202C33] border-[#2A3942] text-white focus:border-[#00A884]' 
                         : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
                     }`}
                   >
-                    <option value="">Voce predefinita di sistema</option>
-                    {availableVoices.filter(v => v.lang.startsWith('it')).map(v => (
-                      <option key={v.voiceURI} value={v.voiceURI}>{v.name} (Italiano)</option>
-                    ))}
-                    <optgroup label="Altre Lingue">
-                      {availableVoices.filter(v => !v.lang.startsWith('it')).map(v => (
-                        <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
-                      ))}
-                    </optgroup>
+                    <option value="it-IT">🇮🇹 Italiano</option>
+                    <option value="en-US">🇬🇧 Inglese (Americano)</option>
+                    <option value="en-GB">🇬🇧 Inglese (Britannico)</option>
+                    <option value="fr-FR">🇫🇷 Francese</option>
+                    <option value="es-ES">🇪🇸 Spagnolo</option>
+                    <option value="de-DE">🇩🇪 Tedesco</option>
                   </select>
                   <p className={`mt-1 text-[10px] leading-tight ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
-                    Queste voci dipendono dal dispositivo in uso.
+                    Scegli la lingua per la pronuncia corretta.
                   </p>
                 </div>
               </div>
