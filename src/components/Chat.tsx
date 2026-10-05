@@ -777,7 +777,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {listFilter === "compiti" ? "📝 Diario Compiti" : "🚨 Prossime Verifiche"}
                   </h3>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-200 text-slate-600"}`}>
-                    0 da fare
+                    {agendaItems.filter(item => item.type === (listFilter === 'compiti' ? 'compito' : 'verifica')).length} da fare
                   </span>
                 </div>
                 

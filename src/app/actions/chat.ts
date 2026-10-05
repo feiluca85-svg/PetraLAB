@@ -134,3 +134,68 @@ export async function sendMessage(
     return { success: false, error: `[DEBUG] Errore di connessione: ${msg}` };
   }
 }
+
+export async function parseNuvolaScreenshot(base64Image: string, mimeType: string) {
+  try {
+    const prompt = `
+Sei un assistente per un registro elettronico scolastico (Nuvola Madisoft).
+Analizza questa immagine (uno screenshot del registro) ed estrai i compiti assegnati e le verifiche in programma.
+Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non includere blocchi \`\`\`json, ma solo il JSON nudo e crudo:
+{
+  "agendaItems": [
+    {
+      "id": "generato_randomicamente_dal_modello_come_stringa_unica_es_id123",
+      "type": "compito" | "verifica",
+      "subject": "Es. Matematica",
+      "description": "Breve descrizione del compito o argomento verifica",
+      "dueDate": "YYYY-MM-DD" // se non specificata, usa una stringa leggibile tipo "Prossima lezione"
+    }
+  ]
+}`;
+
+    let result = null;
+
+    // Proviamo con il modello migliore per vision
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+    try {
+      result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: base64Image,
+            mimeType: mimeType,
+          }
+        }
+      ]);
+    } catch (err: any) {
+      // Fallback a flash se pro fallisce (es. quota superata)
+      console.warn("Fallback a flash per parseNuvola", err);
+      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      result = await fallbackModel.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: base64Image,
+            mimeType: mimeType,
+          }
+        }
+      ]);
+    }
+
+    let text = result.response.text();
+    text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+    try {
+      const data = JSON.parse(text);
+      return { success: true, items: data.agendaItems || [] };
+    } catch (parseErr) {
+      console.error("Failed to parse JSON from Gemini", text);
+      return { success: false, error: "L'IA non è riuscita a leggere il formato correttamente." };
+    }
+
+  } catch (error: any) {
+    console.error("Error parsing screenshot", error);
+    return { success: false, error: "Errore di connessione durante la lettura dell'immagine." };
+  }
+}
