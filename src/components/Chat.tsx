@@ -88,8 +88,6 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       // Aggiornamento ottimistico locale
       setAgendaItems(updated);
       
-      const { doc, setDoc } = require("firebase/firestore");
-      const { db } = require("@/lib/firebase");
       await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
     } catch (err) {
       console.error("Errore durante l'aggiornamento del compito:", err);
