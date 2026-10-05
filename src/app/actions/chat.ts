@@ -18,13 +18,31 @@ export async function sendMessage(
   history: Content[],
   image?: { base64: string; mimeType: string },
   tutor?: Tutor,
-  subjectMemory?: SubjectMemory
+  subjectMemory?: SubjectMemory,
+  agendaItems?: any[]
 ) {
   try {
     // Calcola l'istruzione di sistema specifica per il tutor e la sua memoria
     let dynamicInstruction = SYSTEM_INSTRUCTION;
     if (tutor) {
       dynamicInstruction = buildTutorPrompt(tutor, subjectMemory);
+      
+      // Inject relevant agenda items for this tutor
+      if (agendaItems && agendaItems.length > 0) {
+        // Try to match the tutor's subject to the agenda items loosely
+        const relevantTasks = agendaItems.filter(item => 
+          !item.isCompleted && 
+          item.subject.toLowerCase().includes(tutor.subject.split(' ')[0].toLowerCase())
+        );
+        
+        if (relevantTasks.length > 0) {
+          dynamicInstruction += `\n\nATTENZIONE TUTOR: L'alunna ha i seguenti compiti/verifiche in sospeso per la tua materia:\n`;
+          relevantTasks.forEach(task => {
+            dynamicInstruction += `- [${task.type.toUpperCase()}] Scadenza: ${task.dueDate} - ${task.description}\n`;
+          });
+          dynamicInstruction += `\nOBIETTIVO PROATTIVO: Se la chat è appena iniziata o l'alunna ti saluta, chiedile esplicitamente se vuole iniziare a fare questi compiti/prepararsi per queste verifiche. Rendilo coinvolgente e non stressante, proponendo ad esempio di ripassare tramite quiz o sfide!`;
+        }
+      }
     }
     
     // Regola per forzare il rendering matematico
