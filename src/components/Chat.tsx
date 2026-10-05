@@ -549,7 +549,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.0.5</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.1.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -559,6 +559,15 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       >
                         <span>🔄</span>
                         <span>Ricarica / Aggiorna</span>
+                      </button>
+                      <button 
+                        onClick={() => { toggleVoiceSpeed(); setShowHomeMenu(false); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{voiceSpeed === 1.0 ? '🐇' : voiceSpeed === 1.2 ? '🚀' : '🐢'}</span>
+                        <span>Velocità Voce: {voiceSpeed === 1.0 ? 'Normale' : voiceSpeed === 1.2 ? 'Veloce' : 'Lenta'}</span>
                       </button>
                       <Link 
                         href="/admin" 
