@@ -48,6 +48,26 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [isListening, setIsListening] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
 
+  // Gestione tasto indietro (Back button / Gestures Android)
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      // Se c'è un tutor selezionato (siamo in una chat), chiudila invece di uscire dall'app
+      if (selectedTutor) {
+        setSelectedTutor(null);
+        // Ripristiniamo uno stato fittizio per intercettare il prossimo back
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [selectedTutor]);
+
+  // Quando selezioniamo un tutor, aggiungiamo uno stato alla history
+  const handleSelectTutor = (tutor: Tutor) => {
+    setSelectedTutor(tutor);
+    window.history.pushState({ page: "chat" }, "");
+  };
+
+
   useEffect(() => {
     const savedSpeed = localStorage.getItem("petralab_voice_speed");
     if (savedSpeed) setVoiceSpeed(parseFloat(savedSpeed));
@@ -908,7 +928,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                          if (matchingTutor && !item.isCompleted) {
                                            return (
                                              <button 
-                                               onClick={() => setSelectedTutor(matchingTutor)}
+                                               onClick={() => handleSelectTutor(matchingTutor)}
                                                className={`mt-2 w-max text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm ${
                                                  isDarkMode 
                                                    ? 'bg-[#111B21] border border-[#2A3942] text-emerald-400 hover:bg-[#00A884] hover:text-white' 
@@ -946,7 +966,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             <div className="flex items-center gap-2">
               {/* Tasto Indietro Stile WhatsApp */}
               <button 
-                onClick={() => setSelectedTutor(null)}
+                onClick={() => window.history.back()}
                 className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors flex items-center gap-0.5 text-white"
                 title="Torna alle chat"
               >

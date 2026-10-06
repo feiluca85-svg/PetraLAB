@@ -354,16 +354,7 @@ export default function ParentDashboard({
           🔐 Chi Accede & Dispositivi
         </button>
 
-        <button
-          onClick={() => setActiveSubTab("grades")}
-          className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
-            activeSubTab === "grades"
-              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
-              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
-          }`}
-        >
-          📊 Registro Voti & Lacune
-        </button>
+        
 
         <button
           onClick={() => setActiveSubTab("chats")}

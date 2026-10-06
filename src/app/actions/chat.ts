@@ -155,21 +155,28 @@ export async function sendMessage(
 
 export async function parseNuvolaScreenshot(base64Image: string, mimeType: string, fallbackDate?: string) {
   try {
-    const prompt = `
-Sei un assistente per un registro elettronico scolastico (Nuvola Madisoft).
-Analizza questa immagine (uno screenshot del registro) ed estrai i compiti assegnati e le verifiche in programma.
-Data di default (se non si vede nell'immagine): ${fallbackDate || "Prossima lezione"}
-Se l'immagine taglia l'intestazione, usa la data di default come dueDate per tutti i compiti.
-Attenzione ai duplicati: ignora cose non pertinenti.
-Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non includere blocchi \`\`\`json, ma solo il JSON nudo e crudo:
+    const prompt = `Sei un assistente per un registro elettronico scolastico.
+Analizza questa immagine (uno screenshot del registro) ed estrai QUALSIASI compito, verifica o voto presente.
+Presta attenzione anche ai dettagli del voto (es. "7½" diventa "7.5", argomenti, descrizioni).
+Data di default: ${fallbackDate || "Prossima lezione"}
+
+Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun blocco markdown):
 {
   "agendaItems": [
     {
-      "id": "generato_randomicamente_dal_modello_come_stringa_unica_es_id123",
+      "id": "id_random123",
       "type": "compito" | "verifica",
       "subject": "Es. Matematica",
-      "description": "Breve descrizione del compito o argomento verifica",
-      "dueDate": "YYYY-MM-DD" // se non specificata, usa una stringa leggibile tipo "Prossima lezione"
+      "description": "Breve descrizione",
+      "dueDate": "Data o 'Prossima lezione'"
+    }
+  ],
+  "gradesItems": [
+    {
+      "subject": "Tecnologia",
+      "grade": "7.5",
+      "topic": "Proiezione ortogonale...",
+      "date": "30-09-2026"
     }
   ]
 }`;
