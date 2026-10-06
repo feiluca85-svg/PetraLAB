@@ -390,7 +390,7 @@ export default function ParentDashboard({
               : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
           }`}
         >
-          🔐 Chi Accede & Dispositivi
+          🔐 Accessi
         </button>
 
         
@@ -575,51 +575,6 @@ export default function ParentDashboard({
               </p>
             </div>
 
-            {/* Sessioni Attive (Dispositivi Autorizzati) */}
-            <div className={`rounded-2xl border overflow-hidden ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
-            }`}>
-              <div className={`p-4 border-b ${isDarkMode ? "border-[#2A3942]" : "border-slate-100"}`}>
-                <h3 className="font-bold text-base flex items-center gap-2">
-                  <span>🟢</span>
-                  <span>Dispositivi Attualmente Connessi</span>
-                </h3>
-                <p className={`text-xs mt-1 ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                  Questi sono i telefoni o computer che non hanno bisogno del PIN perché hanno già fatto l'accesso.
-                </p>
-              </div>
-              <div className={`divide-y ${isDarkMode ? "divide-[#2A3942]" : "divide-slate-100"}`}>
-                {devices.map((dev) => (
-                  <div key={dev.id} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${
-                        dev.isCurrent ? (isDarkMode ? "bg-emerald-950/60 text-emerald-400" : "bg-emerald-100 text-emerald-700") : (isDarkMode ? "bg-[#111B21] text-gray-400" : "bg-slate-100 text-slate-500")
-                      }`}>
-                        {dev.name.includes("iPhone") || dev.name.includes("Android") ? "📱" : "💻"}
-                      </div>
-                      <div>
-                        <span className="font-bold text-sm block">
-                          {dev.name} {dev.isCurrent && "(Questo Dispositivo)"}
-                        </span>
-                        <span className={`text-[11px] ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
-                          {dev.isCurrent ? "In uso proprio ora" : `Visto l'ultima volta il ${dev.lastActive}`}
-                        </span>
-                      </div>
-                    </div>
-                    {!dev.isCurrent && (
-                      <button
-                        onClick={() => removeDevice(dev.id)}
-                        className="text-red-500 hover:text-white hover:bg-red-500 font-bold px-3 py-1.5 rounded-full text-xs transition-colors border border-red-500/30"
-                      >
-                        Scollega
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Cronologia Accessi */}
             <div className={`rounded-2xl border overflow-hidden ${
               isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
