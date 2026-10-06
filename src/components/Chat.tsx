@@ -48,23 +48,21 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [isListening, setIsListening] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
 
-  // Gestione tasto indietro (Back button / Gestures Android)
+    // Gestione tasto indietro infallibile tramite Hash
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      // Se c'è un tutor selezionato (siamo in una chat), chiudila invece di uscire dall'app
-      if (selectedTutor) {
+    const handleHashChange = () => {
+      if (window.location.hash !== "#chat" && selectedTutor) {
         setSelectedTutor(null);
-        // Ripristiniamo uno stato fittizio per intercettare il prossimo back
       }
     };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, [selectedTutor]);
 
   // Quando selezioniamo un tutor, aggiungiamo uno stato alla history
   const handleSelectTutor = (tutor: Tutor) => {
     setSelectedTutor(tutor);
-    window.history.pushState({ page: "chat" }, "");
+    window.location.hash = "chat";
   };
 
 
@@ -148,7 +146,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
   // Seleziona un tutor aprendo la sua chat stile WhatsApp
   const handleOpenChat = (tutor: Tutor) => {
-    setSelectedTutor(tutor);
+    handleSelectTutor(tutor);
     
     // Se non ci sono ancora messaggi per questo tutor, inizializza con il saluto personalizzato
     if (!chatsByTutor[tutor.id] || chatsByTutor[tutor.id].messages.length === 0) {

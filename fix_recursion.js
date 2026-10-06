@@ -1,22 +1,8 @@
 const fs = require('fs');
 let content = fs.readFileSync('src/components/Chat.tsx', 'utf-8');
 
-content = content.replace(
-  'const handleSelectTutor = (tutor: Tutor) => {\\n    handleSelectTutor(tutor);',
-  'const handleSelectTutor = (tutor: Tutor) => {\\n    setSelectedTutor(tutor);'
-);
+const oldFunc = 'const handleSelectTutor = (tutor: Tutor) => {\\n    handleSelectTutor(tutor);\\n    window.location.hash = "chat";\\n  };';
+const newFunc = 'const handleSelectTutor = (tutor: Tutor) => {\\n    setSelectedTutor(tutor);\\n    window.location.hash = "chat";\\n  };';
 
-// Ah, wait. The replace string in JS matches exactly. 
-// Let's use string replace with the exact snippet
-content = content.replace(
-\`  const handleSelectTutor = (tutor: Tutor) => {
-    handleSelectTutor(tutor);
-    window.history.pushState({ page: "chat" }, "");
-  };\`,
-\`  const handleSelectTutor = (tutor: Tutor) => {
-    setSelectedTutor(tutor);
-    window.history.pushState({ page: "chat" }, "");
-  };\`
-);
-
+content = content.replace(oldFunc, newFunc);
 fs.writeFileSync('src/components/Chat.tsx', content);
