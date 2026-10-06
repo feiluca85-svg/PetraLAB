@@ -899,6 +899,28 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                          </div>
                                        </div>
                                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-600'}`}>{item.description}</p>
+                                       {/* Bottoncino "Parla col Tutor" */}
+                                       {(() => {
+                                         const matchingTutor = tutors.find((t: any) => 
+                                           t.id === item.subject?.toLowerCase() || 
+                                           t.subject.toLowerCase().includes(item.subject?.toLowerCase())
+                                         );
+                                         if (matchingTutor && !item.isCompleted) {
+                                           return (
+                                             <button 
+                                               onClick={() => setSelectedTutor(matchingTutor)}
+                                               className={`mt-2 w-max text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm ${
+                                                 isDarkMode 
+                                                   ? 'bg-[#111B21] border border-[#2A3942] text-emerald-400 hover:bg-[#00A884] hover:text-white' 
+                                                   : 'bg-white border border-slate-200 text-emerald-600 hover:bg-emerald-500 hover:text-white'
+                                               }`}
+                                             >
+                                               <span className="text-base">{matchingTutor.avatar}</span> Parla col Tutor
+                                             </button>
+                                           );
+                                         }
+                                         return null;
+                                       })()}
                                      </div>
                                    </div>
                                  );

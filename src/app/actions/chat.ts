@@ -211,7 +211,7 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura. Non include
 
     try {
       const data = JSON.parse(text);
-      return { success: true, items: data.agendaItems || [] };
+      return { success: true, items: data.agendaItems || [], gradesItems: data.gradesItems || [] };
     } catch (parseErr) {
       console.error("Failed to parse JSON from Gemini", text);
       return { success: false, error: "L'IA non è riuscita a estrarre i dati. Risposta grezza: " + text.substring(0, 100) };
