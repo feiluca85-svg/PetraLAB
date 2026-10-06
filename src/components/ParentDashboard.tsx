@@ -396,48 +396,35 @@ export default function ParentDashboard({
         {/* ========================================================= */}
         {activeSubTab === "agenda" && (
           <div className="space-y-4">
-            <div className={`p-5 rounded-2xl border ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
-            }`}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0">
-                  📸
-                </div>
-                <div>
-                  <h3 className="font-bold text-base flex items-center gap-2">
-                    Lo Screenshot Magico
-                    <span className="text-[9px] uppercase tracking-wider bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">New</span>
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                    Carica i compiti da Nuvola in 3 secondi netti.
-                  </p>
-                </div>
-              </div>
-              
+            <div className="flex gap-3">
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleNuvolaUpload} />
               
-              {/* Selettore Data Opzionale */}
-              <div className="mb-3">
-                <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>Data di scadenza (opzionale se l'immagine è tagliata):</label>
-                <input 
-                  type="date" 
-                  value={nuvolaDate}
-                  onChange={(e) => setNuvolaDate(e.target.value)}
-                  className={`w-full text-sm px-3 py-2 rounded-lg border ${
-                    isDarkMode ? 'bg-[#111B21] border-[#2A3942] text-white' : 'bg-white border-slate-300 text-slate-800'
-                  }`}
-                />
-              </div>
-              
-              <div onClick={() => fileInputRef.current?.click()} className={`p-4 rounded-xl border-2 border-dashed text-center flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                isDarkMode ? 'border-[#2A3942] hover:bg-[#2A3942]/50' : 'border-slate-300 hover:bg-slate-50'
-              }`}>
-                <span className="text-3xl mb-2 opacity-50">📱</span>
-                <p className={`font-bold text-sm ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>{isUploadingNuvola ? 'Analisi IA in corso (attendere)...' : 'Tocca per caricare lo screenshot'}</p>
-                <p className={`text-xs mt-1 max-w-[250px] ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
-                  L'IA leggerà l'immagine e aggiungerà automaticamente compiti e verifiche al Diario di Petra.
-                </p>
-              </div>
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingNuvola}
+                className={`flex-1 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                  isDarkMode 
+                    ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/40 border border-emerald-500/30 text-emerald-400 hover:from-emerald-900/60' 
+                    : 'bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 hover:from-emerald-100'
+                }`}
+              >
+                <span className="text-2xl">{isUploadingNuvola ? '⏳' : '📸'}</span>
+                <span className="text-xs font-bold text-center leading-tight">{isUploadingNuvola ? 'Analisi IA...' : 'Foto Registro'}</span>
+                <span className="text-[9px] opacity-70 text-center leading-tight">Auto-rileva Compiti & Voti</span>
+              </button>
+
+              <button 
+                onClick={() => setShowManualModal(true)}
+                className={`flex-1 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                  isDarkMode 
+                    ? 'bg-[#202C33] border border-[#2A3942] text-gray-300 hover:bg-[#2A3942]' 
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-2xl">✍️</span>
+                <span className="text-xs font-bold text-center leading-tight">Scrivi a Mano</span>
+                <span className="text-[9px] opacity-70 text-center leading-tight">Aggiungi senza foto</span>
+              </button>
             </div>
 
             {/* List of current agenda items (Mock) */}
