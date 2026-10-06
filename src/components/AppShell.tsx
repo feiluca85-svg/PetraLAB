@@ -16,6 +16,29 @@ export default function AppShell() {
   const { tutors, loading } = useTutors();
 
   useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === "#parent") setActiveTab("parent");
+      else if (hash === "#tutors") setActiveTab("tutors");
+      else if (hash === "#profile") setActiveTab("profile");
+      else setActiveTab("chat");
+    };
+    // Sync initial state
+    handleHashChange();
+    
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const changeTab = (tab: "chat" | "tutors" | "profile" | "parent") => {
+    if (tab === "chat") {
+      window.location.hash = "";
+    } else {
+      window.location.hash = tab;
+    }
+  };
+
+  useEffect(() => {
     const savedTheme = localStorage.getItem("petralab_theme");
     if (savedTheme === "dark") {
       setIsDarkMode(true);
@@ -125,7 +148,7 @@ export default function AppShell() {
         }`}>
           {/* 1. Tab Chat */}
           <button 
-            onClick={() => setActiveTab("chat")}
+            onClick={() => changeTab("chat")}
             className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
           >
             <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
@@ -148,7 +171,7 @@ export default function AppShell() {
 
           {/* 2. Tab Tutor */}
           <button 
-            onClick={() => setActiveTab("tutors")}
+            onClick={() => changeTab("tutors")}
             className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
           >
             <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
@@ -172,7 +195,7 @@ export default function AppShell() {
 
           {/* 3. Tab Livello / Profilo */}
           <button 
-            onClick={() => setActiveTab("profile")}
+            onClick={() => changeTab("profile")}
             className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
           >
             <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
@@ -195,7 +218,7 @@ export default function AppShell() {
 
           {/* 4. Tab Genitore (Sicurezza & Accessi) */}
           <button 
-            onClick={() => setActiveTab("parent")}
+            onClick={() => changeTab("parent")}
             className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
           >
             <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
