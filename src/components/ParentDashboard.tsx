@@ -279,7 +279,8 @@ export default function ParentDashboard({
               const newGrade = {
                 grade: gradeItem.grade,
                 topic: gradeItem.topic || "Voto da registro",
-                date: gradeItem.date || new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "short" })
+                date: gradeItem.date || new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+                originalSubject: gradeItem.subject || "Materia non specificata"
               };
               updatedMemMap[tutorId] = { ...mem, grades: [...(mem.grades || []), newGrade] };
               gradesAdded++;

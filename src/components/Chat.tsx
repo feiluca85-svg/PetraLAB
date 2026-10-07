@@ -584,20 +584,20 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           <div className={`${
             isDarkMode ? 'bg-[#111B21] border-b border-[#222E35]' : 'bg-white border-b border-slate-100'
           } px-4 pt-3.5 pb-2.5 flex justify-between items-center relative z-30 transition-colors`}>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <img 
                 src="/icon.png" 
                 alt="PetraLAB" 
-                className="w-8 h-8 rounded-full border border-emerald-500/30 object-cover shadow-xs bg-emerald-950 shrink-0" 
+                className="w-10 h-10 rounded-2xl shadow-sm object-cover bg-emerald-950 shrink-0" 
               />
-              <div>
-                <h1 className={`text-[22px] font-black tracking-tight leading-none ${
+              <div className="flex flex-col justify-center">
+                <h1 className={`text-2xl font-black tracking-tight leading-none ${
                   isDarkMode ? 'text-[#25D366]' : 'text-[#1DA851]'
                 }`}>
                   PetraLAB
                 </h1>
-                <p className={`text-[11px] font-medium mt-0.5 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
-                  {levelInfo.title} • <span className="font-semibold text-emerald-600">{stats.xp} XP</span>
+                <p className={`text-[12px] font-bold mt-1 tracking-wide ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
+                  {levelInfo.title} <span className="opacity-50 mx-1">•</span> <span className="text-emerald-500">{stats.xp} XP</span>
                 </p>
               </div>
             </div>
@@ -653,7 +653,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.4.0</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.5.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -776,13 +776,13 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   <div
                     key={tutor.id}
                     onClick={() => handleOpenChat(tutor)}
-                    className={`flex items-center gap-3.5 px-4 py-3.5 cursor-pointer transition-colors ${
+                    className={`flex items-center gap-3.5 px-4 py-4 cursor-pointer transition-colors ${
                       isDarkMode ? "hover:bg-[#202C33] active:bg-[#222E35]" : "hover:bg-slate-50 active:bg-slate-100"
                     }`}
                   >
                     {/* Foto Profilo Circolare 52px con Anello di Stato Verde */}
                     <div className="relative shrink-0">
-                      <div className={`w-[52px] h-[52px] rounded-full flex items-center justify-center text-3xl border-2 ${
+                      <div className={`w-16 h-16 rounded-3xl shadow-sm flex items-center justify-center text-3xl border-2 ${
                         tutorChat?.lastUpdated === getCurrentTime() 
                           ? "border-[#25D366] p-0.5" 
                           : "border-transparent"
@@ -797,12 +797,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <h2 className={`font-bold text-[16px] truncate ${
+                          <h2 className={`font-bold text-[17px] truncate ${
                             isDarkMode ? "text-[#E9EDEF]" : "text-slate-900"
                           }`}>
                             {tutor.name}
                           </h2>
-                          <span className={`text-[11px] font-semibold px-2 py-0.2 rounded-full shrink-0 ${
+                          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg shrink-0 ${
                             isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-emerald-50 text-emerald-800 border border-emerald-200"
                           }`}>
                             {tutor.subject.split(" ")[0]}
@@ -818,7 +818,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
-                        <p className={`text-[13.5px] truncate flex items-center gap-1.5 ${
+                        <p className={`text-[14px] truncate flex items-center gap-1.5 ${
                           isDarkMode ? "text-[#8696A0]" : "text-slate-500"
                         }`}>
                           {lastMsg ? (
@@ -1130,7 +1130,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.4.0</span>
+                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.5.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowChatMenu(false); setShowGradesModal(true); }}
