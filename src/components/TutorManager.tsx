@@ -59,17 +59,26 @@ export default function TutorManager({
     }
 
     try {
-      await setDoc(doc(db, "petralab_tutors", formData.id), {
+      const dataToSave = {
         ...formData,
         name: formData.name.trim(),
         subject: formData.subject.trim(),
         avatar: formData.avatar || "🦉",
         gender: formData.gender || "male",
         voiceLang: formData.voiceLang || "it-IT",
-        voiceURI: formData.voiceURI,
+        voiceURI: formData.voiceURI || null,
         greeting: formData.greeting || "Ciao! Come posso aiutarti oggi?",
         prompt: formData.prompt || "Sei un tutor socratico amichevole per ragazzi delle scuole medie."
+      };
+      
+      // Prevent Firebase "undefined" errors
+      Object.keys(dataToSave).forEach(key => {
+        if ((dataToSave as any)[key] === undefined) {
+          delete (dataToSave as any)[key];
+        }
       });
+
+      await setDoc(doc(db, "petralab_tutors", formData.id), dataToSave);
       setEditingTutor(null);
       setIsCreating(false);
       alert("Tutor salvato con successo! 🎉");
@@ -155,7 +164,7 @@ export default function TutorManager({
           }`}>
             <div className="flex items-center justify-between pb-4 border-b border-gray-500/20 mb-5">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{formData.avatar || "🦉"}</span>
+                {formData.avatar?.startsWith('/avatars/') ? <img src={formData.avatar} alt="avatar" className="w-8 h-8 object-contain" /> : <span className="text-2xl">{formData.avatar || "🦉"}</span>}
                 <h3 className="font-bold text-base">
                   {isCreating ? "Crea Nuovo Tutor" : `Modifica ${editingTutor?.name}`}
                 </h3>
@@ -209,7 +218,7 @@ export default function TutorManager({
                     type="text" 
                     value={formData.avatar || "🦉"}
                     onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                    className={`w-12 text-center rounded border px-1 py-0.5 outline-none ${isDarkMode ? 'bg-[#0B141A] border-[#2A3942] text-white' : 'bg-white border-slate-200'}`} 
+                    className={`flex-1 text-center rounded border px-1 py-0.5 outline-none ${isDarkMode ? 'bg-[#0B141A] border-[#2A3942] text-white' : 'bg-white border-slate-200'}`} 
                   />
                 </div>
               </div>
