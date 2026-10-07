@@ -635,7 +635,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.9.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v2.0.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -1116,7 +1116,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.9.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v2.0.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowChatMenu(false); setShowGradesModal(true); }}
@@ -1168,7 +1168,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
                 <div className="flex justify-between items-center border-b pb-3">
                   <div className="flex items-center gap-3">
-                    <span className={`text-3xl p-2 rounded-2xl ${isDarkMode ? "bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60" : "bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100"}`}>{selectedTutor.avatar}</span>
+                    <span className={`text-3xl p-2 rounded-2xl ${isDarkMode ? "bg-[#202C33]" : "bg-[#F0F2F5]"}`}>{selectedTutor.avatar}</span>
                     <div>
                       <h3 className="font-bold text-slate-800 text-lg">Memoria di {selectedTutor.name}</h3>
                       <p className="text-xs text-slate-500">{selectedTutor.subject}</p>
@@ -1255,10 +1255,10 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div 
-                  className={`max-w-[85%] sm:max-w-[78%] px-3.5 py-2.5 rounded-2xl text-[14.5px] leading-relaxed relative shadow-xs group ${
+                  className={`max-w-[80%] sm:max-w-[75%] px-3 py-1.5 rounded-2xl text-[15.5px] leading-relaxed relative shadow-xs group ${
                     msg.role === "user"
-                      ? (isDarkMode ? "bg-[#00A884] text-[#E9EDEF] rounded-tr-xs" : "bg-[#D9FDD3] text-slate-900 rounded-tr-xs")
-                      : (isDarkMode ? "bg-[#202C33] text-[#E9EDEF] rounded-tl-xs" : "bg-white text-slate-900 rounded-tl-xs")
+                      ? (isDarkMode ? "bg-[#005C4B] text-[#E9EDEF] rounded-tr-xs" : "bg-[#D9FDD3] text-slate-900 rounded-tr-xs")
+                      : (isDarkMode ? "bg-[#202C33] text-[#E9EDEF] rounded-tl-[4px]" : "bg-white text-slate-900 rounded-tl-[4px]")
                   }`}
                 >
                   {msg.imageUrl && (
@@ -1270,7 +1270,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   )}
 
                   {msg.text && (
-                    <div className={msg.role === "model" ? `prose prose-sm max-w-none ${isDarkMode ? 'prose-invert prose-emerald' : 'prose-emerald'}` : ""}>
+                    <div className={msg.role === "model" ? `prose prose-sm leading-snug max-w-none ${isDarkMode ? 'prose-invert prose-emerald' : 'prose-emerald'}` : ""}>
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm, remarkMath]} 
                         rehypePlugins={[rehypeKatex]}
@@ -1304,7 +1304,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className={`px-4 py-3 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-1.5 ${
+                <div className={`px-4 py-3 rounded-2xl rounded-tl-[4px] shadow-xs flex items-center gap-1.5 ${
                   isDarkMode ? 'bg-[#202C33] text-[#8696A0]' : 'bg-white text-slate-400'
                 }`}>
                   <span className="text-xs font-medium">{selectedTutor.name} sta scrivendo</span>
