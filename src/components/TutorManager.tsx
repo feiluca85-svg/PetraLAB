@@ -9,7 +9,7 @@ import { doc, setDoc, deleteDoc } from "firebase/firestore";
 const EMOJI_CATEGORIES = [
   {
     label: "Avatar 3D",
-    emojis: Array.from({length: 54}, (_, i) => `/avatars/avatar_${i}.png`)
+    emojis: Array.from({length: 40}, (_, i) => `/avatars/avatar_${i}.png`)
   },
   {
     label: "Lingue e Bandiere",
