@@ -196,7 +196,7 @@ export default function TutorManager({
                                 : (isDarkMode ? 'hover:bg-[#2A3942]' : 'hover:bg-slate-200')
                             }`}
                           >
-                            {emoji}
+                            {emoji.startsWith('/avatars/') ? <img src={emoji} alt="avatar" className="w-full h-full object-contain drop-shadow-sm" /> : emoji}
                           </button>
                         ))}
                       </div>

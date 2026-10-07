@@ -1026,7 +1026,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                                    : 'bg-white border border-slate-200 text-emerald-600 hover:bg-[#25D366] hover:text-white'
                                                }`}
                                              >
-                                               <span className="text-base">{matchingTutor.avatar}</span> Parla col Tutor
+                                               {matchingTutor.avatar?.startsWith("/avatars/") ? <img src={matchingTutor.avatar} alt="avatar" className="w-5 h-5 object-contain" /> : <span className="text-base">{matchingTutor.avatar}</span>} Parla col Tutor
                                              </button>
                                            );
                                          }
