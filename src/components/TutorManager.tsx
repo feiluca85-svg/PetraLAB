@@ -9,7 +9,7 @@ import { doc, setDoc, deleteDoc } from "firebase/firestore";
 const EMOJI_CATEGORIES = [
   {
     label: "Avatar 3D",
-    emojis: Array.from({length: 80}, (_, i) => `/avatars/avatar_${i}.png`)
+    emojis: Array.from({length: 54}, (_, i) => `/avatars/avatar_${i}.png`)
   },
   {
     label: "Lingue e Bandiere",
@@ -199,7 +199,7 @@ export default function TutorManager({
                             key={emoji}
                             type="button"
                             onClick={() => setFormData({ ...formData, avatar: emoji })}
-                            className={`w-9 h-9 flex items-center justify-center text-xl rounded-[16px] transition-transform ${
+                            className={`w-11 h-11 flex items-center justify-center text-xl rounded-[16px] p-1 transition-transform ${
                               formData.avatar === emoji 
                                 ? (isDarkMode ? 'bg-[#25D366]/40 ring-2 ring-[#25D366] scale-110 z-10' : 'bg-emerald-200 ring-2 ring-[#25D366] scale-110 z-10')
                                 : (isDarkMode ? 'hover:bg-[#2A3942]' : 'hover:bg-slate-200')
