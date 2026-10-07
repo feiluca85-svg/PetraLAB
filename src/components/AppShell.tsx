@@ -65,8 +65,8 @@ export default function AppShell() {
         isDarkMode ? "bg-[#0B141A]" : "bg-white"
       }`}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-emerald-600">Caricamento PetraLAB...</p>
+          <div className="w-10 h-10 border-3 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-[#25D366]">Caricamento PetraLAB...</p>
         </div>
       </div>
     );
@@ -116,7 +116,7 @@ export default function AppShell() {
           className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 z-40 ${
             isDarkMode 
               ? "bg-[#25D366] text-[#111B21] shadow-emerald-950/50" 
-              : "bg-[#008069] text-white shadow-emerald-700/30"
+              : "bg-[#25D366] text-white shadow-emerald-700/30"
           }`}
           aria-label="Aggiungi Tutor"
           title="Aggiungi o modifica tutor"

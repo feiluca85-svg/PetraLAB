@@ -366,12 +366,12 @@ export default function ParentDashboard({
 
   return (
     <div className={`flex flex-col h-full w-full overflow-hidden ${
-      isDarkMode ? "bg-[#111B21] text-[#E9EDEF]" : "bg-[#F0F2F5] text-slate-900"
+      isDarkMode ? "bg-[#0B141A] text-[#E9EDEF]" : "bg-[#F0F2F5] text-slate-900"
     }`}>
       {/* Header WhatsApp Top */}
       <div className={`${
-        isDarkMode ? "bg-[#202C33] border-[#222E35]" : "bg-[#008069]"
-      } text-white px-4 py-3.5 flex items-center justify-between shadow-md sticky top-0 z-20`}>
+        isDarkMode ? "bg-[#182229] border-[#202C33]" : "bg-[#25D366]"
+      } text-white px-4 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-20`}>
         <div className="flex items-center gap-3">
           {onClose && (
             <button
@@ -399,7 +399,7 @@ export default function ParentDashboard({
           onClick={logout}
           className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
             isDarkMode 
-              ? "bg-[#111B21] hover:bg-[#2A3942] text-red-400" 
+              ? "bg-[#0B141A] hover:bg-[#2A3942] text-red-400" 
               : "bg-white/15 hover:bg-white/25 text-white"
           }`}
           title="Esci dall'account"
@@ -410,14 +410,14 @@ export default function ParentDashboard({
 
       {/* Pillole Sotto-Navigazione WhatsApp */}
       <div className={`flex gap-2 p-3 border-b text-xs overflow-x-auto no-scrollbar ${
-        isDarkMode ? "bg-[#111B21] border-[#222E35]" : "bg-white border-slate-100"
+        isDarkMode ? "bg-[#0B141A] border-[#202C33]" : "bg-white border-slate-100"
       }`}>
         <button
           onClick={() => setActiveSubTab("security")}
           className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
             activeSubTab === "security"
-              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
-              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
+              ? (isDarkMode ? "bg-[#25D366]/20 text-[#25D366]" : "bg-[#D8FDD2] text-[#0B6E4F]")
+              : (isDarkMode ? "bg-[#182229] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
           }`}
         >
           🔐 Accessi
@@ -427,19 +427,19 @@ export default function ParentDashboard({
           onClick={() => setActiveSubTab("agenda")}
           className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all flex gap-1 items-center ${
             activeSubTab === "agenda"
-              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
-              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
+              ? (isDarkMode ? "bg-[#25D366]/20 text-[#25D366]" : "bg-[#D8FDD2] text-[#0B6E4F]")
+              : (isDarkMode ? "bg-[#182229] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
           }`}
         >
-          <span className="text-emerald-500">✨</span> Diario Nuvola
+          <span className="text-[#25D366]">✨</span> Diario Nuvola
         </button>
 
         <button
           onClick={() => setActiveSubTab("chats")}
           className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
             activeSubTab === "chats"
-              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
-              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
+              ? (isDarkMode ? "bg-[#25D366]/20 text-[#25D366]" : "bg-[#D8FDD2] text-[#0B6E4F]")
+              : (isDarkMode ? "bg-[#182229] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
           }`}
         >
           💬 Chat in Diretta
@@ -460,10 +460,10 @@ export default function ParentDashboard({
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingNuvola}
-                className={`flex-1 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                className={`flex-1 p-3 rounded-[24px] flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                   isDarkMode 
-                    ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/40 border border-emerald-500/30 text-emerald-400 hover:from-emerald-900/60' 
-                    : 'bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 hover:from-emerald-100'
+                    ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/40 border border-[#25D366]/30 text-emerald-400 hover:from-emerald-900/60' 
+                    : 'bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-[#118B44] hover:from-emerald-100'
                 }`}
               >
                 <span className="text-2xl">{isUploadingNuvola ? '⏳' : '📸'}</span>
@@ -473,9 +473,9 @@ export default function ParentDashboard({
 
               <button 
                 onClick={() => setShowManualModal(true)}
-                className={`flex-1 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                className={`flex-1 p-3 rounded-[24px] flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                   isDarkMode 
-                    ? 'bg-[#202C33] border border-[#2A3942] text-gray-300 hover:bg-[#2A3942]' 
+                    ? 'bg-[#182229] border border-[#2A3942] text-gray-300 hover:bg-[#2A3942]' 
                     : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -486,8 +486,8 @@ export default function ParentDashboard({
             </div>
 
             {/* List of current agenda items (Mock) */}
-            <div className={`rounded-2xl border overflow-hidden ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            <div className={`rounded-[24px] border overflow-hidden ${
+              isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
               <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? "border-[#2A3942]" : "border-slate-100"}`}>
                 <h3 className="font-bold text-sm">Compiti in Sospeso</h3>
@@ -508,7 +508,7 @@ export default function ParentDashboard({
                       <div>
                         <h4 className={`text-sm font-bold ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-gray-200' : 'text-slate-800'}`}>{item.subject}</h4>
                         <p className={`text-xs ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>{item.description}</p>
-                        <span className={`text-[10px] font-semibold mt-1 inline-block px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-[#111B21] text-emerald-400' : 'bg-slate-100 text-emerald-700'}`}>{formatDisplayDate(item.dueDate)}</span>
+                        <span className={`text-[10px] font-semibold mt-1 inline-block px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-[#0B141A] text-emerald-400' : 'bg-slate-100 text-[#118B44]'}`}>{formatDisplayDate(item.dueDate)}</span>
                       </div>
                     </div>
                     <button 
@@ -525,13 +525,13 @@ export default function ParentDashboard({
             </div>
 
             {/* Registro Voti unificato nel Diario */}
-            <div className={`mt-6 rounded-2xl border overflow-hidden ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            <div className={`mt-6 rounded-[24px] border overflow-hidden ${
+              isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
               <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? "border-[#2A3942]" : "border-slate-100"}`}>
                 <h3 className="font-bold text-sm">📊 Registro Voti & Memoria Tutor</h3>
               </div>
-              <div className="p-4 grid grid-cols-1 gap-3 bg-slate-50 dark:bg-[#111B21]">
+              <div className="p-4 grid grid-cols-1 gap-3 bg-slate-50 dark:bg-[#0B141A]">
               {tutors.map((tutor) => {
                 const mem = subjectsMemory[tutor.id];
                 const grades = mem?.grades || [];
@@ -539,20 +539,20 @@ export default function ParentDashboard({
                 if (grades.length === 0 && weaknesses.length === 0) return null;
 
                 return (
-                  <div key={tutor.id} className={`p-4 rounded-2xl border ${
-                    isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+                  <div key={tutor.id} className={`p-4 rounded-[24px] border ${
+                    isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
                   }`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{tutor.avatar}</span>
                         <div>
                           <h4 className="font-bold text-sm">{tutor.name}</h4>
-                          <span className="text-xs text-emerald-500 font-medium">{tutor.subject}</span>
+                          <span className="text-xs text-[#25D366] font-medium">{tutor.subject}</span>
                         </div>
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                         grades.length > 0 
-                          ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-emerald-100 text-emerald-800")
+                          ? (isDarkMode ? "bg-[#25D366]/20 text-[#25D366]" : "bg-emerald-100 text-[#118B44]")
                           : (isDarkMode ? "bg-gray-800 text-gray-400" : "bg-slate-100 text-slate-500")
                       }`}>
                         {grades.length} voti
@@ -586,11 +586,11 @@ export default function ParentDashboard({
         {activeSubTab === "security" && (
           <div className="space-y-4">
             {/* Riepilogo Stato */}
-            <div className={`p-4 rounded-2xl border ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            <div className={`p-4 rounded-[24px] border ${
+              isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-500">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#25D366]">
                   Stato Sicurezza
                 </span>
                 <span className="flex items-center gap-1.5 text-xs font-bold text-green-500">
@@ -599,12 +599,12 @@ export default function ParentDashboard({
                 </span>
               </div>
               <p className={`text-sm ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
-                L'app è protetta da PIN. Per far accedere tua figlia da un nuovo dispositivo (come il suo tablet), visita il sito e inserisci il PIN Studente: <strong className="text-emerald-500">1430</strong>.
+                L'app è protetta da PIN. Per far accedere tua figlia da un nuovo dispositivo (come il suo tablet), visita il sito e inserisci il PIN Studente: <strong className="text-[#25D366]">1430</strong>.
               </p>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            <div className={`rounded-[24px] border overflow-hidden ${
+              isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
               <div className={`p-4 border-b flex items-center justify-between ${
                 isDarkMode ? "border-[#2A3942]" : "border-slate-100"
@@ -669,8 +669,8 @@ export default function ParentDashboard({
         {/* ========================================================= */}
         {activeSubTab === "grades" && (
           <div className="space-y-4">
-            <div className={`p-4 rounded-2xl border ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            <div className={`p-4 rounded-[24px] border ${
+              isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
               <h3 className="font-bold text-base mb-1">
                 📊 Registro Memoria Tutor
@@ -684,9 +684,9 @@ export default function ParentDashboard({
                 <button 
                   onClick={() => gradesFileInputRef.current?.click()}
                   disabled={isUploadingGrades}
-                  className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-sm ${
+                  className={`w-full py-3 rounded-[20px] flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-sm ${
                     isDarkMode 
-                      ? 'bg-[#111B21] border border-[#2A3942] text-blue-400 hover:bg-blue-950/30' 
+                      ? 'bg-[#0B141A] border border-[#2A3942] text-blue-400 hover:bg-blue-950/30' 
                       : 'bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100'
                   }`}
                 >
@@ -703,20 +703,20 @@ export default function ParentDashboard({
                 const weaknesses = mem?.weaknesses || [];
 
                 return (
-                  <div key={tutor.id} className={`p-4 rounded-2xl border ${
-                    isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+                  <div key={tutor.id} className={`p-4 rounded-[24px] border ${
+                    isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
                   }`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{tutor.avatar}</span>
                         <div>
                           <h4 className="font-bold text-sm">{tutor.name}</h4>
-                          <span className="text-xs text-emerald-500 font-medium">{tutor.subject}</span>
+                          <span className="text-xs text-[#25D366] font-medium">{tutor.subject}</span>
                         </div>
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                         grades.length > 0 
-                          ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-emerald-100 text-emerald-800")
+                          ? (isDarkMode ? "bg-[#25D366]/20 text-[#25D366]" : "bg-emerald-100 text-[#118B44]")
                           : (isDarkMode ? "bg-gray-800 text-gray-400" : "bg-slate-100 text-slate-500")
                       }`}>
                         {grades.length} voti registrati
@@ -770,8 +770,8 @@ export default function ParentDashboard({
         {/* ========================================================= */}
         {activeSubTab === "chats" && (
           <div className="space-y-4">
-            <div className={`p-4 rounded-2xl border ${
-              isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
+            <div className={`p-4 rounded-[24px] border ${
+              isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200 shadow-sm"
             }`}>
               <h3 className="font-bold text-base flex items-center gap-2">
                 <span>💬</span>
@@ -782,8 +782,8 @@ export default function ParentDashboard({
               </p>
             </div>
 
-            <div className={`p-4 rounded-2xl border max-h-[60vh] overflow-y-auto space-y-3 ${
-              isDarkMode ? "bg-[#111B21] border-[#2A3942]" : "bg-slate-100 border-slate-200"
+            <div className={`p-4 rounded-[24px] border max-h-[60vh] overflow-y-auto space-y-3 ${
+              isDarkMode ? "bg-[#0B141A] border-[#2A3942]" : "bg-slate-100 border-slate-200"
             }`}>
               {childChat.length === 0 ? (
                 <div className="text-center py-8 text-sm text-gray-400">
@@ -798,10 +798,10 @@ export default function ParentDashboard({
                     <span className="text-[10px] font-bold text-gray-400 mb-0.5 px-1">
                       {msg.role === "user" ? "👧 Tua Figlia" : "🤖 Tutor AI"}
                     </span>
-                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-xs ${
+                    <div className={`max-w-[85%] p-3 rounded-[24px] text-sm shadow-xs ${
                       msg.role === "user"
                         ? (isDarkMode ? "bg-[#005C4B] text-white rounded-tr-xs" : "bg-[#DCF8C6] text-slate-900 rounded-tr-xs")
-                        : (isDarkMode ? "bg-[#202C33] text-gray-200 rounded-tl-xs" : "bg-white text-slate-900 rounded-tl-xs border border-slate-200")
+                        : (isDarkMode ? "bg-[#182229] text-gray-200 rounded-tl-xs" : "bg-white text-slate-900 rounded-tl-xs border border-slate-200")
                     }`}>
                       {msg.text}
                     </div>
@@ -825,31 +825,31 @@ export default function ParentDashboard({
       {/* Modale Inserimento Manuale */}
       {showManualModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] ${isDarkMode ? "bg-[#111B21] border border-[#2A3942]" : "bg-white"}`}>
+          <div className={`w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] ${isDarkMode ? "bg-[#0B141A] border border-[#2A3942]" : "bg-white"}`}>
             <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? "border-[#2A3942]" : "border-slate-100"}`}>
               <h3 className="font-bold text-lg">Inserimento Manuale</h3>
-              <button onClick={() => setShowManualModal(false)} className={`w-8 h-8 rounded-full ${isDarkMode ? "bg-[#202C33] text-gray-400" : "bg-slate-100 text-slate-500"}`}>✕</button>
+              <button onClick={() => setShowManualModal(false)} className={`w-8 h-8 rounded-full ${isDarkMode ? "bg-[#182229] text-gray-400" : "bg-slate-100 text-slate-500"}`}>✕</button>
             </div>
             <div className="p-5 overflow-y-auto space-y-4">
-              <div className="flex bg-slate-100 dark:bg-[#202C33] p-1 rounded-xl">
-                <button onClick={() => setManualType("task")} className={`flex-1 py-2 text-sm font-bold rounded-lg ${manualType === 'task' ? 'bg-white dark:bg-[#111B21] shadow-sm text-emerald-600' : 'text-gray-500'}`}>📝 Compito/Verifica</button>
-                <button onClick={() => setManualType("grade")} className={`flex-1 py-2 text-sm font-bold rounded-lg ${manualType === 'grade' ? 'bg-white dark:bg-[#111B21] shadow-sm text-blue-500' : 'text-gray-500'}`}>📊 Voto Preso</button>
+              <div className="flex bg-slate-100 dark:bg-[#182229] p-1 rounded-[20px]">
+                <button onClick={() => setManualType("task")} className={`flex-1 py-2 text-sm font-bold rounded-lg ${manualType === 'task' ? 'bg-white dark:bg-[#0B141A] shadow-sm text-[#25D366]' : 'text-gray-500'}`}>📝 Compito/Verifica</button>
+                <button onClick={() => setManualType("grade")} className={`flex-1 py-2 text-sm font-bold rounded-lg ${manualType === 'grade' ? 'bg-white dark:bg-[#0B141A] shadow-sm text-blue-500' : 'text-gray-500'}`}>📊 Voto Preso</button>
               </div>
               {manualType === "task" ? (
                 <>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Tipo</label><select value={manualFormData.type} onChange={(e) => setManualFormData({...manualFormData, type: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`}><option>Compito</option><option>Verifica</option></select></div>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Materia</label><input type="text" value={manualFormData.subject} onChange={(e) => setManualFormData({...manualFormData, subject: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Descrizione</label><textarea value={manualFormData.description} onChange={(e) => setManualFormData({...manualFormData, description: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Data (es. Giovedì 10 Ottobre)</label><input type="date" value={manualFormData.dueDate} onChange={(e) => setManualFormData({...manualFormData, dueDate: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Tipo</label><select value={manualFormData.type} onChange={(e) => setManualFormData({...manualFormData, type: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`}><option>Compito</option><option>Verifica</option></select></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Materia</label><input type="text" value={manualFormData.subject} onChange={(e) => setManualFormData({...manualFormData, subject: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Descrizione</label><textarea value={manualFormData.description} onChange={(e) => setManualFormData({...manualFormData, description: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Data (es. Giovedì 10 Ottobre)</label><input type="date" value={manualFormData.dueDate} onChange={(e) => setManualFormData({...manualFormData, dueDate: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
                 </>
               ) : (
                 <>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Tutor/Materia</label><select value={manualFormData.subject} onChange={(e) => setManualFormData({...manualFormData, subject: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`}><option value="">Seleziona...</option>{tutors.map(t => <option key={t.id} value={t.id}>{t.subject}</option>)}</select></div>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Voto</label><input type="text" value={manualFormData.grade} onChange={(e) => setManualFormData({...manualFormData, grade: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
-                  <div><label className="block text-xs font-bold mb-1 opacity-70">Argomento</label><input type="text" value={manualFormData.topic} onChange={(e) => setManualFormData({...manualFormData, topic: e.target.value})} className={`w-full p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Tutor/Materia</label><select value={manualFormData.subject} onChange={(e) => setManualFormData({...manualFormData, subject: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`}><option value="">Seleziona...</option>{tutors.map(t => <option key={t.id} value={t.id}>{t.subject}</option>)}</select></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Voto</label><input type="text" value={manualFormData.grade} onChange={(e) => setManualFormData({...manualFormData, grade: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
+                  <div><label className="block text-xs font-bold mb-1 opacity-70">Argomento</label><input type="text" value={manualFormData.topic} onChange={(e) => setManualFormData({...manualFormData, topic: e.target.value})} className={`w-full p-2.5 rounded-[20px] border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`} /></div>
                 </>
               )}
-              <button onClick={handleManualSubmit} className="w-full py-3 mt-2 rounded-xl bg-emerald-500 text-white font-bold text-sm">Salva</button>
+              <button onClick={handleManualSubmit} className="w-full py-3 mt-2 rounded-[20px] bg-[#25D366] text-white font-bold text-sm">Salva</button>
             </div>
           </div>
         </div>

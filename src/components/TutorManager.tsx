@@ -104,9 +104,9 @@ export default function TutorManager({
   };
 
   return (
-    <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#111B21] text-[#E9EDEF]' : 'bg-[#F0F2F5] text-slate-800'}`}>
+    <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#0B141A] text-[#E9EDEF]' : 'bg-[#F0F2F5] text-slate-800'}`}>
       {/* Header Stile WhatsApp */}
-      <div className={`${isDarkMode ? 'bg-[#202C33] border-[#222E35]' : 'bg-[#008069]'} text-white px-4 py-3.5 flex items-center justify-between shadow-md sticky top-0 z-20`}>
+      <div className={`${isDarkMode ? 'bg-[#182229] border-[#202C33]' : 'bg-[#25D366]'} text-white px-4 py-3.5 flex items-center justify-between shadow-md sticky top-0 z-20`}>
         <div className="flex items-center gap-3">
           {onClose && (
             <button 
@@ -135,8 +135,8 @@ export default function TutorManager({
             onClick={handleCreate}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all active:scale-95 ${
               isDarkMode 
-                ? 'bg-[#00A884] text-[#111B21] hover:bg-[#02be96]' 
-                : 'bg-white text-[#008069] hover:bg-emerald-50'
+                ? 'bg-[#25D366] text-[#111B21] hover:bg-[#02be96]' 
+                : 'bg-white text-[#25D366] hover:bg-emerald-50'
             }`}
           >
             <span>+</span>
@@ -150,7 +150,7 @@ export default function TutorManager({
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className={`w-8 h-8 border-3 border-t-transparent rounded-full animate-spin ${
-              isDarkMode ? 'border-[#00A884]' : 'border-[#008069]'
+              isDarkMode ? 'border-[#25D366]' : 'border-[#25D366]'
             }`} />
             <p className={`text-sm ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
               Caricamento tutor in corso...
@@ -162,7 +162,7 @@ export default function TutorManager({
           /* ======================================================= */
           <div className={`rounded-3xl p-5 shadow-sm border transition-all ${
             isDarkMode 
-              ? 'bg-[#202C33] border-[#2A3942]' 
+              ? 'bg-[#182229] border-[#2A3942]' 
               : 'bg-white border-slate-200 shadow-md'
           }`}>
             <div className="flex items-center justify-between pb-4 border-b border-gray-500/20 mb-5">
@@ -175,7 +175,7 @@ export default function TutorManager({
               <button 
                 onClick={() => { setEditingTutor(null); setIsCreating(false); }}
                 className={`p-1.5 rounded-full text-sm font-semibold ${
-                  isDarkMode ? 'hover:bg-[#111B21] text-gray-400' : 'hover:bg-slate-100 text-slate-500'
+                  isDarkMode ? 'hover:bg-[#0B141A] text-gray-400' : 'hover:bg-slate-100 text-slate-500'
                 }`}
               >
                 ✕
@@ -190,7 +190,7 @@ export default function TutorManager({
                 }`}>
                   Scegli Avatar (Emoji)
                 </label>
-                <div className={`border rounded-xl p-2 h-48 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`}>
+                <div className={`border rounded-[20px] p-2 h-48 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A] border-[#2A3942]' : 'bg-slate-50 border-slate-200'}`}>
                   {EMOJI_CATEGORIES.map(cat => (
                     <div key={cat.label} className="mb-3">
                       <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 sticky top-0 py-1 z-10 ${isDarkMode ? 'bg-[#0B141A] text-gray-400' : 'bg-slate-50 text-slate-500'}`}>
@@ -202,9 +202,9 @@ export default function TutorManager({
                             key={emoji}
                             type="button"
                             onClick={() => setFormData({ ...formData, avatar: emoji })}
-                            className={`w-9 h-9 flex items-center justify-center text-xl rounded-lg transition-transform ${
+                            className={`w-9 h-9 flex items-center justify-center text-xl rounded-[16px] transition-transform ${
                               formData.avatar === emoji 
-                                ? (isDarkMode ? 'bg-[#00A884]/40 ring-2 ring-[#00A884] scale-110 z-10' : 'bg-emerald-200 ring-2 ring-emerald-500 scale-110 z-10')
+                                ? (isDarkMode ? 'bg-[#25D366]/40 ring-2 ring-[#25D366] scale-110 z-10' : 'bg-emerald-200 ring-2 ring-[#25D366] scale-110 z-10')
                                 : (isDarkMode ? 'hover:bg-[#2A3942]' : 'hover:bg-slate-200')
                             }`}
                           >
@@ -221,7 +221,7 @@ export default function TutorManager({
                     type="text" 
                     value={formData.avatar || "🦉"}
                     onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                    className={`w-12 text-center rounded border px-1 py-0.5 outline-none ${isDarkMode ? 'bg-[#111B21] border-[#2A3942] text-white' : 'bg-white border-slate-200'}`} 
+                    className={`w-12 text-center rounded border px-1 py-0.5 outline-none ${isDarkMode ? 'bg-[#0B141A] border-[#2A3942] text-white' : 'bg-white border-slate-200'}`} 
                   />
                 </div>
               </div>
@@ -239,10 +239,10 @@ export default function TutorManager({
                     placeholder="es. Archimede, Arthur, Dante..."
                     value={formData.name || ""} 
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className={`w-full rounded-xl px-3.5 py-2.5 text-sm border outline-none font-semibold transition-colors ${
+                    className={`w-full rounded-[20px] px-3.5 py-2.5 text-sm border outline-none font-semibold transition-colors ${
                       isDarkMode 
-                        ? 'bg-[#111B21] border-[#2A3942] text-white focus:border-[#00A884]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
+                        ? 'bg-[#0B141A] border-[#2A3942] text-white focus:border-[#25D366]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#25D366]'
                     }`}
                   />
                 </div>
@@ -258,10 +258,10 @@ export default function TutorManager({
                     placeholder="es. Matematica 📐, Storia 🏛️..."
                     value={formData.subject || ""} 
                     onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                    className={`w-full rounded-xl px-3.5 py-2.5 text-sm border outline-none font-semibold transition-colors ${
+                    className={`w-full rounded-[20px] px-3.5 py-2.5 text-sm border outline-none font-semibold transition-colors ${
                       isDarkMode 
-                        ? 'bg-[#111B21] border-[#2A3942] text-white focus:border-[#00A884]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
+                        ? 'bg-[#0B141A] border-[#2A3942] text-white focus:border-[#25D366]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#25D366]'
                     }`}
                   />
                 </div>
@@ -279,10 +279,10 @@ export default function TutorManager({
                     <button
                       type="button"
                       onClick={() => setFormData({...formData, gender: "male"})}
-                      className={`py-2 px-3 rounded-xl text-sm font-semibold border flex items-center justify-center gap-1.5 transition-all ${
+                      className={`py-2 px-3 rounded-[20px] text-sm font-semibold border flex items-center justify-center gap-1.5 transition-all ${
                         formData.gender === "male"
-                          ? (isDarkMode ? 'bg-[#00A884]/20 border-[#00A884] text-[#00A884]' : 'bg-emerald-50 border-emerald-500 text-emerald-800')
-                          : (isDarkMode ? 'bg-[#111B21] border-[#2A3942] text-gray-400' : 'bg-slate-50 border-slate-200 text-slate-600')
+                          ? (isDarkMode ? 'bg-[#25D366]/20 border-[#25D366] text-[#25D366]' : 'bg-emerald-50 border-[#25D366] text-[#118B44]')
+                          : (isDarkMode ? 'bg-[#0B141A] border-[#2A3942] text-gray-400' : 'bg-slate-50 border-slate-200 text-slate-600')
                       }`}
                     >
                       <span>👨</span>
@@ -291,10 +291,10 @@ export default function TutorManager({
                     <button
                       type="button"
                       onClick={() => setFormData({...formData, gender: "female"})}
-                      className={`py-2 px-3 rounded-xl text-sm font-semibold border flex items-center justify-center gap-1.5 transition-all ${
+                      className={`py-2 px-3 rounded-[20px] text-sm font-semibold border flex items-center justify-center gap-1.5 transition-all ${
                         formData.gender === "female"
-                          ? (isDarkMode ? 'bg-[#00A884]/20 border-[#00A884] text-[#00A884]' : 'bg-emerald-50 border-emerald-500 text-emerald-800')
-                          : (isDarkMode ? 'bg-[#111B21] border-[#2A3942] text-gray-400' : 'bg-slate-50 border-slate-200 text-slate-600')
+                          ? (isDarkMode ? 'bg-[#25D366]/20 border-[#25D366] text-[#25D366]' : 'bg-emerald-50 border-[#25D366] text-[#118B44]')
+                          : (isDarkMode ? 'bg-[#0B141A] border-[#2A3942] text-gray-400' : 'bg-slate-50 border-slate-200 text-slate-600')
                       }`}
                     >
                       <span>👩</span>
@@ -310,10 +310,10 @@ export default function TutorManager({
                   <select 
                     value={formData.voiceLang || "it-IT"} 
                     onChange={(e) => setFormData({...formData, voiceLang: e.target.value, voiceURI: undefined})}
-                    className={`w-full rounded-xl px-3 py-2 text-[13px] border outline-none font-medium transition-colors ${
+                    className={`w-full rounded-[20px] px-3 py-2 text-[13px] border outline-none font-medium transition-colors ${
                       isDarkMode 
-                        ? 'bg-[#202C33] border-[#2A3942] text-white focus:border-[#00A884]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
+                        ? 'bg-[#182229] border-[#2A3942] text-white focus:border-[#25D366]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#25D366]'
                     }`}
                   >
                     <option value="it-IT">🇮🇹 Italiano</option>
@@ -341,10 +341,10 @@ export default function TutorManager({
                   value={formData.greeting || ""} 
                   onChange={(e) => setFormData({...formData, greeting: e.target.value})}
                   placeholder="Cosa dirà il tutor appena l'alunna apre la chat..."
-                  className={`w-full rounded-xl px-3.5 py-2.5 text-sm border outline-none transition-colors resize-none ${
+                  className={`w-full rounded-[20px] px-3.5 py-2.5 text-sm border outline-none transition-colors resize-none ${
                     isDarkMode 
-                      ? 'bg-[#111B21] border-[#2A3942] text-white focus:border-[#00A884]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
+                      ? 'bg-[#0B141A] border-[#2A3942] text-white focus:border-[#25D366]' 
+                      : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#25D366]'
                   }`}
                 />
               </div>
@@ -361,10 +361,10 @@ export default function TutorManager({
                   value={formData.prompt || ""} 
                   onChange={(e) => setFormData({...formData, prompt: e.target.value})}
                   placeholder="Definisci la personalità e il metodo di insegnamento..."
-                  className={`w-full rounded-xl px-3.5 py-2.5 text-sm border outline-none transition-colors resize-none ${
+                  className={`w-full rounded-[20px] px-3.5 py-2.5 text-sm border outline-none transition-colors resize-none ${
                     isDarkMode 
-                      ? 'bg-[#111B21] border-[#2A3942] text-white focus:border-[#00A884]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#008069]'
+                      ? 'bg-[#0B141A] border-[#2A3942] text-white focus:border-[#25D366]' 
+                      : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#25D366]'
                   }`}
                 />
               </div>
@@ -374,8 +374,8 @@ export default function TutorManager({
                 <button 
                   type="button"
                   onClick={() => { setEditingTutor(null); setIsCreating(false); }}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-colors ${
-                    isDarkMode ? 'bg-[#111B21] hover:bg-[#2A3942] text-gray-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  className={`flex-1 py-3 px-4 rounded-[20px] font-bold text-sm transition-colors ${
+                    isDarkMode ? 'bg-[#0B141A] hover:bg-[#2A3942] text-gray-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
                   Annulla
@@ -383,8 +383,8 @@ export default function TutorManager({
                 <button 
                   type="button"
                   onClick={handleSave}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 text-white ${
-                    isDarkMode ? 'bg-[#00A884] hover:bg-[#02be96]' : 'bg-[#008069] hover:bg-[#006e5a]'
+                  className={`flex-1 py-3 px-4 rounded-[20px] font-bold text-sm shadow-md transition-all active:scale-95 text-white ${
+                    isDarkMode ? 'bg-[#25D366] hover:bg-[#02be96]' : 'bg-[#25D366] hover:bg-[#006e5a]'
                   }`}
                 >
                   💾 Salva Tutor
@@ -402,15 +402,15 @@ export default function TutorManager({
                 key={tutor.id} 
                 className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                   isDarkMode 
-                    ? 'bg-[#202C33] border-[#2A3942] hover:border-[#00A884]/40' 
+                    ? 'bg-[#182229] border-[#2A3942] hover:border-[#25D366]/40' 
                     : 'bg-white border-slate-200 hover:border-emerald-300 shadow-sm'
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className={`w-13 h-13 rounded-2xl flex items-center justify-center text-3xl shadow-xs shrink-0 ${
-                    isDarkMode ? 'bg-[#111B21] border border-[#2A3942]' : 'bg-slate-100 border border-slate-200'
+                    isDarkMode ? 'bg-gradient-to-br from-[#182229] to-[#202C33] shadow-inner' : 'bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-inner'
                   }`}>
-                    {tutor.avatar}
+                    <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -418,7 +418,7 @@ export default function TutorManager({
                         {tutor.name}
                       </h3>
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                        isDarkMode ? 'bg-[#00A884]/20 text-[#00A884]' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        isDarkMode ? 'bg-[#25D366]/20 text-[#25D366]' : 'bg-emerald-50 text-[#118B44] border border-emerald-200'
                       }`}>
                         {tutor.subject}
                       </span>
@@ -435,10 +435,10 @@ export default function TutorManager({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button 
                     onClick={() => handleEdit(tutor)}
-                    className={`p-2 rounded-xl text-xs font-bold transition-all ${
+                    className={`p-2 rounded-[20px] text-xs font-bold transition-all ${
                       isDarkMode 
-                        ? 'bg-[#111B21] hover:bg-[#2A3942] text-[#00A884]' 
-                        : 'bg-emerald-50 hover:bg-emerald-100 text-[#008069]'
+                        ? 'bg-[#0B141A] hover:bg-[#2A3942] text-[#25D366]' 
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-[#25D366]'
                     }`}
                     title="Modifica tutor"
                   >
@@ -446,9 +446,9 @@ export default function TutorManager({
                   </button>
                   <button 
                     onClick={() => handleDelete(tutor.id)}
-                    className={`p-2 rounded-xl text-xs font-bold transition-all ${
+                    className={`p-2 rounded-[20px] text-xs font-bold transition-all ${
                       isDarkMode 
-                        ? 'bg-[#111B21] hover:bg-red-950/40 text-red-400' 
+                        ? 'bg-[#0B141A] hover:bg-red-950/40 text-red-400' 
                         : 'bg-red-50 hover:bg-red-100 text-red-600'
                     }`}
                     title="Elimina tutor"

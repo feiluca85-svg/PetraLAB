@@ -635,7 +635,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.6.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.7.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -721,8 +721,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         tutorChat?.lastUpdated === getCurrentTime() 
                           ? "border-[#25D366] p-0.5" 
                           : "border-transparent"
-                      } ${isDarkMode ? "bg-[#202C33]" : "bg-slate-100"}`}>
-                        <span>{tutor.avatar}</span>
+                      } ${isDarkMode ? "bg-gradient-to-br from-[#182229] to-[#202C33] shadow-inner" : "bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-inner"}`}>
+                        <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>
                       </div>
 
                       
@@ -767,7 +767,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                             </>
                           ) : (
                             <span className={`italic font-medium ${
-                              isDarkMode ? "text-[#25D366]" : "text-emerald-700"
+                              isDarkMode ? "text-[#25D366]" : "text-[#118B44]"
                             }`}>
                               Tocca per iniziare i compiti 💬
                             </span>
@@ -971,7 +971,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                <h3 className={`text-lg font-black inline-block px-2 py-1 rounded-lg border-b-2 shadow-sm ${
                                  isUrgentDay 
                                    ? (isDarkMode ? 'bg-red-950/40 text-red-400 border-red-500' : 'bg-red-50 text-red-600 border-red-500') 
-                                   : (isDarkMode ? 'bg-[#202C33] text-emerald-400 border-emerald-400' : 'bg-white text-emerald-700 border-[#25D366]')
+                                   : (isDarkMode ? 'bg-[#202C33] text-emerald-400 border-emerald-400' : 'bg-white text-[#118B44] border-[#25D366]')
                                }`}>
                                  {formatDate(dateStr)} {isUrgentDay && ' 🚨'}
                                </h3>
@@ -1053,7 +1053,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         /* ============================================================== */
         <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#0B141A]' : 'bg-[#EFEAE2]'}`}>
           {/* Header Singola Chat WhatsApp */}
-          <div className={`${isDarkMode ? 'bg-[#202C33]' : 'bg-[#008069]'} text-white px-3 py-2.5 flex items-center justify-between shadow-md z-20`}>
+          <div className={`${isDarkMode ? 'bg-[#202C33]' : 'bg-[#25D366]'} text-white px-3 py-2.5 flex items-center justify-between shadow-md z-20`}>
             <div className="flex items-center gap-2">
               {/* Tasto Indietro Stile WhatsApp */}
               <button 
@@ -1196,7 +1196,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                             <span className="font-bold text-emerald-950">{g.topic || "Verifica"}</span>
                             <span className="text-[10px] text-slate-400 ml-2">{g.date}</span>
                           </div>
-                          <span className="font-black text-sm text-emerald-700 bg-white px-2.5 py-0.5 rounded-lg shadow-xs">
+                          <span className="font-black text-sm text-[#118B44] bg-white px-2.5 py-0.5 rounded-lg shadow-xs">
                             {g.grade}
                           </span>
                         </div>
@@ -1224,7 +1224,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
                 <button 
                   onClick={() => setShowGradesModal(false)}
-                  className="w-full bg-[#008069] text-white font-bold py-2.5 rounded-2xl hover:bg-[#00705c] transition-colors text-sm shadow-md"
+                  className="w-full bg-[#25D366] text-white font-bold py-2.5 rounded-2xl hover:bg-[#118B44] transition-colors text-sm shadow-md"
                 >
                   Chiudi Diario
                 </button>
@@ -1234,9 +1234,9 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
           {/* Area Messaggi Chat Stile WhatsApp */}
           <div 
-            className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 relative"
+            className={`flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 relative ${isDarkMode ? "bg-[#0B141A]" : "bg-[#EFEAE2]"}`}
             style={{ 
-              backgroundImage: isDarkMode ? "radial-gradient(#2A3942 0.75px, transparent 0.75px)" : "radial-gradient(#d3cbbf 0.75px, transparent 0.75px)", 
+              backgroundImage: isDarkMode ? "none" : "none", 
               backgroundSize: "16px 16px" 
             }}
           >
@@ -1291,7 +1291,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {msg.role === "model" && (
                       <button
                         onClick={() => speakText(msg.text)}
-                        className={`ml-1 p-0.5 transition-colors ${isDarkMode ? 'text-[#8696A0] hover:text-[#25D366]' : 'text-slate-400 hover:text-emerald-700'}`}
+                        className={`ml-1 p-0.5 transition-colors ${isDarkMode ? 'text-[#8696A0] hover:text-[#25D366]' : 'text-slate-400 hover:text-[#118B44]'}`}
                         title="Ascolta audio"
                       >
                         🔊
@@ -1319,7 +1319,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
           {/* Barra Input Stile WhatsApp */}
           <div className={`p-2 sm:p-3 pb-safe flex flex-col gap-2 z-20 ${
-            isDarkMode ? 'bg-[#202C33] border-t border-[#2A3942]' : 'bg-[#F0F2F5] border-t border-slate-200'
+            isDarkMode ? 'bg-[#0B141A]' : 'bg-[#F0F2F5]'
           }`}>
             {selectedImage && (
               <div className={`flex items-center gap-2 p-2 rounded-xl border relative w-max shadow-xs ${
@@ -1348,7 +1348,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             <div className="flex items-end gap-2">
               {/* Contenitore Input Arrotondato */}
               <div className={`flex-1 flex items-center px-2 py-1 sm:py-1.5 rounded-3xl shadow-sm border border-transparent ${
-                isDarkMode ? 'bg-[#2A3942] focus-within:border-[#25D366]' : 'bg-white focus-within:border-slate-300'
+                isDarkMode ? 'bg-[#202C33] focus-within:border-[#25D366]' : 'bg-white focus-within:border-transparent'
               } ${isListening ? 'ring-2 ring-red-400' : ''}`}>
                 
                 {/* Input file nascosto */}
@@ -1397,7 +1397,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   onClick={handleSend}
                   disabled={isLoading}
                   className={`w-10 h-10 active:scale-95 text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
-                    isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#008069] hover:bg-[#00705c]'
+                    isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#25D366] hover:bg-[#118B44]'
                   }`}
                   aria-label="Invia messaggio"
                 >
@@ -1411,7 +1411,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
                     isListening 
                       ? 'bg-red-500 text-white animate-pulse' 
-                      : (isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#008069] hover:bg-[#00705c] text-white')
+                      : (isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#25D366] hover:bg-[#118B44] text-white')
                   }`}
                   title="Messaggio vocale"
                   disabled={isLoading}
