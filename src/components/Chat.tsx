@@ -635,7 +635,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.7.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.8.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -1053,28 +1053,28 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         /* ============================================================== */
         <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#0B141A]' : 'bg-[#EFEAE2]'}`}>
           {/* Header Singola Chat WhatsApp */}
-          <div className={`${isDarkMode ? 'bg-[#202C33]' : 'bg-[#25D366]'} text-white px-3 py-2.5 flex items-center justify-between shadow-md z-20`}>
+          <div className={`${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} px-3 py-2.5 flex items-center justify-between shadow-sm border-b ${isDarkMode ? 'border-[#202C33]' : 'border-slate-100'} z-20`}>
             <div className="flex items-center gap-2">
               {/* Tasto Indietro Stile WhatsApp */}
               <button 
                 onClick={() => window.history.back()}
-                className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors flex items-center gap-0.5 text-white"
+                className={`p-1 -ml-1 rounded-full flex items-center gap-0.5 transition-colors ${isDarkMode ? 'text-gray-300 hover:bg-[#202C33]' : 'text-[#25D366] hover:bg-slate-100'}`}
                 title="Torna alle chat"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
                 {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xl shadow-xs">
-                  {selectedTutor.avatar}
+                <div className={`w-[40px] h-[40px] rounded-full flex items-center justify-center text-[22px] shadow-sm ${isDarkMode ? 'bg-gradient-to-br from-[#182229] to-[#202C33]' : 'bg-gradient-to-br from-emerald-50 to-teal-100/50'}`}>
+                  <span className="drop-shadow-md">{selectedTutor.avatar}</span>
                 </div>
               </button>
 
               <div className="min-w-0">
-                <h2 className="font-bold text-[15px] leading-tight truncate">
+                <h2 className={`font-semibold text-[17px] leading-tight truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {selectedTutor.name}
                 </h2>
-                <p className={`text-[11px] ${isDarkMode ? 'text-gray-300' : 'text-emerald-200'} flex items-center gap-1 font-medium`}>
+                <p className={`text-[13px] ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'} flex items-center gap-1.5 font-medium mt-0.5`}>
                   <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDarkMode ? 'bg-[#25D366]' : 'bg-emerald-300'}`}></span>
                   online • {selectedTutor.subject.split(' ')[0]}
                 </p>
@@ -1084,7 +1084,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowGradesModal(true)}
-                className="bg-black/15 hover:bg-black/25 text-white text-xs px-2.5 py-1.5 rounded-full font-semibold flex items-center gap-1 transition-all active:scale-95"
+                className={`text-[13px] px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:bg-[#2A3942]' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200'}`}
                 title="Diario Voti e Lacune"
               >
                 📝 <span className="hidden sm:inline">Voti</span> ({currentTutorMemory?.grades?.length || 0})
@@ -1093,7 +1093,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               <div className="relative">
                 <button 
                   onClick={() => setShowChatMenu(prev => !prev)}
-                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors text-white active:scale-95"
+                  className={`p-1.5 rounded-full transition-colors active:scale-95 ${isDarkMode ? 'text-gray-300 hover:bg-[#202C33]' : 'text-slate-500 hover:bg-slate-100'}`}
                   title="Altre opzioni"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
