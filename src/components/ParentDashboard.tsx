@@ -800,7 +800,7 @@ export default function ParentDashboard({
                     </span>
                     <div className={`max-w-[85%] p-3 rounded-[24px] text-sm shadow-xs ${
                       msg.role === "user"
-                        ? (isDarkMode ? "bg-[#005C4B] text-white rounded-tr-xs" : "bg-[#DCF8C6] text-slate-900 rounded-tr-xs")
+                        ? (isDarkMode ? "bg-[#00A884] text-white rounded-tr-xs" : "bg-[#DCF8C6] text-slate-900 rounded-tr-xs")
                         : (isDarkMode ? "bg-[#182229] text-gray-200 rounded-tl-xs" : "bg-white text-slate-900 rounded-tl-xs border border-slate-200")
                     }`}>
                       {msg.text}

@@ -408,7 +408,7 @@ export default function TutorManager({
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className={`w-13 h-13 rounded-2xl flex items-center justify-center text-3xl shadow-xs shrink-0 ${
-                    isDarkMode ? 'bg-gradient-to-br from-[#182229] to-[#202C33] shadow-inner' : 'bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-inner'
+                    isDarkMode ? 'bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10' : 'bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50'
                   }`}>
                     <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>
                   </div>

@@ -635,7 +635,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.8.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.9.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -721,7 +721,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         tutorChat?.lastUpdated === getCurrentTime() 
                           ? "border-[#25D366] p-0.5" 
                           : "border-transparent"
-                      } ${isDarkMode ? "bg-gradient-to-br from-[#182229] to-[#202C33] shadow-inner" : "bg-gradient-to-br from-emerald-50 to-teal-100/50 shadow-inner"}`}>
+                      } ${isDarkMode ? "bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10" : "bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50"}`}>
                         <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>
                       </div>
 
@@ -1065,7 +1065,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
                 {/* Avatar */}
-                <div className={`w-[40px] h-[40px] rounded-full flex items-center justify-center text-[22px] shadow-sm ${isDarkMode ? 'bg-gradient-to-br from-[#182229] to-[#202C33]' : 'bg-gradient-to-br from-emerald-50 to-teal-100/50'}`}>
+                <div className={`w-[40px] h-[40px] rounded-full flex items-center justify-center text-[22px] shadow-sm ${isDarkMode ? 'bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10' : 'bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50'}`}>
                   <span className="drop-shadow-md">{selectedTutor.avatar}</span>
                 </div>
               </button>
@@ -1116,7 +1116,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.5.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.9.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowChatMenu(false); setShowGradesModal(true); }}
@@ -1168,7 +1168,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
                 <div className="flex justify-between items-center border-b pb-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl bg-slate-100 p-2 rounded-2xl">{selectedTutor.avatar}</span>
+                    <span className={`text-3xl p-2 rounded-2xl ${isDarkMode ? "bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60" : "bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100"}`}>{selectedTutor.avatar}</span>
                     <div>
                       <h3 className="font-bold text-slate-800 text-lg">Memoria di {selectedTutor.name}</h3>
                       <p className="text-xs text-slate-500">{selectedTutor.subject}</p>
@@ -1257,7 +1257,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 <div 
                   className={`max-w-[85%] sm:max-w-[78%] px-3.5 py-2.5 rounded-2xl text-[14.5px] leading-relaxed relative shadow-xs group ${
                     msg.role === "user"
-                      ? (isDarkMode ? "bg-[#005C4B] text-[#E9EDEF] rounded-tr-xs" : "bg-[#D9FDD3] text-slate-900 rounded-tr-xs")
+                      ? (isDarkMode ? "bg-[#00A884] text-[#E9EDEF] rounded-tr-xs" : "bg-[#D9FDD3] text-slate-900 rounded-tr-xs")
                       : (isDarkMode ? "bg-[#202C33] text-[#E9EDEF] rounded-tl-xs" : "bg-white text-slate-900 rounded-tl-xs")
                   }`}
                 >
