@@ -13,11 +13,29 @@ import TutorManager from "./TutorManager";
 
 const parseDateForSort = (d: string) => {
   if (!d || d.toLowerCase() === 'prossima lezione') return 0;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(d).getTime();
-  const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (parts) return new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
-  const t = new Date(d).getTime();
-  return isNaN(t) ? 9999999999998 : t;
+  
+  let time = 9999999999998;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    time = new Date(d).getTime();
+  } else {
+    const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (parts) {
+      time = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
+    } else {
+      const t = new Date(d).getTime();
+      if (!isNaN(t)) time = t;
+    }
+  }
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  // Se il compito è nel passato, lo mandiamo IN FONDO alla lista
+  if (time > 0 && time !== 9999999999998 && time < today.getTime()) {
+    return time + 20000000000000;
+  }
+  
+  return time;
 };
 
 const formatDisplayDate = (d: string) => {

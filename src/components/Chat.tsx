@@ -30,11 +30,29 @@ type SubjectChatData = {
 
 const parseDateForSort = (d: string) => {
   if (!d || d.toLowerCase() === 'prossima lezione') return 0;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(d).getTime();
-  const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (parts) return new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
-  const t = new Date(d).getTime();
-  return isNaN(t) ? 9999999999998 : t;
+  
+  let time = 9999999999998;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    time = new Date(d).getTime();
+  } else {
+    const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (parts) {
+      time = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
+    } else {
+      const t = new Date(d).getTime();
+      if (!isNaN(t)) time = t;
+    }
+  }
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  // Se il compito è nel passato, lo mandiamo IN FONDO alla lista
+  if (time > 0 && time !== 9999999999998 && time < today.getTime()) {
+    return time + 20000000000000;
+  }
+  
+  return time;
 };
 
 const formatDisplayDate = (d: string) => {
@@ -862,18 +880,21 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       // 2. Group
                       const groups: Record<string, any[]> = {};
                       tasks.forEach(t => {
-                         const d = formatDisplayDate(t.dueDate || 'Senza data');
+                         const d = t.dueDate || 'Senza data';
                          if (!groups[d]) groups[d] = [];
                          groups[d].push(t);
                       });
 
                       // 3. Helper per date e urgenze
+                      const todayObj = new Date();
+                      const todayStr = todayObj.toISOString().split('T')[0];
                       const tomorrow = new Date();
                       tomorrow.setDate(tomorrow.getDate() + 1);
                       const tStr = tomorrow.toISOString().split('T')[0];
 
                       const formatDate = (ds: string) => {
                          if (ds === 'Prossima lezione') return 'Prossima Lezione';
+                         if (ds === todayStr) return 'Oggi';
                          if (ds === tStr) return 'Domani';
                          const parts = ds.split('-');
                          if (parts.length === 3) {
@@ -886,22 +907,22 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
                       // 4. Render
                       return Object.entries(groups).map(([dateStr, dayTasks], gIdx) => {
-                         const isTomorrow = dateStr === tStr;
+                         const isUrgentDay = dateStr === tStr || dateStr === todayStr;
                          return (
                            <div key={gIdx} className="flex flex-col gap-3">
                              <div className="sticky top-0 z-10 py-2" style={{ backgroundColor: isDarkMode ? '#0B141A' : '#EFEAE2' }}>
                                <h3 className={`text-lg font-black inline-block px-2 py-1 rounded-lg border-b-2 shadow-sm ${
-                                 isTomorrow 
+                                 isUrgentDay 
                                    ? (isDarkMode ? 'bg-red-950/40 text-red-400 border-red-500' : 'bg-red-50 text-red-600 border-red-500') 
                                    : (isDarkMode ? 'bg-[#202C33] text-emerald-400 border-emerald-400' : 'bg-white text-emerald-700 border-emerald-500')
                                }`}>
-                                 {formatDate(dateStr)} {isTomorrow && ' 🚨'}
+                                 {formatDate(dateStr)} {isUrgentDay && ' 🚨'}
                                </h3>
                              </div>
                              
                              <div className="flex flex-col gap-3">
                                {dayTasks.map((item, idx) => {
-                                 const isUrgent = isTomorrow && !item.isCompleted;
+                                 const isUrgent = isUrgentDay && !item.isCompleted;
                                  return (
                                    <div key={idx} className={`p-4 rounded-xl border flex gap-3 shadow-sm transition-all ${
                                      item.isCompleted 
