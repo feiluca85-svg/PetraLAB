@@ -412,6 +412,17 @@ export default function ParentDashboard({
         isDarkMode ? "bg-[#111B21] border-[#222E35]" : "bg-white border-slate-100"
       }`}>
         <button
+          onClick={() => setActiveSubTab("security")}
+          className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
+            activeSubTab === "security"
+              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
+              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
+          }`}
+        >
+          🔐 Accessi
+        </button>
+        
+        <button
           onClick={() => setActiveSubTab("agenda")}
           className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all flex gap-1 items-center ${
             activeSubTab === "agenda"
@@ -423,19 +434,6 @@ export default function ParentDashboard({
         </button>
 
         <button
-          onClick={() => setActiveSubTab("security")}
-          className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
-            activeSubTab === "security"
-              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
-              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
-          }`}
-        >
-          🔐 Accessi
-        </button>
-
-        
-
-        <button
           onClick={() => setActiveSubTab("chats")}
           className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
             activeSubTab === "chats"
@@ -444,17 +442,6 @@ export default function ParentDashboard({
           }`}
         >
           💬 Chat in Diretta
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab("tutors")}
-          className={`px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all ${
-            activeSubTab === "tutors"
-              ? (isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-[#D8FDD2] text-[#0B6E4F]")
-              : (isDarkMode ? "bg-[#202C33] text-gray-300" : "bg-[#F0F2F5] text-slate-600")
-          }`}
-        >
-          👨‍🏫 Gestisci Tutor
         </button>
       </div>
 
