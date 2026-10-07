@@ -54,10 +54,13 @@ export default function ParentDashboard({
   isDarkMode?: boolean;
   onClose?: () => void;
 }) {
-  const { devices, removeDevice, logout } = useAuth();
+  const { devices, removeDevice, logout, role } = useAuth();
   const { tutors } = useTutors();
 
-  const [activeSubTab, setActiveSubTab] = useState<"security" | "grades" | "chats" | "tutors" | "agenda">("agenda");
+    const [activeSubTab, setActiveSubTab] = useState<"security" | "grades" | "chats" | "tutors" | "agenda">("security");
+  const [isUnlocked, setIsUnlocked] = useState(role === "admin");
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState(false);
   
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualType, setManualType] = useState<"task" | "grade">("task");
