@@ -544,7 +544,7 @@ export default function ParentDashboard({
                   }`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl drop-shadow-md">{tutor.avatar}</span>
+                        {tutor.avatar?.startsWith("/avatars/") ? <img src={tutor.avatar} alt="avatar" className="w-8 h-8 object-contain drop-shadow-md" /> : <span className="text-2xl drop-shadow-md">{tutor.avatar}</span>}
                         <div>
                           <h4 className="font-bold text-sm">{tutor.name}</h4>
                           <span className="text-xs text-[#25D366] font-medium">{tutor.subject}</span>
@@ -708,7 +708,7 @@ export default function ParentDashboard({
                   }`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl drop-shadow-md">{tutor.avatar}</span>
+                        {tutor.avatar?.startsWith("/avatars/") ? <img src={tutor.avatar} alt="avatar" className="w-8 h-8 object-contain drop-shadow-md" /> : <span className="text-2xl drop-shadow-md">{tutor.avatar}</span>}
                         <div>
                           <h4 className="font-bold text-sm">{tutor.name}</h4>
                           <span className="text-xs text-[#25D366] font-medium">{tutor.subject}</span>

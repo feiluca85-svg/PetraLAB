@@ -8,24 +8,12 @@ import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
 const EMOJI_CATEGORIES = [
   {
-    label: "Persone e Tutor",
-    emojis: ["👨‍🏫", "👩‍🏫", "👨‍🔬", "👩‍🔬", "👨‍💻", "👩‍💻", "👨‍🎓", "👩‍🎓", "👨‍💼", "👩‍💼", "🧙‍♂️", "🧙‍♀️", "🤓", "🧐", "😎", "🧠"]
+    label: "Avatar 3D",
+    emojis: Array.from({length: 80}, (_, i) => `/avatars/avatar_${i}.png`)
   },
   {
     label: "Lingue e Bandiere",
     emojis: ["🇮🇹", "🇬🇧", "🇺🇸", "🇫🇷", "🇪🇸", "🇩🇪", "🇨🇳", "🇯🇵", "🇷🇺", "🇧🇷", "🌐", "💬", "🗣️"]
-  },
-  {
-    label: "Studio e Materie",
-    emojis: ["📚", "📖", "✏️", "📐", "📏", "🔬", "🔭", "⚗️", "🧬", "🌍", "🗺️", "💻", "⌨️", "🎨", "🎭", "🎵", "⚽", "🏀", "🏆", "🧩"]
-  },
-  {
-    label: "Animali Simpatici",
-    emojis: ["🦉", "🦊", "🦁", "🐶", "🐱", "🐼", "🐨", "🐸", "🐒", "🦄", "🐙", "🦖", "🐢", "🐝", "🦋"]
-  },
-  {
-    label: "Fantasia e Natura",
-    emojis: ["🤖", "👾", "👽", "👻", "🌟", "🔥", "💧", "⚡", "❄️", "🍀", "🌈", "☀️", "🌙"]
   }
 ];
 
@@ -410,7 +398,7 @@ export default function TutorManager({
                   <div className={`w-13 h-13 rounded-2xl flex items-center justify-center text-3xl shadow-xs shrink-0 ${
                     isDarkMode ? 'bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10' : 'bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50'
                   }`}>
-                    <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>
+                    {tutor.avatar?.startsWith("/avatars/") ? <img src={tutor.avatar} alt="avatar" className="w-[85%] h-[85%] object-contain drop-shadow-md transform transition-transform hover:scale-110" /> : <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">

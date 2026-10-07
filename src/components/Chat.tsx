@@ -722,7 +722,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                           ? "border-[#25D366] p-0.5" 
                           : "border-transparent"
                       } ${isDarkMode ? "bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10" : "bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50"}`}>
-                        <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>
+                        {tutor.avatar?.startsWith("/avatars/") ? <img src={tutor.avatar} alt="avatar" className="w-[85%] h-[85%] object-contain drop-shadow-md transform transition-transform hover:scale-110" /> : <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>}
                       </div>
 
                       
@@ -1066,7 +1066,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 </svg>
                 {/* Avatar */}
                 <div className={`w-[40px] h-[40px] rounded-full flex items-center justify-center text-[22px] shadow-sm ${isDarkMode ? 'bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10' : 'bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50'}`}>
-                  <span className="drop-shadow-md">{selectedTutor.avatar}</span>
+                  {selectedTutor.avatar?.startsWith("/avatars/") ? <img src={selectedTutor.avatar} alt="avatar" className="w-[85%] h-[85%] object-contain drop-shadow-md" /> : <span className="drop-shadow-md">{selectedTutor.avatar}</span>}
                 </div>
               </button>
 
@@ -1168,7 +1168,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
                 <div className="flex justify-between items-center border-b pb-3">
                   <div className="flex items-center gap-3">
-                    <span className={`text-3xl p-2 rounded-2xl ${isDarkMode ? "bg-[#202C33]" : "bg-[#F0F2F5]"}`}>{selectedTutor.avatar}</span>
+                    {selectedTutor.avatar?.startsWith("/avatars/") ? <img src={selectedTutor.avatar} alt="avatar" className={`w-14 h-14 p-1 rounded-2xl object-contain drop-shadow-md ${isDarkMode ? "bg-[#202C33]" : "bg-[#F0F2F5]"}`} /> : <span className={`text-3xl p-2 rounded-2xl ${isDarkMode ? "bg-[#202C33]" : "bg-[#F0F2F5]"}`}>{selectedTutor.avatar}</span>}
                     <div>
                       <h3 className="font-bold text-slate-800 text-lg">Memoria di {selectedTutor.name}</h3>
                       <p className="text-xs text-slate-500">{selectedTutor.subject}</p>
