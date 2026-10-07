@@ -569,7 +569,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   return (
     <div 
       className={`flex flex-col h-full w-full overflow-hidden transition-all duration-200 select-none ${
-        isDragging ? "ring-4 ring-emerald-500/30" : ""
+        isDragging ? "ring-4 ring-[#25D366]/30" : ""
       } ${isDarkMode ? 'bg-[#111B21] text-gray-200' : 'bg-white text-gray-900'}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -580,45 +580,34 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       {/* ============================================================== */}
       {!selectedTutor ? (
         <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
-          {/* Header WhatsApp Top Moderno */}
+          {/* Header WhatsApp 2024 Style */}
           <div className={`${
-            isDarkMode ? 'bg-[#111B21] border-b border-[#222E35]' : 'bg-white border-b border-slate-100'
-          } px-4 pt-3.5 pb-2.5 flex justify-between items-center relative z-30 transition-colors`}>
+            isDarkMode ? 'bg-[#0B141A]' : 'bg-white'
+          } px-4 pt-3 pb-2 flex justify-between items-center relative z-30 transition-colors`}>
             <div className="flex items-center gap-3">
-              <img 
-                src="/icon.png" 
-                alt="PetraLAB" 
-                className="w-10 h-10 rounded-2xl shadow-sm object-cover bg-emerald-950 shrink-0" 
-              />
-              <div className="flex flex-col justify-center">
-                <h1 className={`text-2xl font-black tracking-tight leading-none ${
-                  isDarkMode ? 'text-[#25D366]' : 'text-[#1DA851]'
-                }`}>
-                  PetraLAB
-                </h1>
-                <p className={`text-[12px] font-bold mt-1 tracking-wide ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
-                  {levelInfo.title} <span className="opacity-50 mx-1">•</span> <span className="text-emerald-500">{stats.xp} XP</span>
-                </p>
-              </div>
+              <h1 className={`text-[24px] font-bold tracking-tight ${
+                isDarkMode ? 'text-white' : 'text-[#25D366]'
+              }`}>
+                PetraLAB
+              </h1>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-3">
               {/* Badge Streak Fiamma */}
-              <div className={`flex items-center gap-1 font-bold text-xs px-2.5 py-1 rounded-full ${
-                isDarkMode ? 'bg-[#202C33] text-orange-400 border border-[#2A3942]' : 'bg-orange-50 text-orange-600 border border-orange-100'
+              <div className={`flex items-center gap-1 font-bold text-[13px] px-2.5 py-1 rounded-full ${
+                isDarkMode ? 'bg-[#182229] text-orange-400' : 'bg-orange-50 text-orange-500'
               }`}>
                 <span>🔥</span>
                 <span>{stats.streak}</span>
               </div>
 
-              {/* Tasto Tema Chiaro/Scuro */}
+              {/* Tasto Tema */}
               {toggleTheme && (
                 <button
                   onClick={toggleTheme}
-                  className={`p-2 rounded-full transition-colors ${
-                    isDarkMode ? 'hover:bg-[#202C33] text-gray-300' : 'hover:bg-slate-100 text-slate-600'
+                  className={`p-1.5 rounded-full transition-colors ${
+                    isDarkMode ? 'text-gray-300' : 'text-slate-600'
                   }`}
-                  title={isDarkMode ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
                 >
                   {isDarkMode ? '☀️' : '🌙'}
                 </button>
@@ -628,139 +617,85 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               <div className="relative">
                 <button 
                   onClick={() => setShowHomeMenu(prev => !prev)}
-                  className={`p-2 rounded-full transition-colors active:scale-95 ${
-                    isDarkMode ? 'hover:bg-[#202C33] text-gray-300' : 'hover:bg-slate-100 text-slate-700'
+                  className={`p-1 rounded-full transition-colors ${
+                    isDarkMode ? 'text-gray-300' : 'text-slate-600'
                   }`}
-                  title="Altre opzioni"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M10.5 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" clipRule="evenodd" />
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                   </svg>
                 </button>
-
+                {/* Menu a tendina (rimane uguale ma ricolorato in CSS) */}
                 {showHomeMenu && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setShowHomeMenu(false)}
-                    />
-                    <div className={`absolute right-0 top-full mt-1.5 w-52 rounded-2xl shadow-2xl border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 ${
-                      isDarkMode 
-                        ? 'bg-[#233138] border-[#2E3C44] text-[#E9EDEF]' 
-                        : 'bg-white border-slate-100 text-slate-800'
-                    }`}>
-                      <div className={`px-4 py-2 border-b text-xs flex justify-between items-center ${
-                        isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
+                  <div className={`absolute right-0 top-full mt-2 w-56 rounded-2xl shadow-xl border overflow-hidden z-50 ${
+                    isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-100'
+                  }`}>
+                    <div className="py-2">
+                      <div className={`px-4 py-2 border-b text-[13px] flex justify-between items-center ${
+                        isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.5.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.6.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
-                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
-                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-[15px] transition-colors text-left ${
+                          isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
-                        <span>🔄</span>
-                        <span>Ricarica / Aggiorna</span>
+                        <span className="text-xl">🔄</span> Ricarica App
                       </button>
-                      <button 
-                        onClick={() => { toggleVoiceSpeed(); setShowHomeMenu(false); }}
-                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
-                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <span>{voiceSpeed === 1.0 ? '🐇' : voiceSpeed === 1.2 ? '🚀' : '🐢'}</span>
-                        <span>Velocità Voce: {voiceSpeed === 1.0 ? 'Normale' : voiceSpeed === 1.2 ? 'Veloce' : 'Lenta'}</span>
-                      </button>
-                      <Link 
-                        href="/admin" 
-                        onClick={() => setShowHomeMenu(false)}
-                        className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
-                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <span>⚙️</span>
-                        <span>Pannello Genitore</span>
-                      </Link>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
-
             </div>
           </div>
 
-          {/* Barra di Ricerca Stile WhatsApp Moderno (Senza bordi netti, pillola morbida) */}
-          <div className={`px-4 pt-2.5 pb-2 ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
-            <div className={`flex items-center gap-2.5 rounded-full px-4 py-2.5 transition-all ${
-              isDarkMode 
-                ? 'bg-[#202C33] text-gray-200 focus-within:ring-1 focus-within:ring-[#00A884]' 
-                : 'bg-[#F0F2F5] text-slate-800 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/20'
+          {/* Search Bar (Ask Meta AI style) */}
+          <div className={`px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
+            <div className={`flex items-center gap-3 px-4 py-2.5 rounded-full transition-all ${
+              isDarkMode ? 'bg-[#202C33]' : 'bg-[#F0F2F5]'
             }`}>
-              {/* Icona circolare sfumata Meta AI style */}
-              <div className="w-4 h-4 rounded-full border-2 border-emerald-500/70 border-t-blue-500 shrink-0" />
-              <input
-                type="text"
-                placeholder="Chiedi all'IA o cerca tutor..."
+              <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
+              <input 
+                type="text" 
+                placeholder="Chiedi all'IA o cerca tutor..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`bg-transparent border-none outline-none w-full text-[14.5px] ${
-                  isDarkMode ? 'text-gray-200 placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-400'
+                onChange={e => setSearchQuery(e.target.value)}
+                className={`bg-transparent w-full outline-none font-medium text-[15px] placeholder-opacity-80 ${
+                  isDarkMode ? 'text-white placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-500'
                 }`}
               />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="text-slate-400 text-xs p-1">✕</button>
-              )}
             </div>
           </div>
 
-          {/* Filtri Orizzontali Stile WhatsApp (Pillole arrotondate morbide) */}
-          <div className={`flex gap-2 px-4 py-2 text-xs overflow-x-auto no-scrollbar border-b ${
-            isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-100'
+          {/* Filtri Stile WhatsApp 2024 */}
+          <div className={`flex gap-2 px-4 py-1 pb-3 overflow-x-auto no-scrollbar border-b ${
+            isDarkMode ? 'bg-[#0B141A] border-[#202C33]' : 'bg-white border-slate-100'
           }`}>
-            <span 
-              onClick={() => setListFilter('tutte')}
-              className={`${
-                listFilter === 'tutte'
-                  ? (isDarkMode ? 'bg-[#00A884]/25 text-[#00A884]' : 'bg-[#D8FDD2] text-[#0A332C]')
-                  : (isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200')
-              } font-${listFilter === 'tutte' ? 'semibold' : 'medium'} px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}
-            >
-              Tutte
-            </span>
-            <span 
-              onClick={() => setListFilter('compiti')}
-              className={`${
-                listFilter === 'compiti'
-                  ? (isDarkMode ? 'bg-[#00A884]/25 text-[#00A884]' : 'bg-[#D8FDD2] text-[#0A332C]')
-                  : (isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200')
-              } font-${listFilter === 'compiti' ? 'semibold' : 'medium'} px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}
-            >
-              Compiti
-            </span>
-            <span 
-              onClick={() => setListFilter('verifiche')}
-              className={`${
-                listFilter === 'verifiche'
-                  ? (isDarkMode ? 'bg-[#00A884]/25 text-[#00A884]' : 'bg-[#D8FDD2] text-[#0A332C]')
-                  : (isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200')
-              } font-${listFilter === 'verifiche' ? 'semibold' : 'medium'} px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}
-            >
-              Verifiche
-            </span>
-            <span 
-              onClick={() => setListFilter('voti')}
-              className={`${
-                listFilter === 'voti'
-                  ? (isDarkMode ? 'bg-[#00A884]/25 text-[#00A884]' : 'bg-[#D8FDD2] text-[#0A332C]')
-                  : (isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:text-white' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200')
-              } font-${listFilter === 'voti' ? 'semibold' : 'medium'} px-3.5 py-1.5 rounded-full cursor-pointer transition-all`}
-            >Voti</span>
+            {[
+              { id: 'tutte', label: 'Tutte' },
+              { id: 'compiti', label: 'Compiti' },
+              { id: 'verifiche', label: 'Verifiche' },
+              { id: 'voti', label: 'Voti' }
+            ].map(filter => (
+              <span 
+                key={filter.id}
+                onClick={() => setListFilter(filter.id as any)}
+                className={`font-semibold px-4 py-1.5 rounded-full cursor-pointer transition-all text-[14px] shrink-0 ${
+                  listFilter === filter.id 
+                    ? (isDarkMode ? 'bg-[#0A291A] text-[#25D366]' : 'bg-[#E7FCEB] text-[#118B44]') 
+                    : (isDarkMode ? 'bg-[#202C33] text-[#8696A0]' : 'bg-[#F0F2F5] text-slate-600')
+                }`}
+              >
+                {filter.label}
+              </span>
+            ))}
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
-          <div className={`flex-1 overflow-y-auto ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}>
+          <div className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}>
             {listFilter === "tutte" ? (
               filteredTutors.map((tutor) => {
                 const tutorChat = chatsByTutor[tutor.id];
@@ -777,7 +712,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     key={tutor.id}
                     onClick={() => handleOpenChat(tutor)}
                     className={`flex items-center gap-3.5 px-4 py-4 cursor-pointer transition-colors ${
-                      isDarkMode ? "hover:bg-[#202C33] active:bg-[#222E35]" : "hover:bg-slate-50 active:bg-slate-100"
+                      isDarkMode ? "active:bg-[#202C33]" : "active:bg-[#F5F6F6]"
                     }`}
                   >
                     {/* Foto Profilo Circolare 52px con Anello di Stato Verde */}
@@ -803,7 +738,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                             {tutor.name}
                           </h2>
                           <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg shrink-0 ${
-                            isDarkMode ? "bg-[#00A884]/20 text-[#00A884]" : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                            isDarkMode ? "bg-[#25D366]/20 text-[#25D366]" : "bg-emerald-50 text-emerald-800 border border-emerald-200"
                           }`}>
                             {tutor.subject.split(" ")[0]}
                           </span>
@@ -832,7 +767,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                             </>
                           ) : (
                             <span className={`italic font-medium ${
-                              isDarkMode ? "text-[#00A884]" : "text-emerald-700"
+                              isDarkMode ? "text-[#25D366]" : "text-emerald-700"
                             }`}>
                               Tocca per iniziare i compiti 💬
                             </span>
@@ -846,36 +781,51 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 );
               })
             ) : listFilter === "voti" ? (
-              <div className="flex flex-col gap-4 p-5 pb-10">
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <h3 className={`font-bold text-lg ${isDarkMode ? "text-white" : "text-slate-800"}`}>
-                    📊 Bacheca Voti
+              <div className={`flex flex-col gap-5 p-4 sm:p-6 pb-24 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={`font-bold text-[22px] tracking-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                    Bacheca Voti
                   </h3>
                 </div>
                 
                 {(() => {
-                  const allGrades: Array<{subject: string, grade: string, date: string, topic: string}> = [];
-                  Object.entries(subjectsMemory || {}).forEach(([subject, data]) => {
+                  const groupedGrades: Record<string, any[]> = {};
+                  Object.entries(subjectsMemory || {}).forEach(([subjectOrId, data]) => {
                      const mem = data as any;
-                     if (mem.grades && Array.isArray(mem.grades)) {
-                        mem.grades.forEach((g: any) => allGrades.push({ subject, ...g }));
+                     if (mem.grades && Array.isArray(mem.grades) && mem.grades.length > 0) {
+                        mem.grades.forEach((g: any) => {
+                           let subjectName = subjectOrId;
+                           const foundTutor = tutors.find(t => t.id === subjectOrId);
+                           if (foundTutor) {
+                              subjectName = foundTutor.subject;
+                           } else if (g.originalSubject) {
+                              subjectName = g.originalSubject;
+                           } else if (subjectOrId.startsWith('tutor_')) {
+                              subjectName = "Materie Archiviate";
+                           } else if (subjectOrId === 'generico') {
+                              subjectName = "Altre Materie";
+                           }
+                           
+                           subjectName = subjectName.charAt(0).toUpperCase() + subjectName.slice(1);
+                           if (!groupedGrades[subjectName]) groupedGrades[subjectName] = [];
+                           groupedGrades[subjectName].push({...g, originalId: subjectOrId});
+                        });
                      }
                   });
-                  // Ordinare dal più recente al meno recente. Purtroppo 'date' è una stringa tipo "10 Ott".
-                  // Facciamo un sort basico o li lasciamo nell'ordine in cui sono stati trovati.
-                  allGrades.reverse();
 
-                  if (allGrades.length === 0) {
+                  const subjects = Object.keys(groupedGrades).sort();
+
+                  if (subjects.length === 0) {
                      return (
-                        <div className={`p-6 rounded-2xl border text-center flex flex-col items-center justify-center mt-4 shadow-sm ${
-                          isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-slate-50 border-slate-200"
+                        <div className={`p-8 rounded-[24px] text-center flex flex-col items-center justify-center mt-4 ${
+                          isDarkMode ? "bg-[#111B21]" : "bg-[#F0F2F5]"
                         }`}>
-                          <span className="text-5xl mb-4 opacity-80">📊</span>
-                          <p className={`font-bold text-[15px] mb-2 ${isDarkMode ? "text-gray-200" : "text-slate-700"}`}>
+                          <span className="text-5xl mb-3">📝</span>
+                          <h4 className={`font-semibold text-[17px] mb-1 ${isDarkMode ? "text-white" : "text-slate-800"}`}>
                             Nessun voto registrato
-                          </p>
-                          <p className={`text-[13px] leading-relaxed max-w-[250px] ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                            I voti presi a scuola appariranno qui.
+                          </h4>
+                          <p className={`text-[14px] leading-relaxed max-w-[250px] ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                            I voti presi a scuola verranno salvati qui e raggruppati per materia.
                           </p>
                         </div>
                      );
@@ -883,34 +833,70 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
                   return (
                      <div className="flex flex-col gap-3">
-                        {allGrades.map((g, idx) => {
-                           const gradeNum = parseFloat(g.grade.replace(',', '.'));
-                           const isPositive = !isNaN(gradeNum) && gradeNum >= 6;
+                        {subjects.map((subject, idx) => {
+                           const gradesList = groupedGrades[subject];
+                           const sum = gradesList.reduce((acc, g) => acc + (parseFloat(g.grade.toString().replace(',','.')) || 0), 0);
+                           const avg = sum / gradesList.length;
+                           const isPositiveAvg = avg >= 6;
+                           // gradesList.sort((a,b) => parseDateForSort(b.date || '') - parseDateForSort(a.date || ''));
+
                            return (
-                             <div key={idx} className={`p-4 rounded-xl border flex gap-3 shadow-sm transition-all ${
-                               isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-white border-slate-200'
+                             <details key={idx} className={`group rounded-[20px] overflow-hidden transition-all ${
+                               isDarkMode ? 'bg-[#111B21]' : 'bg-[#F0F2F5]'
                              }`}>
-                               <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black shadow-inner shrink-0 ${
-                                 isPositive
-                                   ? (isDarkMode ? 'bg-[#00A884]/20 text-[#00A884] border border-[#00A884]/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200')
-                                   : (isDarkMode ? 'bg-red-950/40 text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600 border border-red-200')
-                               }`}>
-                                 {g.grade}
-                               </div>
-                               <div className="flex flex-col justify-center min-w-0 flex-1">
-                                 <div className="flex justify-between items-center gap-2">
-                                   <h4 className={`font-bold text-sm truncate ${isDarkMode ? 'text-gray-200' : 'text-slate-800'}`}>
-                                     {g.subject}
-                                   </h4>
-                                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                                     isDarkMode ? 'bg-[#111B21] text-[#8696A0]' : 'bg-slate-100 text-slate-500'
-                                   }`}>{g.date || "Recente"}</span>
+                               <summary className="flex items-center justify-between p-4 cursor-pointer select-none outline-none list-none [&::-webkit-details-marker]:hidden">
+                                 <div className="flex items-center gap-3">
+                                    <div className={`w-[48px] h-[48px] rounded-full flex items-center justify-center text-[18px] font-bold ${
+                                      isPositiveAvg
+                                        ? (isDarkMode ? 'bg-[#0A291A] text-[#25D366]' : 'bg-[#E7FCEB] text-[#118B44]')
+                                        : (isDarkMode ? 'bg-[#3A1618] text-[#F15C6D]' : 'bg-[#FFE5E5] text-[#D82E3F]')
+                                    }`}>
+                                      {avg.toFixed(1).replace('.0', '')}
+                                    </div>
+                                    <div>
+                                      <h4 className={`font-semibold text-[16px] tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                        {subject}
+                                      </h4>
+                                      <span className={`text-[13px] font-medium mt-0.5 inline-block ${
+                                        isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'
+                                      }`}>
+                                        {gradesList.length} {gradesList.length === 1 ? 'Voto' : 'Voti'}
+                                      </span>
+                                    </div>
                                  </div>
-                                 <p className={`text-xs truncate mt-0.5 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
-                                   {g.topic || "Nessun argomento"}
-                                 </p>
+                                 <div className={`w-8 h-8 flex items-center justify-center transition-transform group-open:rotate-180 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                 </div>
+                               </summary>
+                               
+                               <div className={`p-4 pt-0`}>
+                                  <div className="mt-2 flex flex-col gap-2">
+                                    {gradesList.map((g, gIdx) => {
+                                      const gradeNum = parseFloat(g.grade.toString().replace(',','.'));
+                                      const isPos = !isNaN(gradeNum) && gradeNum >= 6;
+                                      return (
+                                        <div key={gIdx} className={`p-3 rounded-[16px] flex flex-col gap-1 ${
+                                          isDarkMode ? 'bg-[#202C33]' : 'bg-white shadow-sm'
+                                        }`}>
+                                          <div className="flex items-center justify-between">
+                                            <span className={`font-bold text-[17px] ${isPos ? (isDarkMode ? 'text-[#25D366]' : 'text-[#118B44]') : (isDarkMode ? 'text-[#F15C6D]' : 'text-[#D82E3F]')}`}>
+                                              {g.grade}
+                                            </span>
+                                            <span className={`text-[12px] font-semibold ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-400'}`}>
+                                              {g.date || "Recente"}
+                                            </span>
+                                          </div>
+                                          {g.topic && (
+                                            <p className={`text-[14px] leading-snug ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
+                                              {g.topic}
+                                            </p>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
                                </div>
-                             </div>
+                             </details>
                            );
                         })}
                      </div>
@@ -985,7 +971,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                <h3 className={`text-lg font-black inline-block px-2 py-1 rounded-lg border-b-2 shadow-sm ${
                                  isUrgentDay 
                                    ? (isDarkMode ? 'bg-red-950/40 text-red-400 border-red-500' : 'bg-red-50 text-red-600 border-red-500') 
-                                   : (isDarkMode ? 'bg-[#202C33] text-emerald-400 border-emerald-400' : 'bg-white text-emerald-700 border-emerald-500')
+                                   : (isDarkMode ? 'bg-[#202C33] text-emerald-400 border-emerald-400' : 'bg-white text-emerald-700 border-[#25D366]')
                                }`}>
                                  {formatDate(dateStr)} {isUrgentDay && ' 🚨'}
                                </h3>
@@ -1006,7 +992,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                        onClick={(e) => handleToggleAgendaItem(e, item.id, item.isCompleted)}
                                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 cursor-pointer border-2 transition-all ${
                                          item.isCompleted 
-                                           ? 'bg-emerald-500 border-emerald-500 text-white' 
+                                           ? 'bg-[#25D366] border-[#25D366] text-white' 
                                            : isUrgent
                                              ? (isDarkMode ? 'bg-[#111B21] border-red-400 text-transparent hover:bg-red-500/20' : 'bg-white border-red-400 text-transparent hover:bg-red-100')
                                              : 'bg-slate-100 border-slate-300 text-transparent hover:border-emerald-400'
@@ -1036,8 +1022,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                                onClick={() => handleSelectTutor(matchingTutor)}
                                                className={`mt-2 w-max text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm ${
                                                  isDarkMode 
-                                                   ? 'bg-[#111B21] border border-[#2A3942] text-emerald-400 hover:bg-[#00A884] hover:text-white' 
-                                                   : 'bg-white border border-slate-200 text-emerald-600 hover:bg-emerald-500 hover:text-white'
+                                                   ? 'bg-[#111B21] border border-[#2A3942] text-emerald-400 hover:bg-[#25D366] hover:text-white' 
+                                                   : 'bg-white border border-slate-200 text-emerald-600 hover:bg-[#25D366] hover:text-white'
                                                }`}
                                              >
                                                <span className="text-base">{matchingTutor.avatar}</span> Parla col Tutor
@@ -1089,7 +1075,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   {selectedTutor.name}
                 </h2>
                 <p className={`text-[11px] ${isDarkMode ? 'text-gray-300' : 'text-emerald-200'} flex items-center gap-1 font-medium`}>
-                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDarkMode ? 'bg-[#00A884]' : 'bg-emerald-300'}`}></span>
+                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDarkMode ? 'bg-[#25D366]' : 'bg-emerald-300'}`}></span>
                   online • {selectedTutor.subject.split(' ')[0]}
                 </p>
               </div>
@@ -1130,7 +1116,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         isDarkMode ? 'border-[#2E3C44] text-[#8696A0]' : 'border-slate-100 text-slate-400'
                       }`}>
                         <span>Versione App</span>
-                        <span className="font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">v1.5.0</span>
+                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v1.5.0</span>
                       </div>
                       <button 
                         onClick={() => { setShowChatMenu(false); setShowGradesModal(true); }}
@@ -1305,7 +1291,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {msg.role === "model" && (
                       <button
                         onClick={() => speakText(msg.text)}
-                        className={`ml-1 p-0.5 transition-colors ${isDarkMode ? 'text-[#8696A0] hover:text-[#00A884]' : 'text-slate-400 hover:text-emerald-700'}`}
+                        className={`ml-1 p-0.5 transition-colors ${isDarkMode ? 'text-[#8696A0] hover:text-[#25D366]' : 'text-slate-400 hover:text-emerald-700'}`}
                         title="Ascolta audio"
                       >
                         🔊
@@ -1362,7 +1348,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             <div className="flex items-end gap-2">
               {/* Contenitore Input Arrotondato */}
               <div className={`flex-1 flex items-center px-2 py-1 sm:py-1.5 rounded-3xl shadow-sm border border-transparent ${
-                isDarkMode ? 'bg-[#2A3942] focus-within:border-[#00A884]' : 'bg-white focus-within:border-slate-300'
+                isDarkMode ? 'bg-[#2A3942] focus-within:border-[#25D366]' : 'bg-white focus-within:border-slate-300'
               } ${isListening ? 'ring-2 ring-red-400' : ''}`}>
                 
                 {/* Input file nascosto */}
@@ -1411,7 +1397,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   onClick={handleSend}
                   disabled={isLoading}
                   className={`w-10 h-10 active:scale-95 text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
-                    isDarkMode ? 'bg-[#00A884] hover:bg-[#00A884]/90 text-[#111B21]' : 'bg-[#008069] hover:bg-[#00705c]'
+                    isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#008069] hover:bg-[#00705c]'
                   }`}
                   aria-label="Invia messaggio"
                 >
@@ -1425,7 +1411,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
                     isListening 
                       ? 'bg-red-500 text-white animate-pulse' 
-                      : (isDarkMode ? 'bg-[#00A884] hover:bg-[#00A884]/90 text-[#111B21]' : 'bg-[#008069] hover:bg-[#00705c] text-white')
+                      : (isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#008069] hover:bg-[#00705c] text-white')
                   }`}
                   title="Messaggio vocale"
                   disabled={isLoading}

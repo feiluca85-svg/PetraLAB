@@ -62,7 +62,7 @@ export default function AppShell() {
   if (loading) {
     return (
       <div className={`flex h-full w-full items-center justify-center ${
-        isDarkMode ? "bg-[#111B21]" : "bg-white"
+        isDarkMode ? "bg-[#0B141A]" : "bg-white"
       }`}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -75,7 +75,7 @@ export default function AppShell() {
   return (
     <div className={`flex flex-col h-[100dvh] w-full max-w-md mx-auto relative sm:border-x transition-colors ${
       isDarkMode 
-        ? "bg-[#111B21] border-[#222E35] text-[#E9EDEF]" 
+        ? "bg-[#0B141A] border-[#202C33] text-[#E9EDEF]" 
         : "bg-white border-slate-200 text-slate-900"
     }`}>
       
@@ -115,7 +115,7 @@ export default function AppShell() {
           onClick={() => setIsTutorManagerModalOpen(true)}
           className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 z-40 ${
             isDarkMode 
-              ? "bg-[#00A884] text-[#111B21] shadow-emerald-950/50" 
+              ? "bg-[#25D366] text-[#111B21] shadow-emerald-950/50" 
               : "bg-[#008069] text-white shadow-emerald-700/30"
           }`}
           aria-label="Aggiungi Tutor"
@@ -143,7 +143,7 @@ export default function AppShell() {
       {!isChatOpen && (
         <nav className={`flex items-center justify-around border-t pb-safe z-30 transition-colors ${
           isDarkMode 
-            ? "bg-[#111B21] border-[#222E35]" 
+            ? "bg-[#0B141A] border-[#202C33]" 
             : "bg-white border-slate-100 shadow-xs"
         }`}>
           {/* 1. Tab Chat */}
@@ -153,7 +153,7 @@ export default function AppShell() {
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
               activeTab === "chat"
-                ? (isDarkMode ? "bg-[#00A884]/25 text-[#00A884]" : "bg-[#D8FDD2] text-[#0A332C]")
+                ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
                 : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -162,7 +162,7 @@ export default function AppShell() {
             </div>
             <span className={`text-[11px] ${
               activeTab === "chat" 
-                ? (isDarkMode ? "font-bold text-[#00A884]" : "font-bold text-[#0A332C]") 
+                ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
               Chat
@@ -176,7 +176,7 @@ export default function AppShell() {
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
               activeTab === "tutors"
-                ? (isDarkMode ? "bg-[#00A884]/25 text-[#00A884]" : "bg-[#D8FDD2] text-[#0A332C]")
+                ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
                 : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -186,7 +186,7 @@ export default function AppShell() {
             </div>
             <span className={`text-[11px] ${
               activeTab === "tutors" 
-                ? (isDarkMode ? "font-bold text-[#00A884]" : "font-bold text-[#0A332C]") 
+                ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
               Tutor
@@ -200,7 +200,7 @@ export default function AppShell() {
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
               activeTab === "profile"
-                ? (isDarkMode ? "bg-[#00A884]/25 text-[#00A884]" : "bg-[#D8FDD2] text-[#0A332C]")
+                ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
                 : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -209,7 +209,7 @@ export default function AppShell() {
             </div>
             <span className={`text-[11px] ${
               activeTab === "profile" 
-                ? (isDarkMode ? "font-bold text-[#00A884]" : "font-bold text-[#0A332C]") 
+                ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
               Livello
@@ -223,7 +223,7 @@ export default function AppShell() {
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
               activeTab === "parent"
-                ? (isDarkMode ? "bg-[#00A884]/25 text-[#00A884]" : "bg-[#D8FDD2] text-[#0A332C]")
+                ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
                 : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -232,7 +232,7 @@ export default function AppShell() {
             </div>
             <span className={`text-[11px] ${
               activeTab === "parent" 
-                ? (isDarkMode ? "font-bold text-[#00A884]" : "font-bold text-[#0A332C]") 
+                ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
               Genitore
