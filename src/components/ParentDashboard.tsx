@@ -10,6 +10,25 @@ import { useTutors } from "@/hooks/useTutors";
 import { AccessLog } from "@/lib/accessLogger";
 import TutorManager from "./TutorManager";
 
+
+const parseDateForSort = (d: string) => {
+  if (!d || d.toLowerCase() === 'prossima lezione') return 0;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(d).getTime();
+  const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (parts) return new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
+  const t = new Date(d).getTime();
+  return isNaN(t) ? 9999999999998 : t;
+};
+
+const formatDisplayDate = (d: string) => {
+  if (!d || d.toLowerCase() === 'prossima lezione') return 'Prossima lezione';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const parts = d.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return d;
+};
+
 export default function ParentDashboard({
   isDarkMode = false,
   onClose,
@@ -102,7 +121,7 @@ export default function ParentDashboard({
           subject: manualFormData.subject,
           type: manualFormData.type,
           description: manualFormData.description,
-          dueDate: manualFormData.dueDate || new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          dueDate: manualFormData.dueDate || new Date().toISOString().split('T')[0],
           isCompleted: false
         };
         const updatedAgenda = [...agendaItems, newTask];
@@ -473,14 +492,14 @@ export default function ParentDashboard({
               </div>
             ) : (
               <div className={`divide-y ${isDarkMode ? 'divide-[#2A3942]' : 'divide-slate-100'}`}>
-                {agendaItems.map((item, idx) => (
+                {[...agendaItems].sort((a, b) => parseDateForSort(a.dueDate || '') - parseDateForSort(b.dueDate || '')).map((item, idx) => (
                   <div key={idx} className="p-3 flex items-start gap-3 justify-between group">
                     <div className="flex items-start gap-3">
                       <span className="text-xl shrink-0">{item.type?.toLowerCase() === 'verifica' ? '🚨' : '📝'}</span>
                       <div>
                         <h4 className={`text-sm font-bold ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-gray-200' : 'text-slate-800'}`}>{item.subject}</h4>
                         <p className={`text-xs ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>{item.description}</p>
-                        <span className={`text-[10px] font-semibold mt-1 inline-block px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-[#111B21] text-emerald-400' : 'bg-slate-100 text-emerald-700'}`}>{item.dueDate}</span>
+                        <span className={`text-[10px] font-semibold mt-1 inline-block px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-[#111B21] text-emerald-400' : 'bg-slate-100 text-emerald-700'}`}>{formatDisplayDate(item.dueDate)}</span>
                       </div>
                     </div>
                     <button 

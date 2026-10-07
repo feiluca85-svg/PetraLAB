@@ -27,6 +27,25 @@ type SubjectChatData = {
   lastUpdated?: string;
 };
 
+
+const parseDateForSort = (d: string) => {
+  if (!d || d.toLowerCase() === 'prossima lezione') return 0;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(d).getTime();
+  const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (parts) return new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
+  const t = new Date(d).getTime();
+  return isNaN(t) ? 9999999999998 : t;
+};
+
+const formatDisplayDate = (d: string) => {
+  if (!d || d.toLowerCase() === 'prossima lezione') return 'Prossima lezione';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const parts = d.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return d;
+};
+
 export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { tutors: Tutor[], isDarkMode?: boolean, toggleTheme?: () => void, onChatOpen?: (isOpen: boolean) => void }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -838,16 +857,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {(() => {
                       // 1. Filter and sort
                       const tasks = agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica'));
-                      tasks.sort((a, b) => {
-                         if (a.dueDate === 'Prossima lezione') return -1;
-                         if (b.dueDate === 'Prossima lezione') return 1;
-                         return (a.dueDate || '').localeCompare(b.dueDate || '');
-                      });
+                      tasks.sort((a, b) => parseDateForSort(a.dueDate || '') - parseDateForSort(b.dueDate || ''));
 
                       // 2. Group
                       const groups: Record<string, any[]> = {};
                       tasks.forEach(t => {
-                         const d = t.dueDate || 'Senza data';
+                         const d = formatDisplayDate(t.dueDate || 'Senza data');
                          if (!groups[d]) groups[d] = [];
                          groups[d].push(t);
                       });
