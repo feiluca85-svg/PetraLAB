@@ -47,10 +47,7 @@ const parseDateForSort = (d: string) => {
   const today = new Date();
   today.setHours(0,0,0,0);
   
-  // Se il compito è nel passato, lo mandiamo IN FONDO alla lista
-  if (time > 0 && time !== 9999999999998 && time < today.getTime()) {
-    return time + 20000000000000;
-  }
+
   
   return time;
 };
@@ -140,11 +137,15 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
       const urgentCount = agendaItems.filter(item => {
         if (item.isCompleted) return false;
-        const d = item.dueDate || '';
-        const todayStr = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tStr = tomorrow.toISOString().split('T')[0];
+        let d = item.dueDate || '';
+        const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (parts) d = `${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+        
+        const dObj = new Date();
+        const todayStr = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
+        const tomObj = new Date();
+        tomObj.setDate(tomObj.getDate() + 1);
+        const tStr = `${tomObj.getFullYear()}-${String(tomObj.getMonth()+1).padStart(2,'0')}-${String(tomObj.getDate()).padStart(2,'0')}`;
         return d === todayStr || d === tStr;
       }).length;
       
@@ -930,29 +931,47 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 ) : (
                   <div className="mt-6 flex flex-col gap-6">
                     {(() => {
+                      // 0. Normalize Dates to YYYY-MM-DD for reliable grouping
+                      const normalizeDate = (d: string) => {
+                         if (!d || d.toLowerCase() === 'prossima lezione') return 'Prossima lezione';
+                         if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+                         const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+                         if (parts) return `${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+                         return d;
+                      };
+
                       // 1. Filter and sort
                       const tasks = agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica'));
-                      tasks.sort((a, b) => parseDateForSort(a.dueDate || '') - parseDateForSort(b.dueDate || ''));
+                      tasks.sort((a, b) => {
+                         // A. I compiti completati vanno sempre in fondo
+                         if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+                         // B. Ordine cronologico
+                         return parseDateForSort(normalizeDate(a.dueDate || '')) - parseDateForSort(normalizeDate(b.dueDate || ''));
+                      });
 
                       // 2. Group
                       const groups: Record<string, any[]> = {};
                       tasks.forEach(t => {
-                         const d = t.dueDate || 'Senza data';
+                         const d = normalizeDate(t.dueDate || 'Senza data');
                          if (!groups[d]) groups[d] = [];
                          groups[d].push(t);
                       });
 
-                      // 3. Helper per date e urgenze
-                      const todayObj = new Date();
-                      const todayStr = todayObj.toISOString().split('T')[0];
-                      const tomorrow = new Date();
-                      tomorrow.setDate(tomorrow.getDate() + 1);
-                      const tStr = tomorrow.toISOString().split('T')[0];
+                      // 3. Helper per date e urgenze (Usa fuso orario LOCALE, non UTC)
+                      const dObj = new Date();
+                      const todayStr = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
+                      const tomObj = new Date();
+                      tomObj.setDate(tomObj.getDate() + 1);
+                      const tStr = `${tomObj.getFullYear()}-${String(tomObj.getMonth()+1).padStart(2,'0')}-${String(tomObj.getDate()).padStart(2,'0')}`;
+                      const yestObj = new Date();
+                      yestObj.setDate(yestObj.getDate() - 1);
+                      const yStr = `${yestObj.getFullYear()}-${String(yestObj.getMonth()+1).padStart(2,'0')}-${String(yestObj.getDate()).padStart(2,'0')}`;
 
                       const formatDate = (ds: string) => {
-                         if (ds === 'Prossima lezione') return 'Prossima Lezione';
+                         if (ds === 'Prossima lezione' || ds === 'Prossima Lezione') return 'Prossima Lezione';
                          if (ds === todayStr) return 'Oggi';
                          if (ds === tStr) return 'Domani';
+                         if (ds === yStr) return 'Ieri';
                          const parts = ds.split('-');
                          if (parts.length === 3) {
                             const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
