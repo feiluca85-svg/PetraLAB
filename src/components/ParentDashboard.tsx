@@ -12,39 +12,52 @@ import TutorManager from "./TutorManager";
 
 
 const parseDateForSort = (d: string) => {
-  if (!d || d.toLowerCase() === 'prossima lezione') return 0;
+  if (!d || d.toLowerCase() === 'prossima lezione' || d === 'Senza data') return 9999999999999;
   
   let time = 9999999999998;
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-    time = new Date(d).getTime();
+    time = new Date(d + 'T00:00:00').getTime();
   } else {
     const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     if (parts) {
-      time = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
+      time = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}T00:00:00`).getTime();
     } else {
       const t = new Date(d).getTime();
       if (!isNaN(t)) time = t;
     }
   }
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  
-  // Se il compito è nel passato, lo mandiamo IN FONDO alla lista
-  if (time > 0 && time !== 9999999999998 && time < today.getTime()) {
-    return time + 20000000000000;
-  }
-  
   return time;
 };
 
-const formatDisplayDate = (d: string) => {
-  if (!d || d.toLowerCase() === 'prossima lezione') return 'Prossima lezione';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-    const parts = d.split('-');
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+const MONTH_NAMES = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+];
+const DAY_NAMES = [
+  'Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'
+];
+
+const formatDisplayDate = (dStr: string) => {
+  if (!dStr || dStr.toLowerCase() === 'prossima lezione') return 'Prossima Lezione';
+  if (dStr === 'Senza data') return 'Senza data';
+  
+  let normalized = dStr;
+  const parts = dStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (parts) {
+    normalized = `${parts[3]}-${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
   }
-  return d;
+  
+  const ymd = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymd) {
+    const year = ymd[1];
+    const monthNum = parseInt(ymd[2], 10);
+    const dayNum = parseInt(ymd[3], 10);
+    const dateObj = new Date(Number(year), monthNum - 1, dayNum);
+    const monthName = MONTH_NAMES[monthNum - 1] || ymd[2];
+    const weekdayName = DAY_NAMES[dateObj.getDay()] || '';
+    return `${year} ${monthName} ${dayNum} ${weekdayName}`.trim();
+  }
+  return dStr;
 };
 
 export default function ParentDashboard({
@@ -258,8 +271,13 @@ export default function ParentDashboard({
           });
           
           if (itemsToAdd.length > 0) {
-            updatePayload.agendaItems = [...agendaItems, ...itemsToAdd];
-            tasksAdded = itemsToAdd.length;
+            const uniqueNewItems = itemsToAdd.map((it: any, idx: number) => ({
+              ...it,
+              id: it.id && it.id !== "id_random123" && it.id !== "id_1" ? it.id : `nuvola_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
+              isCompleted: Boolean(it.isCompleted)
+            }));
+            updatePayload.agendaItems = [...agendaItems, ...uniqueNewItems];
+            tasksAdded = uniqueNewItems.length;
           }
         }
         
@@ -332,8 +350,27 @@ export default function ParentDashboard({
         if (data.subjectsMemory) {
           setSubjectsMemory(data.subjectsMemory);
         }
-        if (data.agendaItems) {
-          setAgendaItems(data.agendaItems);
+        if (data.agendaItems && Array.isArray(data.agendaItems)) {
+          const seenIds = new Set<string>();
+          let hasDuplicates = false;
+          const cleaned = data.agendaItems.map((item: any, idx: number) => {
+            let itemId = item.id;
+            if (!itemId || itemId === 'id_random123' || itemId === 'id_1' || seenIds.has(itemId)) {
+              itemId = `task_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
+              hasDuplicates = true;
+            }
+            seenIds.add(itemId);
+            return {
+              ...item,
+              id: itemId,
+              isCompleted: Boolean(item.isCompleted)
+            };
+          });
+          setAgendaItems(cleaned);
+          if (hasDuplicates) {
+            const userRef = doc(db, "petralab_users", "studente_demo");
+            setDoc(userRef, { agendaItems: cleaned }, { merge: true }).catch(console.error);
+          }
         }
       }
     });

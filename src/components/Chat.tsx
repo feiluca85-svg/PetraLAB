@@ -29,36 +29,52 @@ type SubjectChatData = {
 
 
 const parseDateForSort = (d: string) => {
-  if (!d || d.toLowerCase() === 'prossima lezione') return 0;
+  if (!d || d.toLowerCase() === 'prossima lezione' || d === 'Senza data') return 9999999999999;
   
   let time = 9999999999998;
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-    time = new Date(d).getTime();
+    time = new Date(d + 'T00:00:00').getTime();
   } else {
     const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     if (parts) {
-      time = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`).getTime();
+      time = new Date(`${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}T00:00:00`).getTime();
     } else {
       const t = new Date(d).getTime();
       if (!isNaN(t)) time = t;
     }
   }
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  
-
-  
   return time;
 };
 
-const formatDisplayDate = (d: string) => {
-  if (!d || d.toLowerCase() === 'prossima lezione') return 'Prossima lezione';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-    const parts = d.split('-');
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+const MONTH_NAMES = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+];
+const DAY_NAMES = [
+  'Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'
+];
+
+const formatFullTextDate = (dStr: string) => {
+  if (!dStr || dStr.toLowerCase() === 'prossima lezione') return 'Prossima Lezione';
+  if (dStr === 'Senza data') return 'Senza data';
+  
+  let normalized = dStr;
+  const itParts = dStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (itParts) {
+    normalized = `${itParts[3]}-${itParts[2].padStart(2, '0')}-${itParts[1].padStart(2, '0')}`;
   }
-  return d;
+  
+  const ymd = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymd) {
+    const year = ymd[1];
+    const monthNum = parseInt(ymd[2], 10);
+    const dayNum = parseInt(ymd[3], 10);
+    const dateObj = new Date(Number(year), monthNum - 1, dayNum);
+    const monthName = MONTH_NAMES[monthNum - 1] || ymd[2];
+    const weekdayName = DAY_NAMES[dateObj.getDay()] || '';
+    return `${year} ${monthName} ${dayNum} ${weekdayName}`.trim();
+  }
+  return dStr;
 };
 
 export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { tutors: Tutor[], isDarkMode?: boolean, toggleTheme?: () => void, onChatOpen?: (isOpen: boolean) => void }) {
@@ -184,8 +200,26 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         if (data.chatsByTutor) {
           setChatsByTutor(data.chatsByTutor);
         }
-        if (data.agendaItems) {
-          setAgendaItems(data.agendaItems);
+        if (data.agendaItems && Array.isArray(data.agendaItems)) {
+          const seenIds = new Set<string>();
+          let hasDuplicates = false;
+          const cleaned = data.agendaItems.map((item: any, idx: number) => {
+            let itemId = item.id;
+            if (!itemId || itemId === 'id_random123' || itemId === 'id_1' || seenIds.has(itemId)) {
+              itemId = `task_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
+              hasDuplicates = true;
+            }
+            seenIds.add(itemId);
+            return {
+              ...item,
+              id: itemId,
+              isCompleted: Boolean(item.isCompleted)
+            };
+          });
+          setAgendaItems(cleaned);
+          if (hasDuplicates) {
+            setDoc(userRef, { agendaItems: cleaned }, { merge: true }).catch(console.error);
+          }
         }
       }
     });
@@ -911,7 +945,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {listFilter === "compiti" ? "📝 Diario Compiti" : "🚨 Prossime Verifiche"}
                   </h3>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-200 text-slate-600"}`}>
-                    {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica')).length} da fare
+                    {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica') && !item.isCompleted).length} da fare
                   </span>
                 </div>
                 
@@ -931,7 +965,10 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 ) : (
                   <div className="mt-6 flex flex-col gap-6">
                     {(() => {
-                      // 0. Normalize Dates to YYYY-MM-DD for reliable grouping
+                      // 1. Filtra compiti o verifiche
+                      const tasks = agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica'));
+
+                      // 2. Normalizza e raggruppa per data YYYY-MM-DD
                       const normalizeDate = (d: string) => {
                          if (!d || d.toLowerCase() === 'prossima lezione') return 'Prossima lezione';
                          if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
@@ -940,16 +977,6 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                          return d;
                       };
 
-                      // 1. Filter and sort
-                      const tasks = agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica'));
-                      tasks.sort((a, b) => {
-                         // A. I compiti completati vanno sempre in fondo
-                         if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
-                         // B. Ordine cronologico
-                         return parseDateForSort(normalizeDate(a.dueDate || '')) - parseDateForSort(normalizeDate(b.dueDate || ''));
-                      });
-
-                      // 2. Group
                       const groups: Record<string, any[]> = {};
                       tasks.forEach(t => {
                          const d = normalizeDate(t.dueDate || 'Senza data');
@@ -957,7 +984,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                          groups[d].push(t);
                       });
 
-                      // 3. Helper per date e urgenze (Usa fuso orario LOCALE, non UTC)
+                      // 3. Date di riferimento (Oggi, Domani, Ieri nel fuso orario locale)
                       const dObj = new Date();
                       const todayStr = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
                       const tomObj = new Date();
@@ -967,32 +994,39 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       yestObj.setDate(yestObj.getDate() - 1);
                       const yStr = `${yestObj.getFullYear()}-${String(yestObj.getMonth()+1).padStart(2,'0')}-${String(yestObj.getDate()).padStart(2,'0')}`;
 
-                      const formatDate = (ds: string) => {
-                         if (ds === 'Prossima lezione' || ds === 'Prossima Lezione') return 'Prossima Lezione';
-                         if (ds === todayStr) return 'Oggi';
-                         if (ds === tStr) return 'Domani';
-                         if (ds === yStr) return 'Ieri';
-                         const parts = ds.split('-');
-                         if (parts.length === 3) {
-                            const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
-                            const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                            return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-                         }
-                         return ds;
-                      };
+                      // 4. Ordine cronologico rigoroso delle date
+                      const sortedDates = Object.keys(groups).sort((a, b) => {
+                         if (a === 'Prossima lezione' || a === 'Prossima Lezione') return 1;
+                         if (b === 'Prossima lezione' || b === 'Prossima Lezione') return -1;
+                         if (a === 'Senza data') return 1;
+                         if (b === 'Senza data') return -1;
+                         return parseDateForSort(a) - parseDateForSort(b);
+                      });
 
-                      // 4. Render
-                      return Object.entries(groups).map(([dateStr, dayTasks], gIdx) => {
+                      // 5. Render
+                      return sortedDates.map((dateStr, gIdx) => {
+                         const dayTasks = groups[dateStr];
+                         // All'interno dello stesso giorno: prima da fare, poi completati
+                         dayTasks.sort((a, b) => {
+                           if (Boolean(a.isCompleted) !== Boolean(b.isCompleted)) {
+                             return a.isCompleted ? 1 : -1;
+                           }
+                           return 0;
+                         });
+
                          const isUrgentDay = dateStr === tStr || dateStr === todayStr;
+                         const badgeSuffix = dateStr === todayStr ? ' (Oggi)' : dateStr === tStr ? ' (Domani)' : dateStr === yStr ? ' (Ieri)' : '';
+                         const headerText = `${formatFullTextDate(dateStr)}${badgeSuffix}`;
+
                          return (
                            <div key={gIdx} className="flex flex-col gap-3">
                              <div className="sticky top-0 z-10 py-2" style={{ backgroundColor: isDarkMode ? '#0B141A' : '#EFEAE2' }}>
-                               <h3 className={`text-lg font-black inline-block px-2 py-1 rounded-lg border-b-2 shadow-sm ${
+                               <h3 className={`text-sm sm:text-base font-black inline-block px-3 py-1.5 rounded-xl border-b-2 shadow-sm ${
                                  isUrgentDay 
                                    ? (isDarkMode ? 'bg-red-950/40 text-red-400 border-red-500' : 'bg-red-50 text-red-600 border-red-500') 
                                    : (isDarkMode ? 'bg-[#202C33] text-emerald-400 border-emerald-400' : 'bg-white text-[#118B44] border-[#25D366]')
                                }`}>
-                                 {formatDate(dateStr)} {isUrgentDay && ' 🚨'}
+                                 {headerText} {isUrgentDay && ' 🚨'}
                                </h3>
                              </div>
                              
@@ -1000,7 +1034,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                {dayTasks.map((item, idx) => {
                                  const isUrgent = isUrgentDay && !item.isCompleted;
                                  return (
-                                   <div key={idx} className={`p-4 rounded-xl border flex gap-3 shadow-sm transition-all ${
+                                   <div key={item.id || idx} className={`p-4 rounded-xl border flex gap-3 shadow-sm transition-all ${
                                      item.isCompleted 
                                        ? (isDarkMode ? 'bg-[#111B21] border-[#2A3942] opacity-50' : 'bg-slate-50 border-slate-100 opacity-60') 
                                        : isUrgent 

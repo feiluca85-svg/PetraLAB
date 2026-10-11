@@ -170,7 +170,7 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun bloc
 {
   "agendaItems": [
     {
-      "id": "id_random123",
+      "id": "id_1",
       "type": "compito" | "verifica",
       "subject": "Es. Matematica",
       "description": "Breve descrizione",
@@ -182,7 +182,7 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun bloc
       "subject": "Tecnologia",
       "grade": "7.5",
       "topic": "Proiezione ortogonale...",
-      "date": "30-09-2026"
+      "date": "2026-09-30"
     }
   ]
 }`;
@@ -224,7 +224,20 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun bloc
 
     try {
       const data = JSON.parse(text);
-      return { success: true, items: data.agendaItems || [], gradesItems: data.gradesItems || [] };
+      const items = (data.agendaItems || []).map((it: any, idx: number) => {
+        let dueDate = it.dueDate || "Prossima lezione";
+        const parts = dueDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (parts) {
+          dueDate = `${parts[3]}-${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+        }
+        return {
+          ...it,
+          id: `nuvola_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 8)}`,
+          dueDate,
+          isCompleted: false
+        };
+      });
+      return { success: true, items, gradesItems: data.gradesItems || [] };
     } catch (parseErr) {
       console.error("Failed to parse JSON from Gemini", text);
       return { success: false, error: "L'IA non è riuscita a estrarre i dati. Risposta grezza: " + text.substring(0, 100) };
