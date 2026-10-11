@@ -166,35 +166,63 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'verifiche'|'voti'>('tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
 
-  // Memorizza la posizione esatta dello scroll quando l'utente naviga la lista
+  const tabScrollMap = useRef<Record<string, number>>({
+    tutte: 0,
+    compiti: -1,
+    verifiche: -1,
+    voti: 0
+  });
+
+  const handleTabChange = (newFilter: 'tutte'|'compiti'|'verifiche'|'voti') => {
+    if (listScrollRef.current) {
+      tabScrollMap.current[listFilter] = listScrollRef.current.scrollTop;
+    }
+    setListFilter(newFilter);
+  };
+
+  // Memorizza la posizione esatta dello scroll per ciascuna tab separatamente
   const handleListScroll = () => {
-    if (listScrollRef.current && (listFilter === 'compiti' || listFilter === 'verifiche')) {
-      lastCompitiScrollRef.current = listScrollRef.current.scrollTop;
+    if (listScrollRef.current) {
+      tabScrollMap.current[listFilter] = listScrollRef.current.scrollTop;
     }
   };
 
-  // Posizionamento istantaneo all'apertura dei compiti su Oggi/prossimi SENZA scorrimento visibile
+  // Posizionamento istantaneo per ciascuna tab SENZA scorrimento visibile
   useLayoutEffect(() => {
-    if (listFilter === 'compiti' || listFilter === 'verifiche') {
-      const container = listScrollRef.current;
-      if (!container) return;
+    const container = listScrollRef.current;
+    if (!container) return;
 
-      const positionInstantly = () => {
-        if (!container) return;
-        if (lastCompitiScrollRef.current >= 0) {
-          container.scrollTop = lastCompitiScrollRef.current;
+    const restoreTabPosition = () => {
+      if (!container) return;
+      if (listFilter === 'tutte' || listFilter === 'voti') {
+        // "Tutte" e "Voti" partono sempre dall'inizio assoluto (0) a meno che l'utente non abbia già scorso in questa sessione
+        container.scrollTop = tabScrollMap.current[listFilter] || 0;
+      } else if (listFilter === 'compiti' || listFilter === 'verifiche') {
+        const saved = tabScrollMap.current[listFilter];
+        if (saved !== undefined && saved >= 0) {
+          container.scrollTop = saved;
         } else {
+          // Prima apertura:
           const targetEl = container.querySelector('[data-agenda-focus="true"]') as HTMLElement;
-          if (targetEl) {
-            container.scrollTop = targetEl.offsetTop - 12;
-            lastCompitiScrollRef.current = container.scrollTop;
+          const allDays = container.querySelectorAll('[data-agenda-day="true"]');
+          const firstDay = allDays.length > 0 ? (allDays[0] as HTMLElement) : null;
+
+          // Se il giorno obiettivo è già il primo (non ci sono giorni passati sopra), parti da 0 esatto
+          if (!targetEl || (firstDay && targetEl === firstDay)) {
+            container.scrollTop = 0;
+            tabScrollMap.current[listFilter] = 0;
+          } else {
+            // Se ci sono giorni passati sopra, salta al giorno obiettivo lasciando visibile l'intestazione
+            const targetTop = Math.max(0, targetEl.offsetTop - 55);
+            container.scrollTop = targetTop;
+            tabScrollMap.current[listFilter] = targetTop;
           }
         }
-      };
+      }
+    };
 
-      positionInstantly();
-      requestAnimationFrame(positionInstantly);
-    }
+    restoreTabPosition();
+    requestAnimationFrame(restoreTabPosition);
   }, [listFilter]);
   // Effetto Badge OS
   useEffect(() => {
@@ -824,7 +852,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             ].map(filter => (
               <span 
                 key={filter.id}
-                onClick={() => setListFilter(filter.id as any)}
+                onClick={() => handleTabChange(filter.id as any)}
                 className={`font-semibold px-4 py-1.5 rounded-full cursor-pointer transition-all text-[14px] shrink-0 ${
                   listFilter === filter.id 
                     ? (isDarkMode ? 'bg-[#0A291A] text-[#25D366]' : 'bg-[#E7FCEB] text-[#118B44]') 
@@ -1154,6 +1182,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                            <div 
                              key={gIdx} 
                              id={`agenda-day-${dateStr}`}
+                             data-agenda-day="true"
                              data-agenda-focus={isTargetFocus ? "true" : undefined}
                              className="flex flex-col gap-3"
                            >
