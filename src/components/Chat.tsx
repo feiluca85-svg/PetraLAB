@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import Link from "next/link";
 import { sendMessage } from "@/app/actions/chat";
 import { Content } from "@google/generative-ai";
@@ -131,8 +131,10 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
+  const lastCompitiScrollRef = useRef<number>(-1);
   const recognitionRef = useRef<any>(null);
   const wasVoiceInputRef = useRef<boolean>(false);
 
@@ -164,18 +166,36 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'verifiche'|'voti'>('tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
 
-  // Auto-scroll automatico alla data odierna o prossima all'apertura dei compiti
-  useEffect(() => {
-    if (listFilter === 'compiti' || listFilter === 'verifiche') {
-      const timer = setTimeout(() => {
-        const targetEl = document.querySelector('[data-agenda-focus="true"]') as HTMLElement;
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 120);
-      return () => clearTimeout(timer);
+  // Memorizza la posizione esatta dello scroll quando l'utente naviga la lista
+  const handleListScroll = () => {
+    if (listScrollRef.current && (listFilter === 'compiti' || listFilter === 'verifiche')) {
+      lastCompitiScrollRef.current = listScrollRef.current.scrollTop;
     }
-  }, [listFilter, agendaItems.length]);
+  };
+
+  // Posizionamento istantaneo all'apertura dei compiti su Oggi/prossimi SENZA scorrimento visibile
+  useLayoutEffect(() => {
+    if (listFilter === 'compiti' || listFilter === 'verifiche') {
+      const container = listScrollRef.current;
+      if (!container) return;
+
+      const positionInstantly = () => {
+        if (!container) return;
+        if (lastCompitiScrollRef.current >= 0) {
+          container.scrollTop = lastCompitiScrollRef.current;
+        } else {
+          const targetEl = container.querySelector('[data-agenda-focus="true"]') as HTMLElement;
+          if (targetEl) {
+            container.scrollTop = targetEl.offsetTop - 12;
+            lastCompitiScrollRef.current = container.scrollTop;
+          }
+        }
+      };
+
+      positionInstantly();
+      requestAnimationFrame(positionInstantly);
+    }
+  }, [listFilter]);
   // Effetto Badge OS
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
@@ -290,15 +310,48 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottomInstant = () => {
+    if (chatMessagesContainerRef.current) {
+      chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    }
   };
 
+  const scrollToBottomSmooth = () => {
+    if (chatMessagesContainerRef.current) {
+      chatMessagesContainerRef.current.scrollTo({
+        top: chatMessagesContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Posizionamento istantaneo all'apertura della chat sull'ultima risposta (NESSUNO scorrimento visibile)
+  useLayoutEffect(() => {
+    if (selectedTutor) {
+      scrollToBottomInstant();
+      requestAnimationFrame(() => {
+        scrollToBottomInstant();
+      });
+    }
+  }, [selectedTutor]);
+
+  // Se arriva una nuova risposta mentre si sta chattando, scorri dolcemente
+  const prevMsgCountRef = useRef<number>(0);
   useEffect(() => {
     if (selectedTutor) {
-      scrollToBottom();
+      const currentCount = currentMessages.length;
+      if (prevMsgCountRef.current > 0 && currentCount > prevMsgCountRef.current) {
+        scrollToBottomSmooth();
+      }
+      prevMsgCountRef.current = currentCount;
+    } else {
+      prevMsgCountRef.current = 0;
     }
-  }, [selectedTutor, chatsByTutor]);
+  }, [selectedTutor, currentMessages.length]);
 
   // Setup Riconoscimento Vocale
   useEffect(() => {
@@ -784,7 +837,11 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
-          <div ref={listScrollRef} className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}>
+          <div 
+            ref={listScrollRef} 
+            onScroll={handleListScroll}
+            className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}
+          >
             {listFilter === "tutte" ? (
               filteredTutors.map((tutor) => {
                 const tutorChat = chatsByTutor[tutor.id];
@@ -1367,6 +1424,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
           {/* Area Messaggi Chat Stile WhatsApp */}
           <div 
+            ref={chatMessagesContainerRef}
             className={`flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 relative ${isDarkMode ? "bg-[#0B141A]" : "bg-[#EFEAE2]"}`}
             style={{ 
               backgroundImage: isDarkMode ? "none" : "none", 
