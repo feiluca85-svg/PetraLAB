@@ -20,12 +20,14 @@ type UIMessage = {
   text: string;
   imageUrl?: string;
   time?: string;
+  date?: string;
   timestamp?: number;
 };
 
 type SubjectChatData = {
   messages: UIMessage[];
   lastUpdated?: string;
+  lastUpdatedDate?: string;
   lastUpdatedTimestamp?: number;
 };
 
@@ -163,6 +165,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const getCurrentTime = () => {
     const now = new Date();
     return now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  // Restituisce la data attuale formato YYYY-MM-DD (es: 2026-10-11)
+  const getCurrentDate = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
 
   const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'verifiche'|'voti'>('tutte');
@@ -328,10 +336,24 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         greeting = `Bentornata! Ricordo che l'ultimo voto che mi hai detto era ${lastGrade.grade}${lastGrade.topic ? ` in '${lastGrade.topic}'` : ''}. Come stanno andando le lezioni in questi giorni? Ci sono novità o verifiche? Di cosa ci occupiamo oggi?`;
       }
       
-      const initialMsgs: UIMessage[] = [{ role: "model", text: greeting, time: getCurrentTime() }];
+      const nowTime = getCurrentTime();
+      const nowDate = getCurrentDate();
+      const nowTimestamp = Date.now();
+      const initialMsgs: UIMessage[] = [{ 
+        role: "model", 
+        text: greeting, 
+        time: nowTime, 
+        date: nowDate, 
+        timestamp: nowTimestamp 
+      }];
       const updatedChats = {
         ...chatsByTutor,
-        [tutor.id]: { messages: initialMsgs, lastUpdated: getCurrentTime() }
+        [tutor.id]: { 
+          messages: initialMsgs, 
+          lastUpdated: nowTime, 
+          lastUpdatedDate: nowDate, 
+          lastUpdatedTimestamp: nowTimestamp 
+        }
       };
       setChatsByTutor(updatedChats);
       
@@ -599,18 +621,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
     const tutorId = selectedTutor.id;
     const nowTime = getCurrentTime();
+    const nowDate = getCurrentDate();
     const nowTimestamp = Date.now();
     const prevMsgs = currentMessages;
 
     const newMessages: UIMessage[] = [
       ...prevMsgs, 
-      { role: "user", text: userText, imageUrl: localImageUrl, time: nowTime, timestamp: nowTimestamp }
+      { role: "user", text: userText, imageUrl: localImageUrl, time: nowTime, date: nowDate, timestamp: nowTimestamp }
     ];
 
     // Aggiorna stato locale
     const updatedChats = {
       ...chatsByTutor,
-      [tutorId]: { messages: newMessages, lastUpdated: nowTime, lastUpdatedTimestamp: nowTimestamp }
+      [tutorId]: { messages: newMessages, lastUpdated: nowTime, lastUpdatedDate: nowDate, lastUpdatedTimestamp: nowTimestamp }
     };
     setChatsByTutor(updatedChats);
 
@@ -644,15 +667,16 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     
     if (response.success && response.text) {
       const replyTime = getCurrentTime();
+      const replyDate = getCurrentDate();
       const replyTimestamp = Date.now();
       const finalMsgs: UIMessage[] = [
         ...newMessages, 
-        { role: "model", text: response.text, time: replyTime, timestamp: replyTimestamp }
+        { role: "model", text: response.text, time: replyTime, date: replyDate, timestamp: replyTimestamp }
       ];
       
       const finalChats = {
         ...chatsByTutor,
-        [tutorId]: { messages: finalMsgs, lastUpdated: replyTime, lastUpdatedTimestamp: replyTimestamp }
+        [tutorId]: { messages: finalMsgs, lastUpdated: replyTime, lastUpdatedDate: replyDate, lastUpdatedTimestamp: replyTimestamp }
       };
       setChatsByTutor(finalChats);
       awardXP(10);
@@ -697,6 +721,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       Object.keys(safeChats).forEach(tid => {
         const msgs = safeChats[tid].messages;
         safeChats[tid].lastUpdatedTimestamp = finalChats[tid]?.lastUpdatedTimestamp || null;
+        safeChats[tid].lastUpdatedDate = finalChats[tid]?.lastUpdatedDate || null;
         safeChats[tid].messages = msgs.map((m: any, mIdx: number) => {
           let img = m.imageUrl;
           if (mIdx === msgs.length - 2 && thumbForDb && tid === tutorId) {
@@ -705,7 +730,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           return {
             role: m.role,
             text: m.text,
-            time: m.time,
+            time: m.time || null,
+            date: m.date || null,
             timestamp: m.timestamp || null,
             imageUrl: img && (img.startsWith("http") || (img.startsWith("data:image") && img.length < 80000)) ? img : null
           };
@@ -724,14 +750,15 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       }
     } else {
       const errTime = getCurrentTime();
+      const errDate = getCurrentDate();
       const errTimestamp = Date.now();
       const finalMsgs: UIMessage[] = [
         ...newMessages, 
-        { role: "model", text: response.error || "Errore di connessione.", time: errTime, timestamp: errTimestamp }
+        { role: "model", text: response.error || "Errore di connessione.", time: errTime, date: errDate, timestamp: errTimestamp }
       ];
       setChatsByTutor({
         ...chatsByTutor,
-        [tutorId]: { messages: finalMsgs, lastUpdated: errTime, lastUpdatedTimestamp: errTimestamp }
+        [tutorId]: { messages: finalMsgs, lastUpdated: errTime, lastUpdatedDate: errDate, lastUpdatedTimestamp: errTimestamp }
       });
     }
     
@@ -740,16 +767,41 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
   const currentTutorMemory = selectedTutor ? subjectsMemory[selectedTutor.id] : null;
 
-  // Parser universale per ricavare il timestamp esatto di qualsiasi stringa orario (es. "19:21", "23:04", ISO, etc.)
-  const parseTimeToEpoch = (timeStr?: string): number => {
-    if (!timeStr) return 0;
-    const trimmed = timeStr.trim();
+  // Parser universale per ricavare il timestamp esatto di qualsiasi data e orario (es. "2026-10-11" + "19:21", "23:04", ISO, etc.)
+  const parseTimeToEpoch = (timeStr?: string, dateStr?: string): number => {
+    if (!timeStr && !dateStr) return 0;
+    
+    // Se abbiamo data (YYYY-MM-DD) e orario (HH:MM)
+    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+      const cleanTime = (timeStr || "12:00").trim();
+      const matchHHMM = cleanTime.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (matchHHMM) {
+        const h = matchHHMM[1].padStart(2, '0');
+        const m = matchHHMM[2].padStart(2, '0');
+        const s = (matchHHMM[3] || "00").padStart(2, '0');
+        const t = new Date(`${dateStr.trim()}T${h}:${m}:${s}`).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+    }
+
+    const trimmed = (timeStr || "").trim();
     if (!trimmed) return 0;
 
-    // Se è un numero puro
+    // Se è un numero puro timestamp
     if (/^\d+$/.test(trimmed)) {
       const num = parseInt(trimmed, 10);
       if (num > 1000000000000) return num;
+    }
+
+    // Formato data italiana "DD/MM/YYYY [HH:MM]"
+    const matchIT = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    if (matchIT) {
+      const day = parseInt(matchIT[1], 10);
+      const month = parseInt(matchIT[2], 10) - 1;
+      const year = parseInt(matchIT[3], 10);
+      const hour = matchIT[4] ? parseInt(matchIT[4], 10) : 12;
+      const min = matchIT[5] ? parseInt(matchIT[5], 10) : 0;
+      return new Date(year, month, day, hour, min).getTime();
     }
 
     // Formato orario "HH:MM" o "HH:MM:SS" (es: "19:21", "23:04")
@@ -764,23 +816,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       const target = new Date();
       target.setHours(h, m, 0, 0);
 
-      // Se l'orario indicato è superiore all'orario attuale odierno (es. 23:04 quando adesso sono le 19:44),
-      // significa che la conversazione è avvenuta ieri sera!
+      // Se l'orario indicato è superiore all'orario attuale odierno (es. 23:04 quando adesso sono le 19:50),
+      // significa che la conversazione è avvenuta prima di oggi (ieri sera)!
       if (h > curH || (h === curH && m > curM)) {
         target.setDate(target.getDate() - 1);
       }
       return target.getTime();
-    }
-
-    // Formato data italiana "DD/MM/YYYY [HH:MM]"
-    const matchIT = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
-    if (matchIT) {
-      const day = parseInt(matchIT[1], 10);
-      const month = parseInt(matchIT[2], 10) - 1;
-      const year = parseInt(matchIT[3], 10);
-      const hour = matchIT[4] ? parseInt(matchIT[4], 10) : 12;
-      const min = matchIT[5] ? parseInt(matchIT[5], 10) : 0;
-      return new Date(year, month, day, hour, min).getTime();
     }
 
     // Standard Date parsing
@@ -808,24 +849,28 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       if (typeof lastMsg.timestamp === 'number' && lastMsg.timestamp > 0) {
         return lastMsg.timestamp;
       }
+      if (lastMsg.date && lastMsg.time) {
+        const parsed = parseTimeToEpoch(lastMsg.time, lastMsg.date);
+        if (parsed > 0) return parsed;
+      }
       if (lastMsg.time) {
-        const parsed = parseTimeToEpoch(lastMsg.time);
+        const parsed = parseTimeToEpoch(lastMsg.time, chat.lastUpdatedDate);
         if (parsed > 0) return parsed;
       }
     }
 
-    // 3. Fallback su chat.lastUpdated se presente
-    if (chat.lastUpdated) {
-      const parsed = parseTimeToEpoch(chat.lastUpdated);
+    // 3. Fallback su chat.lastUpdated / lastUpdatedDate
+    if (chat.lastUpdated || chat.lastUpdatedDate) {
+      const parsed = parseTimeToEpoch(chat.lastUpdated, chat.lastUpdatedDate);
       if (parsed > 0) return parsed;
     }
 
-    // 4. Controllo a ritroso sui messaggi per trovare un orario
+    // 4. Controllo a ritroso sui messaggi
     for (let i = chat.messages.length - 1; i >= 0; i--) {
       const m = chat.messages[i];
       if (typeof m.timestamp === 'number' && m.timestamp > 0) return m.timestamp;
-      if (m.time) {
-        const parsed = parseTimeToEpoch(m.time);
+      if (m.date || m.time) {
+        const parsed = parseTimeToEpoch(m.time, m.date);
         if (parsed > 0) return parsed;
       }
     }
@@ -836,20 +881,41 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const formatChatDate = (chat?: SubjectChatData) => {
     if (!chat || !chat.messages || chat.messages.length === 0) return "";
     const lastMsg = chat.messages[chat.messages.length - 1];
-    if (chat.lastUpdatedTimestamp) {
-      const d = new Date(chat.lastUpdatedTimestamp);
+
+    let timestamp = 0;
+    if (typeof chat.lastUpdatedTimestamp === 'number' && chat.lastUpdatedTimestamp > 0) {
+      timestamp = chat.lastUpdatedTimestamp;
+    } else if (typeof lastMsg?.timestamp === 'number' && lastMsg.timestamp > 0) {
+      timestamp = lastMsg.timestamp;
+    } else {
+      timestamp = parseTimeToEpoch(lastMsg?.time || chat.lastUpdated, lastMsg?.date || chat.lastUpdatedDate);
+    }
+
+    if (timestamp > 0) {
+      const d = new Date(timestamp);
       const now = new Date();
-      const isToday = d.toDateString() === now.toDateString();
-      if (isToday) {
+      
+      // Oggi: mostra l'ora (es. 19:21)
+      if (d.toDateString() === now.toDateString()) {
         return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       }
+      
+      // Ieri: mostra "Ieri"
       const yesterday = new Date(now);
       yesterday.setDate(now.getDate() - 1);
       if (d.toDateString() === yesterday.toDateString()) {
         return "Ieri";
       }
-      return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+
+      // Questa settimana / quest'anno: giorno e mese (es. "10 ott", "7 ott")
+      if (d.getFullYear() === now.getFullYear()) {
+        return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+      }
+
+      // Anno differente: gg/mm/aa
+      return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" });
     }
+
     return lastMsg?.time || chat.lastUpdated || "";
   };
 
@@ -1592,20 +1658,38 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               backgroundSize: "16px 16px" 
             }}
           >
-            {/* Pillola Data Centrata */}
-            <div className="flex justify-center my-2">
-              <span className={`text-[11px] font-semibold px-3 py-1 rounded-lg shadow-xs uppercase tracking-wider ${
-                isDarkMode ? 'bg-[#182229]/90 text-[#8696A0]' : 'bg-white/90 text-slate-600'
-              }`}>
-                OGGI
-              </span>
-            </div>
+            {currentMessages.map((msg, idx) => {
+              const prevMsg = idx > 0 ? currentMessages[idx - 1] : null;
+              const msgDateStr = msg.date || (msg.timestamp ? new Date(msg.timestamp).toISOString().split('T')[0] : null);
+              const prevDateStr = prevMsg ? (prevMsg.date || (prevMsg.timestamp ? new Date(prevMsg.timestamp).toISOString().split('T')[0] : null)) : null;
+              const showDateHeader = idx === 0 || (msgDateStr && msgDateStr !== prevDateStr);
 
-            {currentMessages.map((msg, idx) => (
-              <div 
-                key={idx} 
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+              const getDayLabel = (dStr?: string | null, ts?: number) => {
+                if (!dStr && !ts) return "OGGI";
+                const d = dStr ? new Date(dStr + "T00:00:00") : new Date(ts!);
+                const now = new Date();
+                if (d.toDateString() === now.toDateString()) return "OGGI";
+                const yest = new Date(now);
+                yest.setDate(now.getDate() - 1);
+                if (d.toDateString() === yest.toDateString()) return "IERI";
+                return d.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }).toUpperCase();
+              };
+
+              return (
+                <div key={idx} className="flex flex-col">
+                  {showDateHeader && (
+                    <div className="flex justify-center my-2">
+                      <span className={`text-[11px] font-semibold px-3 py-1 rounded-lg shadow-xs uppercase tracking-wider ${
+                        isDarkMode ? 'bg-[#182229]/90 text-[#8696A0]' : 'bg-white/90 text-slate-600'
+                      }`}>
+                        {getDayLabel(msgDateStr, msg.timestamp)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div 
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
                 <div 
                   className={`max-w-[80%] sm:max-w-[75%] px-3 py-1.5 rounded-2xl text-[15.5px] leading-relaxed relative shadow-xs group ${
                     msg.role === "user"
@@ -1649,10 +1733,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                         🔊
                       </button>
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
 
             {isLoading && (
               <div className="flex justify-start">
