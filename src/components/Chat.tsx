@@ -132,6 +132,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const wasVoiceInputRef = useRef<boolean>(false);
 
@@ -139,15 +140,42 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     if (onChatOpen) onChatOpen(!!selectedTutor);
   }, [selectedTutor, onChatOpen]);
 
+  // Incolla immagine da appunti (screenshot paste)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          setSelectedImage(file);
+          break;
+        }
+      }
+    }
+  };
+
   // Formatta l'orario attuale stile WhatsApp (es: 19:20)
   const getCurrentTime = () => {
     const now = new Date();
     return now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   };
 
-  // Filtro Lista (Tutte, Compiti, Verifiche, Voti)
   const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'verifiche'|'voti'>('tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
+
+  // Auto-scroll automatico alla data odierna o prossima all'apertura dei compiti
+  useEffect(() => {
+    if (listFilter === 'compiti' || listFilter === 'verifiche') {
+      const timer = setTimeout(() => {
+        const targetEl = document.querySelector('[data-agenda-focus="true"]') as HTMLElement;
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [listFilter, agendaItems.length]);
   // Effetto Badge OS
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
@@ -393,39 +421,58 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     }
   };
 
-  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string; dataUrl: string }> => {
+  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string; dataUrl: string; thumbUrl: string }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
+          // 1. Immagine ad alta leggibilità per Gemini (max 1280px, jpeg 0.75, testo chiarissimo)
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          
-          // Compressione: max 1024x1024
-          const MAX_SIZE = 1024;
+          const MAX_SIZE = 1280;
           if (width > height && width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
+            height = Math.round((height * MAX_SIZE) / width);
             width = MAX_SIZE;
           } else if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
+            width = Math.round((width * MAX_SIZE) / height);
             height = MAX_SIZE;
           }
-          
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            const result = reader.result as string;
-            return resolve({ base64: result.split(",")[1], mimeType: file.type, dataUrl: result });
+            const raw = reader.result as string;
+            return resolve({ base64: raw.split(",")[1], mimeType: file.type || 'image/jpeg', dataUrl: raw, thumbUrl: raw });
           }
-          
           ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
           const base64 = dataUrl.split(',')[1];
-          resolve({ base64, mimeType: 'image/jpeg', dataUrl });
+
+          // 2. Thumbnail leggerissimo per salvataggio permanente su Firestore (max 360px, jpeg 0.5, ~15-20KB)
+          const thumbCanvas = document.createElement('canvas');
+          let tw = img.width;
+          let th = img.height;
+          const THUMB_MAX = 360;
+          if (tw > th && tw > THUMB_MAX) {
+            th = Math.round((th * THUMB_MAX) / tw);
+            tw = THUMB_MAX;
+          } else if (th > THUMB_MAX) {
+            tw = Math.round((tw * THUMB_MAX) / th);
+            th = THUMB_MAX;
+          }
+          thumbCanvas.width = tw;
+          thumbCanvas.height = th;
+          const tctx = thumbCanvas.getContext('2d');
+          let thumbUrl = dataUrl;
+          if (tctx) {
+            tctx.drawImage(img, 0, 0, tw, th);
+            thumbUrl = thumbCanvas.toDataURL('image/jpeg', 0.5);
+          }
+
+          resolve({ base64, mimeType: 'image/jpeg', dataUrl, thumbUrl });
         };
         img.onerror = reject;
         img.src = event.target?.result as string;
@@ -447,23 +494,23 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
     let imagePayload = undefined;
     let localImageUrl = undefined;
+    let thumbForDb: string | null = null;
 
     if (imgFile) {
       try {
-        const { base64, mimeType, dataUrl } = await fileToBase64(imgFile);
+        const { base64, mimeType, dataUrl, thumbUrl } = await fileToBase64(imgFile);
         imagePayload = { base64, mimeType };
-        
-        // Carica su Firebase Storage per mantenere la memoria permanente
-        const safeName = imgFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const storageRef = ref(storage, `chat_images/studente_demo_${Date.now()}_${safeName}`);
-        await uploadString(storageRef, dataUrl, 'data_url');
-        localImageUrl = await getDownloadURL(storageRef);
+        localImageUrl = dataUrl;
+        thumbForDb = thumbUrl;
+
+        // Prova caricamento Storage asincrono in background (senza bloccare la chat!)
+        try {
+          const safeName = imgFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const storageRef = ref(storage, `chat_images/studente_demo_${Date.now()}_${safeName}`);
+          uploadString(storageRef, dataUrl, 'data_url').catch(() => {});
+        } catch (_) {}
       } catch (err) {
-        console.warn("Firebase Storage non configurato o errore. Fallback alla memoria temporanea:", err);
-        // Fallback: usiamo l'immagine locale ma non verrà salvata su Firestore in modo permanente
-        const { base64, mimeType, dataUrl } = await fileToBase64(imgFile);
-        imagePayload = { base64, mimeType };
-        localImageUrl = dataUrl; 
+        console.warn("Errore conversione foto:", err);
       }
     }
 
@@ -562,12 +609,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       // Crea una copia sicura senza i base64 pesanti per non bloccare Firestore
       const safeChats: any = JSON.parse(JSON.stringify(finalChats));
       Object.keys(safeChats).forEach(tid => {
-        safeChats[tid].messages = safeChats[tid].messages.map((m: any) => ({
-          role: m.role,
-          text: m.text,
-          time: m.time,
-          imageUrl: (m.imageUrl && m.imageUrl.startsWith("http")) ? m.imageUrl : null
-        }));
+        const msgs = safeChats[tid].messages;
+        safeChats[tid].messages = msgs.map((m: any, mIdx: number) => {
+          let img = m.imageUrl;
+          if (mIdx === msgs.length - 2 && thumbForDb && tid === tutorId) {
+            img = thumbForDb;
+          }
+          return {
+            role: m.role,
+            text: m.text,
+            time: m.time,
+            imageUrl: img && (img.startsWith("http") || (img.startsWith("data:image") && img.length < 80000)) ? img : null
+          };
+        });
       });
 
       setDoc(userRef, { 
@@ -730,7 +784,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
-          <div className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}>
+          <div ref={listScrollRef} className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}>
             {listFilter === "tutte" ? (
               filteredTutors.map((tutor) => {
                 const tutorChat = chatsByTutor[tutor.id];
@@ -940,13 +994,28 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               </div>
             ) : (
               <div className="flex flex-col gap-4 p-5 pb-10">
-                <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center justify-between mb-2 px-1 gap-2 flex-wrap">
                   <h3 className={`font-bold text-lg ${isDarkMode ? "text-white" : "text-slate-800"}`}>
                     {listFilter === "compiti" ? "📝 Diario Compiti" : "🚨 Prossime Verifiche"}
                   </h3>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-200 text-slate-600"}`}>
-                    {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica') && !item.isCompleted).length} da fare
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetEl = document.querySelector('[data-agenda-focus="true"]') as HTMLElement;
+                        if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs ${
+                        isDarkMode ? 'bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30' : 'bg-emerald-100 text-[#118B44] hover:bg-emerald-200'
+                      }`}
+                      title="Salta a oggi o ai prossimi compiti"
+                    >
+                      <span>📍</span> Vai a Oggi
+                    </button>
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-200 text-slate-600"}`}>
+                      {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica') && !item.isCompleted).length} da fare
+                    </span>
+                  </div>
                 </div>
                 
                 {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica')).length === 0 ? (
@@ -1003,6 +1072,11 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                          return parseDateForSort(a) - parseDateForSort(b);
                       });
 
+                      // Identifica il giorno obiettivo di partenza (Oggi se presente, altrimenti la prima data futura)
+                      const targetFocusDate = sortedDates.find(d => d !== 'Prossima lezione' && d !== 'Senza data' && d >= todayStr)
+                         || sortedDates.find(d => d === todayStr)
+                         || sortedDates[sortedDates.length - 1];
+
                       // 5. Render
                       return sortedDates.map((dateStr, gIdx) => {
                          const dayTasks = groups[dateStr];
@@ -1017,9 +1091,15 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                          const isUrgentDay = dateStr === tStr || dateStr === todayStr;
                          const badgeSuffix = dateStr === todayStr ? ' (Oggi)' : dateStr === tStr ? ' (Domani)' : dateStr === yStr ? ' (Ieri)' : '';
                          const headerText = `${formatFullTextDate(dateStr)}${badgeSuffix}`;
+                         const isTargetFocus = dateStr === targetFocusDate;
 
                          return (
-                           <div key={gIdx} className="flex flex-col gap-3">
+                           <div 
+                             key={gIdx} 
+                             id={`agenda-day-${dateStr}`}
+                             data-agenda-focus={isTargetFocus ? "true" : undefined}
+                             className="flex flex-col gap-3"
+                           >
                              <div className="sticky top-0 z-10 py-2" style={{ backgroundColor: isDarkMode ? '#0B141A' : '#EFEAE2' }}>
                                <h3 className={`text-sm sm:text-base font-black inline-block px-3 py-1.5 rounded-xl border-b-2 shadow-sm ${
                                  isUrgentDay 
@@ -1375,23 +1455,33 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             isDarkMode ? 'bg-[#0B141A]' : 'bg-[#F0F2F5]'
           }`}>
             {selectedImage && (
-              <div className={`flex items-center gap-2 p-2 rounded-xl border relative w-max shadow-xs ${
-                isDarkMode ? 'bg-[#2A3942] border-[#202C33]' : 'bg-white border-slate-200'
+              <div className={`flex items-center gap-3 p-2.5 rounded-2xl border relative shadow-sm ${
+                isDarkMode ? 'bg-[#202C33] border-[#2A3942]' : 'bg-emerald-50 border-emerald-200'
               }`}>
                 <img 
                   src={URL.createObjectURL(selectedImage)} 
-                  alt="Preview" 
-                  className="h-14 w-14 object-cover rounded-lg" 
+                  alt="Anteprima foto" 
+                  className="h-14 w-14 object-cover rounded-xl border border-black/10 shrink-0" 
                 />
-                <span className={`text-xs truncate max-w-[140px] font-medium ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
-                  {selectedImage.name}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-[#25D366]">📸 Foto Pronta per il Tutor</span>
+                  </div>
+                  <p className={`text-[12px] truncate ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>
+                    {selectedImage.name || "Foto scattata"}
+                  </p>
+                  <p className={`text-[10px] ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
+                    Scrivi una domanda o premi Invio per farti aiutare!
+                  </p>
+                </div>
                 <button 
+                  type="button"
                   onClick={() => {
                     setSelectedImage(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600 shadow"
+                  className="bg-red-500 hover:bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md shrink-0 transition-transform active:scale-95"
+                  title="Rimuovi foto"
                 >
                   ✕
                 </button>
@@ -1404,14 +1494,48 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 isDarkMode ? 'bg-[#202C33] focus-within:border-[#25D366]' : 'bg-white focus-within:border-transparent'
               } ${isListening ? 'ring-2 ring-red-400' : ''}`}>
                 
-                {/* Input file nascosto */}
+                {/* Input nativo per Scatta Foto diretta con fotocamera */}
                 <input 
+                  id="chat-camera-input"
+                  type="file" 
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleImageChange}
+                  className="sr-only" 
+                />
+                {/* Input nativo per Galleria / File */}
+                <input 
+                  id="chat-gallery-input"
                   type="file" 
                   accept="image/*"
                   ref={fileInputRef}
                   onChange={handleImageChange}
-                  className="hidden" 
+                  className="sr-only" 
                 />
+                
+                {/* Tasto 📷 Fotocamera */}
+                <label 
+                  htmlFor="chat-camera-input"
+                  className={`p-2 rounded-full cursor-pointer transition-colors flex-shrink-0 ${
+                    isDarkMode ? 'text-[#8696A0] hover:text-[#25D366] hover:bg-[#374B56]' : 'text-slate-400 hover:text-emerald-600 hover:bg-slate-100'
+                  }`}
+                  title="Scatta foto diretta con la fotocamera"
+                >
+                  <span className="text-lg">📷</span>
+                </label>
+
+                {/* Tasto 📎 Scegli da Galleria / File */}
+                <label 
+                  htmlFor="chat-gallery-input"
+                  className={`p-2 rounded-full cursor-pointer transition-colors flex-shrink-0 -ml-1 ${
+                    isDarkMode ? 'text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#374B56]' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                  }`}
+                  title="Scegli foto dalla galleria o dai file"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 transform -rotate-45">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                  </svg>
+                </label>
                 
                 {/* Input di testo */}
                 <input 
@@ -1421,27 +1545,14 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     setInput(e.target.value);
                     wasVoiceInputRef.current = false;
                   }}
+                  onPaste={handlePaste}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder={isListening ? "Parla pure..." : "Messaggio..."}
-                  className={`flex-1 px-3 py-2 bg-transparent border-none focus:outline-none text-[15px] ${
+                  placeholder={isListening ? "Parla pure..." : selectedImage ? "Chiedi spiegazione sulla foto..." : "Messaggio o incolla screenshot..."}
+                  className={`flex-1 px-2 py-2 bg-transparent border-none focus:outline-none text-[15px] ${
                     isDarkMode ? 'text-gray-200 placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-400'
                   }`}
                   disabled={isLoading}
                 />
-                
-                {/* Bottone Allegato (Graffetta) - ora dentro l'input */}
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`p-2 rounded-full transition-colors flex-shrink-0 mx-1 ${
-                    isDarkMode ? 'text-[#8696A0] hover:text-[#E9EDEF] hover:bg-[#374B56]' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                  }`}
-                  title="Allega foto esercizio"
-                  disabled={isLoading}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 transform -rotate-45">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
-                  </svg>
-                </button>
               </div>
 
               {/* Bottone Tondo Verde: Microfono o Invio */}
