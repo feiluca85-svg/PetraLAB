@@ -740,33 +740,102 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
   const currentTutorMemory = selectedTutor ? subjectsMemory[selectedTutor.id] : null;
 
+  // Parser universale per ricavare il timestamp esatto di qualsiasi stringa orario (es. "19:21", "23:04", ISO, etc.)
+  const parseTimeToEpoch = (timeStr?: string): number => {
+    if (!timeStr) return 0;
+    const trimmed = timeStr.trim();
+    if (!trimmed) return 0;
+
+    // Se è un numero puro
+    if (/^\d+$/.test(trimmed)) {
+      const num = parseInt(trimmed, 10);
+      if (num > 1000000000000) return num;
+    }
+
+    // Formato orario "HH:MM" o "HH:MM:SS" (es: "19:21", "23:04")
+    const matchHHMM = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (matchHHMM) {
+      const h = parseInt(matchHHMM[1], 10);
+      const m = parseInt(matchHHMM[2], 10);
+      const now = new Date();
+      const curH = now.getHours();
+      const curM = now.getMinutes();
+
+      const target = new Date();
+      target.setHours(h, m, 0, 0);
+
+      // Se l'orario indicato è superiore all'orario attuale odierno (es. 23:04 quando adesso sono le 19:44),
+      // significa che la conversazione è avvenuta ieri sera!
+      if (h > curH || (h === curH && m > curM)) {
+        target.setDate(target.getDate() - 1);
+      }
+      return target.getTime();
+    }
+
+    // Formato data italiana "DD/MM/YYYY [HH:MM]"
+    const matchIT = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    if (matchIT) {
+      const day = parseInt(matchIT[1], 10);
+      const month = parseInt(matchIT[2], 10) - 1;
+      const year = parseInt(matchIT[3], 10);
+      const hour = matchIT[4] ? parseInt(matchIT[4], 10) : 12;
+      const min = matchIT[5] ? parseInt(matchIT[5], 10) : 0;
+      return new Date(year, month, day, hour, min).getTime();
+    }
+
+    // Standard Date parsing
+    const parsedDate = new Date(trimmed).getTime();
+    if (!isNaN(parsedDate) && parsedDate > 1000000000000) {
+      return parsedDate;
+    }
+
+    return 0;
+  };
+
   // Calcola il timestamp dell'ultima attività della chat stile WhatsApp (più recente in cima)
   const getTutorLastActivity = (tutorId: string): number => {
     const chat = chatsByTutor[tutorId];
-    if (!chat) return 0;
+    if (!chat || !chat.messages || chat.messages.length === 0) return 0;
+
+    // 1. Timestamp numerico esplicito
     if (typeof chat.lastUpdatedTimestamp === 'number' && chat.lastUpdatedTimestamp > 0) {
       return chat.lastUpdatedTimestamp;
     }
-    if (chat.messages && chat.messages.length > 0) {
-      const timestamps = chat.messages
-        .map(m => m.timestamp)
-        .filter((t): t is number => typeof t === 'number' && t > 0);
-      if (timestamps.length > 0) {
-        return Math.max(...timestamps);
+
+    // 2. Controllo sull'ultimo messaggio della chat
+    const lastMsg = chat.messages[chat.messages.length - 1];
+    if (lastMsg) {
+      if (typeof lastMsg.timestamp === 'number' && lastMsg.timestamp > 0) {
+        return lastMsg.timestamp;
       }
-      const hasUserMsg = chat.messages.some(m => m.role === 'user');
-      if (hasUserMsg) {
-        return 1000 + chat.messages.length;
-      }
-      if (chat.messages.length > 1) {
-        return 100 + chat.messages.length;
+      if (lastMsg.time) {
+        const parsed = parseTimeToEpoch(lastMsg.time);
+        if (parsed > 0) return parsed;
       }
     }
+
+    // 3. Fallback su chat.lastUpdated se presente
+    if (chat.lastUpdated) {
+      const parsed = parseTimeToEpoch(chat.lastUpdated);
+      if (parsed > 0) return parsed;
+    }
+
+    // 4. Controllo a ritroso sui messaggi per trovare un orario
+    for (let i = chat.messages.length - 1; i >= 0; i--) {
+      const m = chat.messages[i];
+      if (typeof m.timestamp === 'number' && m.timestamp > 0) return m.timestamp;
+      if (m.time) {
+        const parsed = parseTimeToEpoch(m.time);
+        if (parsed > 0) return parsed;
+      }
+    }
+
     return 0;
   };
 
   const formatChatDate = (chat?: SubjectChatData) => {
     if (!chat || !chat.messages || chat.messages.length === 0) return "";
+    const lastMsg = chat.messages[chat.messages.length - 1];
     if (chat.lastUpdatedTimestamp) {
       const d = new Date(chat.lastUpdatedTimestamp);
       const now = new Date();
@@ -781,7 +850,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       }
       return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
     }
-    return chat.lastUpdated || "Oggi";
+    return lastMsg?.time || chat.lastUpdated || "";
   };
 
   // Ordina i tutor in ordine decrescente di interazione (la più giovane in cima, la più vecchia in fondo)
