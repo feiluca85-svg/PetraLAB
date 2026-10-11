@@ -20,11 +20,13 @@ type UIMessage = {
   text: string;
   imageUrl?: string;
   time?: string;
+  timestamp?: number;
 };
 
 type SubjectChatData = {
   messages: UIMessage[];
   lastUpdated?: string;
+  lastUpdatedTimestamp?: number;
 };
 
 
@@ -597,17 +599,18 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
     const tutorId = selectedTutor.id;
     const nowTime = getCurrentTime();
+    const nowTimestamp = Date.now();
     const prevMsgs = currentMessages;
 
     const newMessages: UIMessage[] = [
       ...prevMsgs, 
-      { role: "user", text: userText, imageUrl: localImageUrl, time: nowTime }
+      { role: "user", text: userText, imageUrl: localImageUrl, time: nowTime, timestamp: nowTimestamp }
     ];
 
     // Aggiorna stato locale
     const updatedChats = {
       ...chatsByTutor,
-      [tutorId]: { messages: newMessages, lastUpdated: nowTime }
+      [tutorId]: { messages: newMessages, lastUpdated: nowTime, lastUpdatedTimestamp: nowTimestamp }
     };
     setChatsByTutor(updatedChats);
 
@@ -640,14 +643,16 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     }
     
     if (response.success && response.text) {
+      const replyTime = getCurrentTime();
+      const replyTimestamp = Date.now();
       const finalMsgs: UIMessage[] = [
         ...newMessages, 
-        { role: "model", text: response.text, time: getCurrentTime() }
+        { role: "model", text: response.text, time: replyTime, timestamp: replyTimestamp }
       ];
       
       const finalChats = {
         ...chatsByTutor,
-        [tutorId]: { messages: finalMsgs, lastUpdated: getCurrentTime() }
+        [tutorId]: { messages: finalMsgs, lastUpdated: replyTime, lastUpdatedTimestamp: replyTimestamp }
       };
       setChatsByTutor(finalChats);
       awardXP(10);
@@ -691,6 +696,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       const safeChats: any = JSON.parse(JSON.stringify(finalChats));
       Object.keys(safeChats).forEach(tid => {
         const msgs = safeChats[tid].messages;
+        safeChats[tid].lastUpdatedTimestamp = finalChats[tid]?.lastUpdatedTimestamp || null;
         safeChats[tid].messages = msgs.map((m: any, mIdx: number) => {
           let img = m.imageUrl;
           if (mIdx === msgs.length - 2 && thumbForDb && tid === tutorId) {
@@ -700,6 +706,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
             role: m.role,
             text: m.text,
             time: m.time,
+            timestamp: m.timestamp || null,
             imageUrl: img && (img.startsWith("http") || (img.startsWith("data:image") && img.length < 80000)) ? img : null
           };
         });
@@ -716,13 +723,15 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         wasVoiceInputRef.current = false;
       }
     } else {
+      const errTime = getCurrentTime();
+      const errTimestamp = Date.now();
       const finalMsgs: UIMessage[] = [
         ...newMessages, 
-        { role: "model", text: response.error || "Errore di connessione.", time: getCurrentTime() }
+        { role: "model", text: response.error || "Errore di connessione.", time: errTime, timestamp: errTimestamp }
       ];
       setChatsByTutor({
         ...chatsByTutor,
-        [tutorId]: { messages: finalMsgs, lastUpdated: getCurrentTime() }
+        [tutorId]: { messages: finalMsgs, lastUpdated: errTime, lastUpdatedTimestamp: errTimestamp }
       });
     }
     
@@ -731,7 +740,61 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
 
   const currentTutorMemory = selectedTutor ? subjectsMemory[selectedTutor.id] : null;
 
-  const filteredTutors = tutors.filter(t => 
+  // Calcola il timestamp dell'ultima attività della chat stile WhatsApp (più recente in cima)
+  const getTutorLastActivity = (tutorId: string): number => {
+    const chat = chatsByTutor[tutorId];
+    if (!chat) return 0;
+    if (typeof chat.lastUpdatedTimestamp === 'number' && chat.lastUpdatedTimestamp > 0) {
+      return chat.lastUpdatedTimestamp;
+    }
+    if (chat.messages && chat.messages.length > 0) {
+      const timestamps = chat.messages
+        .map(m => m.timestamp)
+        .filter((t): t is number => typeof t === 'number' && t > 0);
+      if (timestamps.length > 0) {
+        return Math.max(...timestamps);
+      }
+      const hasUserMsg = chat.messages.some(m => m.role === 'user');
+      if (hasUserMsg) {
+        return 1000 + chat.messages.length;
+      }
+      if (chat.messages.length > 1) {
+        return 100 + chat.messages.length;
+      }
+    }
+    return 0;
+  };
+
+  const formatChatDate = (chat?: SubjectChatData) => {
+    if (!chat || !chat.messages || chat.messages.length === 0) return "";
+    if (chat.lastUpdatedTimestamp) {
+      const d = new Date(chat.lastUpdatedTimestamp);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      if (isToday) {
+        return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+      }
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      if (d.toDateString() === yesterday.toDateString()) {
+        return "Ieri";
+      }
+      return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+    }
+    return chat.lastUpdated || "Oggi";
+  };
+
+  // Ordina i tutor in ordine decrescente di interazione (la più giovane in cima, la più vecchia in fondo)
+  const sortedTutors = [...tutors].sort((a, b) => {
+    const timeA = getTutorLastActivity(a.id);
+    const timeB = getTutorLastActivity(b.id);
+    if (timeA !== timeB) {
+      return timeB - timeA;
+    }
+    return tutors.findIndex(t => t.id === a.id) - tutors.findIndex(t => t.id === b.id);
+  });
+
+  const filteredTutors = sortedTutors.filter(t => 
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     t.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -892,7 +955,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     {/* Foto Profilo Circolare 52px con Anello di Stato Verde */}
                     <div className="relative shrink-0">
                       <div className={`w-16 h-16 rounded-3xl shadow-sm flex items-center justify-center text-3xl border-2 ${
-                        tutorChat?.lastUpdated === getCurrentTime() 
+                        tutorChat?.lastUpdatedTimestamp && (Date.now() - tutorChat.lastUpdatedTimestamp < 180000)
                           ? "border-[#25D366] p-0.5" 
                           : "border-transparent"
                       } ${isDarkMode ? "bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10" : "bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50"}`}>
@@ -922,7 +985,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                             ? (isDarkMode ? "text-[#8696A0]" : "text-slate-400")
                             : "text-[#25D366] font-semibold"
                         }`}>
-                          {tutorChat?.lastUpdated || "Oggi"}
+                          {formatChatDate(tutorChat)}
                         </span>
                       </div>
 
