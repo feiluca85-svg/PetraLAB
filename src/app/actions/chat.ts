@@ -155,16 +155,36 @@ export async function sendMessage(
 
 export async function parseNuvolaScreenshot(base64Image: string, mimeType: string, fallbackDate?: string) {
   try {
-    const prompt = `Sei un assistente per un registro elettronico scolastico.
-Analizza questa immagine (uno screenshot del registro) ed estrai QUALSIASI compito, verifica o voto presente.
-Presta attenzione ai dettagli del voto (es. "7½" diventa "7.5").
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const tom = new Date(now);
+    tom.setDate(tom.getDate() + 1);
+    const tomorrowISO = `${tom.getFullYear()}-${String(tom.getMonth() + 1).padStart(2, '0')}-${String(tom.getDate()).padStart(2, '0')}`;
 
-REGOLE TASSATIVE PER LE DATE:
-1. L'anno scolastico corrente è il 2026.
-2. NON inserire mai anni passati come 1918 o 1920 nelle date di scadenza. Se vedi anni storici, fanno parte della descrizione dell'argomento di studio (es. Storia), non sono la data del compito!
-3. Se l'anno di consegna non è specificato, usa SEMPRE "2026".
-4. Il formato del campo "dueDate" (e "date" per i voti) DEVE ESSERE ESATTAMENTE "YYYY-MM-DD" (es. "2026-10-15").
-5. Se non c'è una data specifica o deducibile, usa "${fallbackDate || "Prossima lezione"}".
+    const DAY_NAMES = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    const todayName = DAY_NAMES[now.getDay()];
+    const tomorrowName = DAY_NAMES[tom.getDay()];
+
+    const prompt = `Sei un assistente per un registro elettronico scolastico (es. Nuvola, ClasseViva, Spaggiari).
+Analizza questa immagine (uno screenshot del registro elettronico) ed estrai TUTTI i compiti, verifiche o voti presenti, SENZA TRASCURARE O SALTARE ALCUNA MATERIA.
+
+DATA DI RIFERIMENTO ATTUALE:
+- Oggi è: ${todayName} ${todayISO}
+- Domani è: ${tomorrowName} ${tomorrowISO}
+
+REGOLE CRUCIALI PER LE MATERIE E I COMPITI:
+1. NON SALTARE NESSUNA MATERIA! Esamina meticolosamente ogni singola riga, riquadro, card o blocco presente nello screenshot.
+   Se vedi Inglese, Scienze, Arte e Immagine, Matematica, Italiano, Tecnologia, Francese, Musica, Storia, Geografia, ecc., estraile TUTTE! Ognuna deve diventare un elemento separato in "agendaItems".
+2. SE UNA SEZIONE, SCHEDA O COLONNA RIGUARDA UN GIORNO SPECIFICO (es. "Domani", "${tomorrowName}", "${tomorrowISO}", o una data in testata come "13 Ottobre"):
+   -> TUTTI i compiti elencati dentro o sotto quel giorno (es. Arte e Immagine, Scienze, Inglese) DEVONO RICEVERE ESATTAMENTE QUELLA DATA (es. "${tomorrowISO}")!
+   -> NON contrassegnare MAI i compiti di quel giorno con "Prossima lezione" solo perché la data non è ripetuta riga per riga! La data dell'intestazione del giorno si applica a TUTTI i compiti di quel gruppo!
+3. Se nello screenshot leggi "Domani", la dueDate è "${tomorrowISO}". Se leggi "Oggi", la dueDate è "${todayISO}".
+4. Se c'è una data (es. "13/10", "13 ott", "14 ottobre"), convertila in formato "YYYY-MM-DD" con anno ${now.getFullYear()} (es. "${now.getFullYear()}-10-13").
+5. Il formato del campo "dueDate" (e "date" per i voti) DEVE ESSERE ESATTAMENTE "YYYY-MM-DD" (es. "${tomorrowISO}").
+6. Usa "Prossima lezione" SOLO E SOLTANTO se nello screenshot è esplicitamente scritto "Prossima lezione" o se non c'è assolutamente alcun giorno/data specificato in tutta la schermata.
+
+REGOLE PER I VOTI:
+- Se vedi voti o valutazioni (es. "7½" diventa "7.5", "8-", "6+"), inseriscili in "gradesItems".
 
 Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun blocco markdown):
 {
@@ -172,17 +192,17 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun bloc
     {
       "id": "id_1",
       "type": "compito" | "verifica",
-      "subject": "Es. Matematica",
-      "description": "Breve descrizione",
-      "dueDate": "Data o 'Prossima lezione'"
+      "subject": "Es. Inglese",
+      "description": "Descrizione del compito o argomento",
+      "dueDate": "${tomorrowISO}"
     }
   ],
   "gradesItems": [
     {
       "subject": "Tecnologia",
       "grade": "7.5",
-      "topic": "Proiezione ortogonale...",
-      "date": "2026-09-30"
+      "topic": "Argomento verifica",
+      "date": "YYYY-MM-DD"
     }
   ]
 }`;
@@ -224,12 +244,40 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun bloc
 
     try {
       const data = JSON.parse(text);
-      const items = (data.agendaItems || []).map((it: any, idx: number) => {
-        let dueDate = it.dueDate || "Prossima lezione";
-        const parts = dueDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (parts) {
-          dueDate = `${parts[3]}-${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+      const rawItems = data.agendaItems || [];
+      
+      // Controlla se c'è una data comune prevalente per i compiti nello screenshot
+      const explicitDates = rawItems
+        .map((it: any) => it.dueDate)
+        .filter((d: any) => d && /^\d{4}-\d{2}-\d{2}$/.test(d));
+      const dominantDate = explicitDates.length > 0 ? explicitDates[0] : tomorrowISO;
+
+      const items = rawItems.map((it: any, idx: number) => {
+        let dueDate = (it.dueDate || "").trim();
+        
+        if (!dueDate || dueDate.toLowerCase() === 'domani') {
+          dueDate = tomorrowISO;
+        } else if (dueDate.toLowerCase() === 'oggi') {
+          dueDate = todayISO;
+        } else {
+          // Se la data è "DD/MM/YYYY"
+          const partsFull = dueDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+          if (partsFull) {
+            dueDate = `${partsFull[3]}-${partsFull[2].padStart(2, '0')}-${partsFull[1].padStart(2, '0')}`;
+          } else {
+            // Se la data è "DD/MM" o "DD-MM"
+            const partsShort = dueDate.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+            if (partsShort) {
+              dueDate = `${now.getFullYear()}-${partsShort[2].padStart(2, '0')}-${partsShort[1].padStart(2, '0')}`;
+            } else if (dueDate === "Prossima lezione" && explicitDates.length > 0) {
+              // Se l'IA ha messo "Prossima lezione" ma gli altri compiti dello screenshot hanno una data esplicita di domani
+              dueDate = dominantDate;
+            } else if (!dueDate) {
+              dueDate = fallbackDate || tomorrowISO;
+            }
+          }
         }
+
         return {
           ...it,
           id: `nuvola_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 8)}`,

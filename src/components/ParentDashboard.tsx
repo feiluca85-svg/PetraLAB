@@ -109,7 +109,7 @@ export default function ParentDashboard({
           const canvas = document.createElement("canvas");
           let width = img.width;
           let height = img.height;
-          const max = 1024;
+          const max = 2400; // Risoluzione HD per permettere all'IA di leggere testo piccolo e denso nei registri
           if (width > max || height > max) {
             if (width > height) { height = Math.round((height * max) / width); width = max; }
             else { width = Math.round((width * max) / height); height = max; }
@@ -121,7 +121,7 @@ export default function ParentDashboard({
             ctx.fillStyle = "#FFF";
             ctx.fillRect(0, 0, width, height);
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL("image/jpeg", 0.7));
+            resolve(canvas.toDataURL("image/jpeg", 0.88));
           } else {
             resolve(reader.result as string);
           }
@@ -260,11 +260,31 @@ export default function ParentDashboard({
         // Process Agenda Items
         if (res.items && res.items.length > 0) {
           const itemsToAdd = res.items.filter((newItem: any) => {
-            const normNew = (newItem.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normNewSub = (newItem.subject || "").toLowerCase().trim();
+            const normNewDate = (newItem.dueDate || "").trim();
+            const normNewDesc = (newItem.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+
             const isDuplicate = agendaItems.some((ex: any) => {
-              const normEx = (ex.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
-              if (normEx === normNew) return true;
-              if (normEx.length > 20 && normNew.length > 20 && (normEx.includes(normNew.substring(0,20)) || normNew.includes(normEx.substring(0,20)))) return true;
+              const normExSub = (ex.subject || "").toLowerCase().trim();
+              const normExDate = (ex.dueDate || "").trim();
+              const normExDesc = (ex.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+
+              // Materie diverse -> NON sono duplicati (es. Inglese vs Scienze vs Arte)
+              if (normNewSub && normExSub && !normNewSub.includes(normExSub) && !normExSub.includes(normNewSub)) {
+                return false;
+              }
+
+              // Date diverse -> NON sono duplicati (es. compiti per giorni diversi)
+              if (normNewDate && normExDate && normNewDate !== normExDate) {
+                return false;
+              }
+
+              // Se coincidono sia materia che data: controlla se la descrizione è identica o quasi
+              if (normExDesc === normNewDesc && normNewDesc.length > 5) return true;
+              if (normExDesc.length > 30 && normNewDesc.length > 30 && (normExDesc.includes(normNewDesc) || normNewDesc.includes(normExDesc))) {
+                return true;
+              }
+
               return false;
             });
             return !isDuplicate;
