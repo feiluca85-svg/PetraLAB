@@ -273,6 +273,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     }
   };
 
+  const handleUpdateTaskDate = async (e: React.MouseEvent, id: string, newDate: string) => {
+    e.stopPropagation();
+    try {
+      const updated = agendaItems.map(item => 
+        item.id === id ? { ...item, dueDate: newDate } : item
+      );
+      setAgendaItems(updated);
+      await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+    } catch (err) {
+      console.error("Errore durante la modifica della data:", err);
+    }
+  };
+
 
   // Ascolta le chat e la memoria da Firestore in tempo reale
   useEffect(() => {
@@ -1427,6 +1440,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                          </div>
                                        </div>
                                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-600'}`}>{item.description}</p>
+                                       {(dateStr === 'Prossima lezione' || dateStr === 'Prossima Lezione' || dateStr === 'Senza data') && !item.isCompleted && (
+                                         <button 
+                                           onClick={(e) => handleUpdateTaskDate(e, item.id, tStr)}
+                                           className={`mt-2 mr-2 inline-flex text-xs font-bold px-3 py-1.5 rounded-full items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                                             isDarkMode 
+                                               ? 'bg-amber-950/40 border border-amber-500/50 text-amber-300 hover:bg-amber-900/60' 
+                                               : 'bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100'
+                                           }`}
+                                           title="Imposta data per domani"
+                                         >
+                                           <span>🚀</span> Sposta a Domani
+                                         </button>
+                                       )}
                                        {/* Bottoncino "Parla col Tutor" */}
                                        {(() => {
                                          const matchingTutor = tutors.find((t: any) => 

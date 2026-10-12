@@ -258,6 +258,7 @@ export default function ParentDashboard({
         const updatePayload: any = {};
         
         // Process Agenda Items
+        let addedTaskItems: any[] = [];
         if (res.items && res.items.length > 0) {
           const itemsToAdd = res.items.filter((newItem: any) => {
             const normNewSub = (newItem.subject || "").toLowerCase().trim();
@@ -291,13 +292,13 @@ export default function ParentDashboard({
           });
           
           if (itemsToAdd.length > 0) {
-            const uniqueNewItems = itemsToAdd.map((it: any, idx: number) => ({
+            addedTaskItems = itemsToAdd.map((it: any, idx: number) => ({
               ...it,
               id: it.id && it.id !== "id_random123" && it.id !== "id_1" ? it.id : `nuvola_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
               isCompleted: Boolean(it.isCompleted)
             }));
-            updatePayload.agendaItems = [...agendaItems, ...uniqueNewItems];
-            tasksAdded = uniqueNewItems.length;
+            updatePayload.agendaItems = [...agendaItems, ...addedTaskItems];
+            tasksAdded = addedTaskItems.length;
           }
         }
         
@@ -334,9 +335,15 @@ export default function ParentDashboard({
           if (tasksAdded > 0) setAgendaItems(updatePayload.agendaItems);
           if (gradesAdded > 0) setSubjectsMemory(updatedMemMap);
           
-          let msg = "Completato!\n";
-          if (tasksAdded > 0) msg += `- ${tasksAdded} compiti inseriti\n`;
-          if (gradesAdded > 0) msg += `- ${gradesAdded} voti estratti e salvati`;
+          let msg = "Analisi Registro Completata!\n\n";
+          if (tasksAdded > 0) {
+            msg += `📋 ${tasksAdded} compiti aggiunti/aggiornati:\n`;
+            addedTaskItems.forEach((it: any) => {
+              msg += `• ${it.subject} (${it.dueDate}): ${it.description.substring(0, 35)}...\n`;
+            });
+            msg += "\n";
+          }
+          if (gradesAdded > 0) msg += `📊 ${gradesAdded} voti estratti e salvati\n`;
           alert(msg);
         } else {
           alert("Nessun compito o voto nuovo trovato (o erano già stati salvati).");
