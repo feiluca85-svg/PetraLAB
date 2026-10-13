@@ -81,6 +81,33 @@ const formatFullTextDate = (dStr: string) => {
   return dStr;
 };
 
+// Converte link/URL presenti nel testo dei compiti in collegamenti cliccabili evidenziati
+const renderFormattedTaskText = (text: string) => {
+  if (!text) return "";
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 font-bold text-sky-500 hover:text-sky-400 underline underline-offset-4 decoration-2 hover:decoration-sky-300 break-all bg-sky-500/10 px-1.5 py-0.5 rounded-md transition-colors cursor-pointer"
+          title="Apri pagina web"
+        >
+          <span>🔗</span>
+          <span>{part}</span>
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { tutors: Tutor[], isDarkMode?: boolean, toggleTheme?: () => void, onChatOpen?: (isOpen: boolean) => void }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -1439,7 +1466,9 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                            }`}>{item.subject}</h4>
                                          </div>
                                        </div>
-                                       <p className={`text-sm mt-1 ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-600'}`}>{item.description}</p>
+                                       <div className={`text-sm mt-1 leading-relaxed ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-600'}`}>
+                                          {renderFormattedTaskText(item.description)}
+                                        </div>
                                        {(dateStr === 'Prossima lezione' || dateStr === 'Prossima Lezione' || dateStr === 'Senza data') && !item.isCompleted && (
                                          <button 
                                            onClick={(e) => handleUpdateTaskDate(e, item.id, tStr)}

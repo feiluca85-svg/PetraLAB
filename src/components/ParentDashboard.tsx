@@ -60,6 +60,33 @@ const formatDisplayDate = (dStr: string) => {
   return dStr;
 };
 
+// Converte link/URL presenti nel testo dei compiti in collegamenti cliccabili evidenziati
+const renderFormattedTaskText = (text: string) => {
+  if (!text) return "";
+  const urlRegex = /(https?:\/\/[^s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 font-bold text-sky-500 hover:text-sky-400 underline underline-offset-4 decoration-2 hover:decoration-sky-300 break-all bg-sky-500/10 px-1.5 py-0.5 rounded-md transition-colors cursor-pointer"
+          title="Apri pagina web"
+        >
+          <span>🔗</span>
+          <span>{part}</span>
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function ParentDashboard({
   isDarkMode = false,
   onClose,
@@ -571,7 +598,9 @@ export default function ParentDashboard({
                       <span className="text-xl shrink-0">{item.type?.toLowerCase() === 'verifica' ? '🚨' : '📝'}</span>
                       <div>
                         <h4 className={`text-sm font-bold ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-gray-200' : 'text-slate-800'}`}>{item.subject}</h4>
-                        <p className={`text-xs ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>{item.description}</p>
+                        <div className={`text-xs mt-0.5 leading-relaxed ${item.isCompleted ? 'line-through opacity-50' : ''} ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
+                          {renderFormattedTaskText(item.description)}
+                        </div>
                         <span className={`text-[10px] font-semibold mt-1 inline-block px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-[#0B141A] text-emerald-400' : 'bg-slate-100 text-[#118B44]'}`}>{formatDisplayDate(item.dueDate)}</span>
                       </div>
                     </div>
