@@ -200,17 +200,16 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
 
-  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'verifiche'|'voti'>('tutte');
+  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'>('tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
 
   const tabScrollMap = useRef<Record<string, number>>({
     tutte: 0,
     compiti: -1,
-    verifiche: -1,
     voti: 0
   });
 
-  const handleTabChange = (newFilter: 'tutte'|'compiti'|'verifiche'|'voti') => {
+  const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti') => {
     if (listScrollRef.current) {
       tabScrollMap.current[listFilter] = listScrollRef.current.scrollTop;
     }
@@ -234,7 +233,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       if (listFilter === 'tutte' || listFilter === 'voti') {
         // "Tutte" e "Voti" partono sempre dall'inizio assoluto (0) a meno che l'utente non abbia già scorso in questa sessione
         container.scrollTop = tabScrollMap.current[listFilter] || 0;
-      } else if (listFilter === 'compiti' || listFilter === 'verifiche') {
+      } else if (listFilter === 'compiti') {
         const saved = tabScrollMap.current[listFilter];
         if (saved !== undefined && saved >= 0) {
           container.scrollTop = saved;
@@ -1084,8 +1083,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           }`}>
             {[
               { id: 'tutte', label: 'Tutte' },
-              { id: 'compiti', label: 'Compiti' },
-              { id: 'verifiche', label: 'Verifiche' },
+              { id: 'compiti', label: 'Compiti & Verifiche' },
               { id: 'voti', label: 'Voti' }
             ].map(filter => (
               <span 
@@ -1319,7 +1317,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               <div className="flex flex-col gap-4 p-5 pb-10">
                 <div className="flex items-center justify-between mb-2 px-1 gap-2 flex-wrap">
                   <h3 className={`font-bold text-lg ${isDarkMode ? "text-white" : "text-slate-800"}`}>
-                    {listFilter === "compiti" ? "📝 Diario Compiti" : "🚨 Prossime Verifiche"}
+                    "📝 Diario Compiti & Verifiche"
                   </h3>
                   <div className="flex items-center gap-2">
                     <button
@@ -1336,21 +1334,21 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                       <span>📍</span> Vai a Oggi
                     </button>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-200 text-slate-600"}`}>
-                      {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica') && !item.isCompleted).length} da fare
+                      {agendaItems.filter(item => !item.isCompleted).length} da fare
                     </span>
                   </div>
                 </div>
                 
-                {agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica')).length === 0 ? (
+                {agendaItems.length === 0 ? (
                   <div className={`p-6 rounded-2xl border text-center flex flex-col items-center justify-center mt-4 shadow-sm ${
                     isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-slate-50 border-slate-200"
                   }`}>
-                    <span className="text-5xl mb-4 opacity-80">{listFilter === "compiti" ? "📚" : "🎯"}</span>
+                    <span className="text-5xl mb-4 opacity-80">"📚"</span>
                     <p className={`font-bold text-[15px] mb-2 ${isDarkMode ? "text-gray-200" : "text-slate-700"}`}>
                       Tutto completato!
                     </p>
                     <p className={`text-[13px] leading-relaxed max-w-[250px] ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                      Non hai {listFilter === "compiti" ? "compiti" : "verifiche"} in sospeso. 
+                      Non hai compiti o verifiche in sospeso. 
                       Mamma o papà possono inserirli con lo <strong className={isDarkMode ? "text-emerald-400" : "text-emerald-600"}>Screenshot Magico</strong>.
                     </p>
                   </div>
@@ -1358,7 +1356,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                   <div className="mt-6 flex flex-col gap-6">
                     {(() => {
                       // 1. Filtra compiti o verifiche
-                      const tasks = agendaItems.filter(item => item.type?.toLowerCase() === (listFilter === 'compiti' ? 'compito' : 'verifica'));
+                      const tasks = [...agendaItems];
 
                       // 2. Normalizza e raggruppa per data YYYY-MM-DD
                       const normalizeDate = (d: string) => {
@@ -1459,11 +1457,24 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                      </div>
                                      <div className={`flex-1 ${item.isCompleted ? 'line-through' : ''}`}>
                                        <div className="flex justify-between items-start">
-                                         <div className="flex items-center gap-2">
+                                         <div className="flex items-center gap-2 flex-wrap">
                                            <span className="text-lg">{item.type?.toLowerCase() === 'verifica' ? '🚨' : '📝'}</span>
                                            <h4 className={`font-bold ${
-                                             isUrgent && !item.isCompleted ? (isDarkMode ? 'text-red-400' : 'text-red-700') : (isDarkMode ? 'text-gray-200' : 'text-slate-800')
+                                             item.type?.toLowerCase() === 'verifica'
+                                               ? (isDarkMode ? 'text-red-400' : 'text-red-700')
+                                               : isUrgent && !item.isCompleted 
+                                                 ? (isDarkMode ? 'text-red-400' : 'text-red-700') 
+                                                 : (isDarkMode ? 'text-gray-200' : 'text-slate-800')
                                            }`}>{item.subject}</h4>
+                                           {item.type?.toLowerCase() === 'verifica' && (
+                                             <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                                               isDarkMode 
+                                                 ? 'bg-red-950/60 text-red-400 border-red-500/50' 
+                                                 : 'bg-red-100 text-red-700 border-red-300'
+                                             }`}>
+                                               VERIFICA
+                                             </span>
+                                           )}
                                          </div>
                                        </div>
                                        <div className={`text-sm mt-1 leading-relaxed ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-600'}`}>
