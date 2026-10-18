@@ -1665,6 +1665,32 @@ export default function Chat({
                          );
                       });
                     })()}
+
+                    {/* CARD MOTIVAZIONALE DI FINE LISTA - AVVANTAGGIATI E GUADAGNA TEMPO LIBERO */}
+                    <div className={`mt-4 p-5 rounded-3xl border text-center flex flex-col items-center gap-3 shadow-sm ${
+                      isDarkMode 
+                        ? "bg-gradient-to-br from-emerald-950/40 via-[#111B21] to-teal-950/40 border-emerald-500/30" 
+                        : "bg-gradient-to-br from-emerald-50 via-teal-50/50 to-white border-emerald-200"
+                    }`}>
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center text-2xl shadow-md">
+                        🌟
+                      </div>
+                      <div className="max-w-sm">
+                        <h4 className={`font-black text-[15px] ${isDarkMode ? "text-emerald-400" : "text-emerald-900"}`}>
+                          Ti senti carica? Portati avanti e guadagna tempo!
+                        </h4>
+                        <p className={`text-xs mt-1 leading-relaxed ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+                          Fare anche solo <strong>un compito dei prossimi giorni</strong> significa regalarti un pomeriggio intero libero domani per le cose che ami fare!
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPlannerModal(true)}
+                        className="px-5 py-2.5 rounded-full text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all flex items-center gap-1.5"
+                      >
+                        <span>⚡</span> AVVIA SESSIONE CON START
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

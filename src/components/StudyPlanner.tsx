@@ -73,14 +73,35 @@ export default function StudyPlanner({
     return due === todayISO || due === tomorrowISO || due === "Prossima lezione";
   });
 
-  const tasksToPlan = relevantTasks.length > 0 ? relevantTasks : pendingTasks.slice(0, 6);
+  const [includeFutureTasks, setIncludeFutureTasks] = useState(false);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
+
+  // Compiti futuri (oltre oggi e domani)
+  const futureTasks = pendingTasks.filter(item => {
+    const due = item.dueDate;
+    return due !== todayISO && due !== tomorrowISO && due !== "Prossima lezione";
+  });
+
+  const tasksToPlan = includeFutureTasks 
+    ? (relevantTasks.length > 0 ? [...relevantTasks, ...futureTasks.slice(0, 4)] : pendingTasks.slice(0, 8))
+    : (relevantTasks.length > 0 ? relevantTasks : pendingTasks.slice(0, 6));
 
   // Genera il piano con l'AI
-  const handleGenerate = async () => {
-    if (tasksToPlan.length === 0) return;
+  const handleGenerate = async (forceFuture?: boolean) => {
+    const useFuture = forceFuture !== undefined ? forceFuture : includeFutureTasks;
+    const tasks = useFuture 
+      ? (relevantTasks.length > 0 ? [...relevantTasks, ...futureTasks.slice(0, 4)] : pendingTasks.slice(0, 8))
+      : (relevantTasks.length > 0 ? relevantTasks : pendingTasks.slice(0, 6));
+
+    if (tasks.length === 0) return;
     setLoading(true);
+    setSessionCompleted(false);
     try {
-      const res = await generateStudyPlan(tasksToPlan, userHabits, customNote);
+      const promptNote = useFuture 
+        ? `${customNote} - ATTENZIONE: Lo studente ha completato i compiti urgenti e vuole AVVANTAGGIARSI sui compiti dei prossimi giorni! Sottolinea con grande entusiasmo che portandosi avanti guadagnerà tantissimo tempo libero per se stessa nei prossimi giorni!`
+        : customNote;
+
+      const res = await generateStudyPlan(tasks, userHabits, promptNote);
       if (res.success && res.plan) {
         setPlan(res.plan);
         setActiveStepIndex(null);
@@ -163,6 +184,7 @@ export default function StudyPlanner({
     } else {
       setActiveStepIndex(null);
       setIsTimerRunning(false);
+      setSessionCompleted(true);
     }
   };
 
@@ -228,6 +250,80 @@ export default function StudyPlanner({
               <p className={`text-xs max-w-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
                 Separo la teoria dagli esercizi e programmo le pause giuste per farti finire presto e senza fatica!
               </p>
+            </div>
+          ) : sessionCompleted ? (
+            /* --- SCHERMATA TRAGUARDO & INVITAZIONE AD AVVANTAGGIARSI --- */
+            <div className="py-6 flex flex-col items-center text-center gap-4 animate-in zoom-in-95 duration-200">
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 via-emerald-400 to-teal-500 flex items-center justify-center text-4xl shadow-xl animate-bounce">
+                🌟
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Missione Compiuta! +50 XP
+                </span>
+                <h3 className="text-2xl font-black mt-2 mb-1">
+                  Hai finito tutti i compiti di oggi! 🚀
+                </h3>
+                <p className={`text-sm max-w-md mx-auto leading-relaxed ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+                  Vedi che questo metodo a piccoli passi funziona davvero? Ci hai messo molto meno di quanto pensavi e senza alcuno stress!
+                </p>
+              </div>
+
+              {/* CARD: Ti senti ispirata? Avvantaggiati! */}
+              {futureTasks.length > 0 ? (
+                <div className={`w-full max-w-md p-4 rounded-3xl border text-left flex flex-col gap-3 shadow-lg ${
+                  isDarkMode ? "bg-gradient-to-br from-emerald-950/40 via-[#111B21] to-teal-950/40 border-emerald-500/40" : "bg-gradient-to-br from-emerald-50 via-white to-teal-50 border-emerald-300"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">💡</span>
+                    <div>
+                      <h4 className={`font-black text-sm ${isDarkMode ? "text-emerald-400" : "text-emerald-800"}`}>
+                        Ti senti ispirata per un super potere in più?
+                      </h4>
+                      <p className={`text-xs mt-0.5 ${isDarkMode ? "text-[#8696A0]" : "text-slate-600"}`}>
+                        Se ti porti avanti adesso con <strong>{futureTasks.length} {futureTasks.length === 1 ? 'compito dei prossimi giorni' : 'compiti dei prossimi giorni'}</strong>, domani e nel weekend avrai <strong>ore di tempo libero al 100% per te</strong>: per disegnare, uscire o rilassarti senza pensieri!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    {futureTasks.slice(0, 3).map((ft, i) => (
+                      <div key={i} className={`px-3 py-2 rounded-xl text-xs flex items-center justify-between border ${
+                        isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200"
+                      }`}>
+                        <span className="font-bold truncate max-w-[200px]">{ft.subject}: {ft.description?.slice(0, 35)}...</span>
+                        <span className="text-[10px] font-semibold text-emerald-500 shrink-0">Scad: {ft.dueDate}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <button
+                      onClick={() => handleGenerate(true)}
+                      className="w-full py-3 rounded-2xl font-black text-sm bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>⚡</span> SÌ! AVVANTAGGIAMI E REGALAMI TEMPO LIBERO
+                    </button>
+                    <button
+                      onClick={onClose}
+                      className={`w-full py-2.5 rounded-2xl font-bold text-xs transition-colors ${
+                        isDarkMode ? "hover:bg-white/5 text-[#8696A0]" : "hover:bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      No, per oggi mi fermo qui e mi godo il mio meritato relax! ☕
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-2">
+                  <button
+                    onClick={onClose}
+                    className="px-6 py-3 rounded-2xl font-black text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md active:scale-95"
+                  >
+                    🎉 Fantastico! Chiudi e goditi il pomeriggio libero
+                  </button>
+                </div>
+              )}
             </div>
           ) : tasksToPlan.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center">
@@ -480,7 +576,7 @@ export default function StudyPlanner({
         }`}>
           <span>🌱 L'IA impara ogni giorno i tuoi ritmi naturali.</span>
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={loading}
             className="hover:underline font-bold text-emerald-500"
           >
