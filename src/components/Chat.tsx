@@ -119,6 +119,7 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [showGradesModal, setShowGradesModal] = useState(false);
   const [showPlannerModal, setShowPlannerModal] = useState(false);
   const [userHabits, setUserHabits] = useState<Record<string, { avgMinutes: number; count: number }>>({});
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showHomeMenu, setShowHomeMenu] = useState(false);
 
@@ -1163,16 +1164,6 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 {filter.label}
               </span>
             ))}
-
-            {/* Pulsante START - Organizzazione Guidata Compiti */}
-            <button
-              type="button"
-              onClick={() => setShowPlannerModal(true)}
-              className="font-black px-4 py-1.5 rounded-full cursor-pointer transition-all text-[14px] shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 animate-pulse"
-              title="Organizza il pomeriggio senza ansia"
-            >
-              <span>▶️</span> START
-            </button>
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
@@ -1565,66 +1556,89 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                                      >
                                        {item.isCompleted ? '✓' : ''}
                                      </div>
-                                     <div className={`flex-1 ${item.isCompleted ? 'line-through' : ''}`}>
-                                       <div className="flex justify-between items-start">
-                                         <div className="flex items-center gap-2 flex-wrap">
-                                           <span className="text-lg">{item.type?.toLowerCase() === 'verifica' ? '🚨' : '📝'}</span>
-                                           <h4 className={`font-bold ${
-                                             item.type?.toLowerCase() === 'verifica'
-                                               ? (isDarkMode ? 'text-red-400' : 'text-red-700')
-                                               : isUrgent && !item.isCompleted 
-                                                 ? (isDarkMode ? 'text-red-400' : 'text-red-700') 
-                                                 : (isDarkMode ? 'text-gray-200' : 'text-slate-800')
-                                           }`}>{item.subject}</h4>
-                                           {item.type?.toLowerCase() === 'verifica' && (
-                                             <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                                               isDarkMode 
-                                                 ? 'bg-red-950/60 text-red-400 border-red-500/50' 
-                                                 : 'bg-red-100 text-red-700 border-red-300'
-                                             }`}>
-                                               VERIFICA
-                                             </span>
-                                           )}
+                                     <div className={`flex-1 min-w-0 ${item.isCompleted ? "line-through opacity-70" : ""}`}>
+                                       <div 
+                                         onClick={() => setExpandedTasks(prev => ({ ...prev, [item.id || idx]: !prev[item.id || idx] }))}
+                                         className="cursor-pointer select-none"
+                                       >
+                                         <div className="flex justify-between items-start gap-2">
+                                           <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                             <span className="text-lg shrink-0">{item.type?.toLowerCase() === "verifica" ? "🚨" : "📝"}</span>
+                                             <h4 className={`font-bold text-[15px] truncate ${
+                                               item.type?.toLowerCase() === "verifica"
+                                                 ? (isDarkMode ? "text-red-400" : "text-red-700")
+                                                 : isUrgent && !item.isCompleted 
+                                                   ? (isDarkMode ? "text-red-400" : "text-red-700") 
+                                                   : (isDarkMode ? "text-gray-100" : "text-slate-800")
+                                             }`}>{item.subject}</h4>
+                                             {item.type?.toLowerCase() === "verifica" && (
+                                               <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border shrink-0 ${
+                                                 isDarkMode 
+                                                   ? "bg-red-950/60 text-red-400 border-red-500/50" 
+                                                   : "bg-red-100 text-red-700 border-red-300"
+                                               }`}>
+                                                 VERIFICA
+                                               </span>
+                                             )}
+                                           </div>
+                                           <div className={`text-xs px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 font-semibold transition-colors ${
+                                             isDarkMode ? "text-[#8696A0] bg-[#111B21] hover:text-white" : "text-slate-500 bg-slate-100 hover:text-slate-800"
+                                           }`}>
+                                             <span>{expandedTasks[item.id || idx] ? "Nascondi ▲" : "Espandi ▼"}</span>
+                                           </div>
+                                         </div>
+                                         <div className={`text-sm mt-1.5 leading-relaxed transition-all ${
+                                           expandedTasks[item.id || idx]
+                                             ? (isDarkMode ? "text-gray-200" : "text-slate-700")
+                                             : (isDarkMode ? "text-[#8696A0] line-clamp-1" : "text-slate-600 line-clamp-1")
+                                         }`}>
+                                           {renderFormattedTaskText(item.description)}
                                          </div>
                                        </div>
-                                       <div className={`text-sm mt-1 leading-relaxed ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-600'}`}>
-                                          {renderFormattedTaskText(item.description)}
-                                        </div>
-                                       {(dateStr === 'Prossima lezione' || dateStr === 'Prossima Lezione' || dateStr === 'Senza data') && !item.isCompleted && (
-                                         <button 
-                                           onClick={(e) => handleUpdateTaskDate(e, item.id, tStr)}
-                                           className={`mt-2 mr-2 inline-flex text-xs font-bold px-3 py-1.5 rounded-full items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
-                                             isDarkMode 
-                                               ? 'bg-amber-950/40 border border-amber-500/50 text-amber-300 hover:bg-amber-900/60' 
-                                               : 'bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100'
-                                           }`}
-                                           title="Imposta data per domani"
-                                         >
-                                           <span>🚀</span> Sposta a Domani
-                                         </button>
-                                       )}
-                                       {/* Bottoncino "Parla col Tutor" */}
-                                       {(() => {
-                                         const matchingTutor = tutors.find((t: any) => 
-                                           t.id === item.subject?.toLowerCase() || 
-                                           t.subject.toLowerCase().includes(item.subject?.toLowerCase())
-                                         );
-                                         if (matchingTutor && !item.isCompleted) {
-                                           return (
+                                       {expandedTasks[item.id || idx] && (
+                                         <div className="mt-3 pt-3 border-t flex flex-wrap items-center gap-2 border-dashed border-slate-300/40 animate-in fade-in duration-150">
+                                           {(() => {
+                                             const matchingTutor = tutors.find((t: any) => 
+                                               t.id === item.subject?.toLowerCase() || 
+                                               t.subject.toLowerCase().includes(item.subject?.toLowerCase())
+                                             );
+                                             if (matchingTutor) {
+                                               return (
+                                                 <button 
+                                                   type="button"
+                                                   onClick={(e) => {
+                                                     e.stopPropagation();
+                                                     handleSelectTutor(matchingTutor);
+                                                   }}
+                                                   className="px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all"
+                                                 >
+                                                   {matchingTutor.avatar?.startsWith("/avatars/") ? (
+                                                     <img src={matchingTutor.avatar} alt="avatar" className="w-5 h-5 object-contain" />
+                                                   ) : (
+                                                     <span className="text-base">{matchingTutor.avatar}</span>
+                                                   )}
+                                                   <span>Hai un dubbio? Chiedi a {matchingTutor.name}</span>
+                                                 </button>
+                                               );
+                                             }
+                                             return null;
+                                           })()}
+                                           {(dateStr === "Prossima lezione" || dateStr === "Prossima Lezione" || dateStr === "Senza data") && !item.isCompleted && (
                                              <button 
-                                               onClick={() => handleSelectTutor(matchingTutor)}
-                                               className={`mt-2 w-max text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm ${
+                                               type="button"
+                                               onClick={(e) => handleUpdateTaskDate(e, item.id, tStr)}
+                                               className={`text-xs font-bold px-3 py-1.5 rounded-xl items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                                                  isDarkMode 
-                                                   ? 'bg-[#111B21] border border-[#2A3942] text-emerald-400 hover:bg-[#25D366] hover:text-white' 
-                                                   : 'bg-white border border-slate-200 text-emerald-600 hover:bg-[#25D366] hover:text-white'
+                                                   ? "bg-amber-950/40 border border-amber-500/50 text-amber-300 hover:bg-amber-900/60" 
+                                                   : "bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100"
                                                }`}
+                                               title="Imposta data per domani"
                                              >
-                                               {matchingTutor.avatar?.startsWith("/avatars/") ? <img src={matchingTutor.avatar} alt="avatar" className="w-5 h-5 object-contain" /> : <span className="text-base">{matchingTutor.avatar}</span>} Parla col Tutor
+                                               <span>🚀</span> Sposta a Domani
                                              </button>
-                                           );
-                                         }
-                                         return null;
-                                       })()}
+                                           )}
+                                         </div>
+                                       )}
                                      </div>
                                    </div>
                                  );
@@ -1639,6 +1653,23 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
               </div>
             )}
           </div>
+
+          {/* PULSANTE GALLEGGIANTE "START" A PORTATA DI POLLICE (Nella scheda Compiti) */}
+          {listFilter === "compiti" && (
+            <div className="absolute bottom-6 right-4 z-30">
+              <button
+                type="button"
+                onClick={() => setShowPlannerModal(true)}
+                className="px-5 py-3.5 rounded-full font-black text-sm text-white flex items-center gap-2 shadow-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all animate-bounce hover:animate-none border-2 border-white/30"
+                style={{
+                  boxShadow: "0 8px 25px -4px rgba(16, 185, 129, 0.6)"
+                }}
+              >
+                <span className="text-xl">▶️</span>
+                <span className="tracking-wide">START STUDIO</span>
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         /* ============================================================== */

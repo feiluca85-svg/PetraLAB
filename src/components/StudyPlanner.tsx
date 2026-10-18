@@ -53,6 +53,7 @@ export default function StudyPlanner({
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [customNote, setCustomNote] = useState("");
   const [stepStartTime, setStepStartTime] = useState<number | null>(null);
+  const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -358,10 +359,16 @@ export default function StudyPlanner({
               <div className="flex flex-col gap-2.5">
                 {plan.steps.map((step, idx) => {
                   const isBreak = step.phase === "pausa";
+                  const isExpanded = expandedSteps[step.id || idx];
+                  const matchingTutor = tutors.find(t => 
+                    (step.tutorId && t.id === step.tutorId) || 
+                    t.subject.toLowerCase().includes(step.subject.toLowerCase())
+                  );
+
                   return (
                     <div
                       key={step.id || idx}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                      className={`p-3.5 rounded-2xl border flex flex-col gap-2.5 transition-all ${
                         step.completed
                           ? isDarkMode ? "bg-[#111B21] border-[#222E35] opacity-50" : "bg-slate-50 border-slate-200 opacity-60"
                           : isBreak
@@ -369,48 +376,86 @@ export default function StudyPlanner({
                             : isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-white border-slate-200 shadow-xs"
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-                          step.completed
-                            ? "bg-emerald-500 text-white"
-                            : isBreak
-                              ? "bg-amber-400/20 text-amber-500"
-                              : isDarkMode ? "bg-[#111B21] text-emerald-400" : "bg-emerald-100 text-emerald-800"
-                        }`}>
-                          {step.completed ? "✓" : isBreak ? "☕" : step.phase === "teoria" ? "📖" : "✏️"}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h5 className={`font-bold text-sm truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-                              {step.title}
-                            </h5>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              isBreak 
-                                ? "bg-amber-500/20 text-amber-400" 
-                                : isDarkMode ? "bg-[#111B21] text-[#8696A0]" : "bg-slate-100 text-slate-600"
-                            }`}>
-                              {step.subject}
-                            </span>
+                      <div 
+                        onClick={() => setExpandedSteps(prev => ({ ...prev, [step.id || idx]: !prev[step.id || idx] }))}
+                        className="flex items-center justify-between gap-3 cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                            step.completed
+                              ? "bg-emerald-500 text-white"
+                              : isBreak
+                                ? "bg-amber-400/20 text-amber-500"
+                                : isDarkMode ? "bg-[#111B21] text-emerald-400" : "bg-emerald-100 text-emerald-800"
+                          }`}>
+                            {step.completed ? "✓" : isBreak ? "☕" : step.phase === "teoria" ? "📖" : "✏️"}
                           </div>
-                          <p className={`text-xs truncate ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                            {step.description}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h5 className={`font-bold text-sm truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                                {step.title}
+                              </h5>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
+                                isBreak 
+                                  ? "bg-amber-500/20 text-amber-400" 
+                                  : isDarkMode ? "bg-[#111B21] text-[#8696A0]" : "bg-slate-100 text-slate-600"
+                              }`}>
+                                {step.subject}
+                              </span>
+                            </div>
+                            <p className={`text-xs ${isExpanded ? '' : 'truncate'} ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                              {step.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-xs font-semibold ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                            ⏱️ {step.estimatedMinutes}m
+                          </span>
+                          <span className="text-xs opacity-60">
+                            {isExpanded ? '▲' : '▼'}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className={`text-xs font-semibold ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-                          ⏱️ {step.estimatedMinutes}m
-                        </span>
-                        {!step.completed && (
-                          <button
-                            onClick={() => handleStartStep(idx)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95 transition-all shadow-xs"
-                          >
-                            Inizia ▶
-                          </button>
-                        )}
-                      </div>
+                      {/* DETTAGLI ESPANSI CON PULSANTE TUTOR E AVVIO */}
+                      {isExpanded && (
+                        <div className="pt-2 border-t border-dashed border-slate-300/30 flex flex-wrap items-center justify-between gap-2 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-2">
+                            {matchingTutor && onSelectTutor && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onClose();
+                                  onSelectTutor(matchingTutor);
+                                }}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm active:scale-95"
+                              >
+                                {matchingTutor.avatar?.startsWith("/avatars/") ? (
+                                  <img src={matchingTutor.avatar} alt="avatar" className="w-4 h-4 object-contain" />
+                                ) : (
+                                  <span>{matchingTutor.avatar}</span>
+                                )}
+                                <span>Chiedi a {matchingTutor.name}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {!step.completed && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartStep(idx);
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95 transition-all shadow-xs flex items-center gap-1"
+                            >
+                              <span>Avvia questo blocco</span> ▶
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
