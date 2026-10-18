@@ -45,12 +45,12 @@ export async function sendMessage(
       }
     }
     
-    // Regola per forzare il rendering matematico
-    dynamicInstruction += `\n\nREGOLE DI FORMATTAZIONE MATEMATICA: 
-- Usa SEMPRE la formattazione LaTeX per numeri, formule ed espressioni. 
-- Usa il doppio dollaro $$ per le formule centrate su nuova riga (es. $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}$$).
-- Usa il dollaro singolo $ per formule e numeri all'interno del testo (es. $x = 5$).
-- Non usare mai testo normale per espressioni come x^2, usa $x^2$.`;
+    // Regola per il linguaggio matematico e formattazione
+    dynamicInstruction += `\n\nREGOLE FONDAMENTALI PER LA MATEMATICA E LEGGIBILITÀ (TARGET: SCUOLA MEDIA):
+- CHIAREZZA E LINGUAGGIO NATURALE: Parla come una bravissima insegnante in classe. Non riempire il testo di simboli incomprensibili o codici astrusi.
+- SPIEGA SEMPRE A VOCE I PASSAGGI: Quando scrivi un'operazione, accompagnala sempre a parole semplici (es. "Moltiplichiamo la base per l'altezza, quindi 10 per 3").
+- NON RACCHIUDERE PAROLE NORMALI O SIGLE IN CODICE LATEX: Non scrivere MAI $\\text{...}$, $M.C.D.$, o sigle tra dollari. Scrivi semplicemente "MCD", "cm²", "Area = base × altezza".
+- FORMULE ED ESPRESSIONI: Quando scrivi espressioni complesse o frazioni per mostrarle a schermo, usa una formattazione pulita e ordinata. Usa il formato formula centrata ($$...$$) solo per l'espressione di riepilogo su riga separata. Nel corpo del testo scrivi in modo naturale e discorsivo.`;
 
     // Costruisci il payload: testo ed eventuale immagine
     const parts: Part[] = [];
@@ -290,9 +290,103 @@ Rispondi ESATTAMENTE E SOLO con un JSON valido con questa struttura (nessun bloc
       console.error("Failed to parse JSON from Gemini", text);
       return { success: false, error: "L'IA non è riuscita a estrarre i dati. Risposta grezza: " + text.substring(0, 100) };
     }
-
   } catch (error: any) {
     console.error("Error parsing screenshot", error);
     return { success: false, error: error?.message || "Errore di connessione." };
+  }
+}
+
+export async function generateStudyPlan(
+  tasks: Array<{ id: string; subject: string; description: string; type?: string; dueDate?: string }>,
+  historyHabits?: Record<string, { avgMinutes: number; count: number }>,
+  customPrompt?: string
+) {
+  try {
+    const prompt = `Sei un tutor esperto di pedagogia e organizzazione dello studio per studenti delle scuole medie (11-14 anni).
+Il tuo obiettivo è costruire un piano di studio pomeridiano ("Tabella di marcia") RILASSANTE, SENZA ANSIA, REALISTICO e CHIARO.
+
+REGOLE PEDAGOGICHE:
+1. "TECNICA CHUNKING": Spezza i compiti pesanti in blocchi digeribili. Ad esempio:
+   - Matematica o Grammatica: se c'è teoria + esercizi, crea 2 step distinti: uno di studio teoria/regole (10-15 min) e uno per gli esercizi (15-25 min).
+   - Lettura o Riassunto: lettura/comprensione (15-20 min) e scrittura (15 min).
+2. TECNICA SANDWICH (ORDINE STRATEGICO):
+   - Step 1: Materia a difficoltà media (per riscaldarsi e prendere fiducia).
+   - Step 2: Materia più tosta/impegnativa (quando l'energia mentale è alta).
+   - In mezzo: inserisci sempre una breve pausa (5 min) dopo 30-40 minuti di lavoro continuativo.
+   - Fine: materia più leggera o piacevole (disegno, lettura breve, ricopiatura).
+3. STIME DEI TEMPI:
+   - Ogni step deve durare tra i 10 e i 25 minuti al massimo. Nessun blocco deve superare i 30 minuti senza pausa!
+   - Tieni conto delle abitudini e tempi storici dello studente se forniti: ${JSON.stringify(historyHabits || {})}
+4. TONO: Super incoraggiante, empatico e orientato al successo.
+
+ECCO I COMPITI DA PIANIFICARE PER OGGI/DOMANI:
+${JSON.stringify(tasks, null, 2)}
+${customPrompt ? `Note speciali dell'alunna: "${customPrompt}"` : ''}
+
+Rispondi ESCLUSIVAMENTE con un JSON valido con questa struttura (nessun blocco markdown):
+{
+  "totalEstimatedMinutes": 75,
+  "motivationalMessage": "Oggi abbiamo un piano perfetto: con calma e un passo alla volta, prima delle 17:00 avrai finito tutto!",
+  "steps": [
+    {
+      "id": "step_1",
+      "taskId": "id del compito originale o null se è una pausa",
+      "subject": "Matematica",
+      "phase": "teoria" | "esercizi" | "lettura" | "pausa" | "generale",
+      "title": "Ripasso veloce delle formule",
+      "description": "Leggi pag. 2 e guarda i 2 esempi già svolti",
+      "estimatedMinutes": 15,
+      "tutorId": "matematica"
+    },
+    {
+      "id": "step_2",
+      "taskId": "id del compito",
+      "subject": "Matematica",
+      "phase": "esercizi",
+      "title": "Esercizi dal n. 1 al 4",
+      "description": "Fai i primi 4 esercizi con calma sul quaderno",
+      "estimatedMinutes": 20,
+      "tutorId": "matematica"
+    },
+    {
+      "id": "step_pausa_1",
+      "taskId": null,
+      "subject": "Pausa Relax",
+      "phase": "pausa",
+      "title": "Stretching & Bicchiere d'Acqua",
+      "description": "Stacca gli occhi, alzati dalla sedia e fai un respiro profondo!",
+      "estimatedMinutes": 5,
+      "tutorId": null
+    }
+  ]
+}`;
+
+    let result = null;
+    let lastError = null;
+
+    for (const modelName of FALLBACK_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        result = await model.generateContent(prompt);
+        if (result && result.response && result.response.text()) {
+          break;
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Fallback in generateStudyPlan (${modelName}):`, err.message);
+      }
+    }
+
+    if (!result) {
+      throw lastError || new Error("Nessun modello disponibile per generare la tabella di marcia.");
+    }
+
+    let text = result.response.text();
+    text = text.replace(/\s*```json/gi, "").replace(/```/g, "").trim();
+    const plan = JSON.parse(text);
+    return { success: true, plan };
+  } catch (error: any) {
+    console.error("Error generating study plan:", error);
+    return { success: false, error: error?.message || "Impossibile creare la tabella di marcia automatica." };
   }
 }

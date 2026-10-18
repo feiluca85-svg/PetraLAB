@@ -14,6 +14,7 @@ import { Tutor, SubjectMemory } from "@/lib/tutors";
 import { db, storage } from "@/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import StudyPlanner from "@/components/StudyPlanner";
 
 type UIMessage = {
   role: "user" | "model";
@@ -116,6 +117,8 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
   const [chatsByTutor, setChatsByTutor] = useState<Record<string, SubjectChatData>>({});
   const [subjectsMemory, setSubjectsMemory] = useState<Record<string, SubjectMemory>>({});
   const [showGradesModal, setShowGradesModal] = useState(false);
+  const [showPlannerModal, setShowPlannerModal] = useState(false);
+  const [userHabits, setUserHabits] = useState<Record<string, { avgMinutes: number; count: number }>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showHomeMenu, setShowHomeMenu] = useState(false);
 
@@ -299,6 +302,37 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     }
   };
 
+  const handleCompleteTaskById = async (id: string) => {
+    try {
+      const updated = agendaItems.map(item => 
+        item.id === id ? { ...item, isCompleted: true } : item
+      );
+      setAgendaItems(updated);
+      awardXP(25);
+      await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+    } catch (err) {
+      console.error("Errore completamento compito da planner:", err);
+    }
+  };
+
+  const handleSaveHabits = async (subject: string, phase: string, durationMinutes: number) => {
+    try {
+      const key = `${subject.toLowerCase()}_${phase.toLowerCase()}`;
+      const existing = userHabits[key] || { avgMinutes: durationMinutes, count: 0 };
+      const newCount = existing.count + 1;
+      const newAvg = Math.round((existing.avgMinutes * existing.count + durationMinutes) / newCount);
+
+      const updatedHabits = {
+        ...userHabits,
+        [key]: { avgMinutes: newAvg, count: newCount }
+      };
+      setUserHabits(updatedHabits);
+      await setDoc(doc(db, "petralab_users", "studente_demo"), { userHabits: updatedHabits }, { merge: true });
+    } catch (err) {
+      console.error("Errore salvataggio abitudini studio:", err);
+    }
+  };
+
   const handleUpdateTaskDate = async (e: React.MouseEvent, id: string, newDate: string) => {
     e.stopPropagation();
     try {
@@ -321,6 +355,9 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
         const data = snapshot.data();
         if (data.subjectsMemory) {
           setSubjectsMemory(data.subjectsMemory);
+        }
+        if (data.userHabits) {
+          setUserHabits(data.userHabits);
         }
         if (data.chatsByTutor) {
           setChatsByTutor(data.chatsByTutor);
@@ -501,8 +538,36 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
     
     window.speechSynthesis.cancel();
     
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.text = text.replace(/[*#_`]/g, '');
+    // Pulisci e converti formule matematiche e simboli LaTeX in linguaggio parlato naturale
+    let cleanText = text;
+    // Rimuovi commenti nascosti come <!-- TRACK: ... -->
+    cleanText = cleanText.replace(/<!--[\s\S]*?-->/g, '');
+    // Converti frazioni \frac{a}{b} -> "a fratto b"
+    cleanText = cleanText.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1 fratto $2');
+    // Rimuovi tag \text{...} lasciando solo il testo
+    cleanText = cleanText.replace(/\\text\{([^}]+)\}/g, '$1');
+    // Converti radici quadrate \sqrt{x} -> "radice quadrata di x"
+    cleanText = cleanText.replace(/\\sqrt\{([^}]+)\}/g, 'radice quadrata di $1');
+    // Converti potenze semplici come x^2 -> "x alla seconda", x^3 -> "x alla terza"
+    cleanText = cleanText.replace(/\^2\b/g, ' alla seconda');
+    cleanText = cleanText.replace(/\^3\b/g, ' alla terza');
+    cleanText = cleanText.replace(/\^([0-9]+)/g, ' alla $1');
+    // Converti simboli matematici comuni in parole pronunciabili
+    cleanText = cleanText.replace(/\\times|\\cdot|\s\*\s/g, ' per ');
+    cleanText = cleanText.replace(/\\div|\s\/\s/g, ' diviso ');
+    cleanText = cleanText.replace(/\s\+\s/g, ' più ');
+    cleanText = cleanText.replace(/\s\-\s/g, ' meno ');
+    cleanText = cleanText.replace(/\s=\s/g, ' uguale a ');
+    cleanText = cleanText.replace(/\s\+-\s|\\pm/g, ' più o meno ');
+    // Rimuovi simboli LaTeX residui (\pi, \le, \ge, backslash, ecc.)
+    cleanText = cleanText.replace(/\\pi/g, 'pi greco');
+    cleanText = cleanText.replace(/\\([a-zA-Z]+)/g, '');
+    // Rimuovi caratteri di formattazione markdown e LaTeX ($$, $, *, #, _, `, {, })
+    cleanText = cleanText.replace(/[\$\*\#\_`\{\}\\]/g, ' ');
+    // Riduci spazi multipli
+    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     
     utterance.lang = selectedTutor?.voiceLang || "it-IT";
     utterance.rate = voiceSpeed;
@@ -1098,6 +1163,16 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                 {filter.label}
               </span>
             ))}
+
+            {/* Pulsante START - Organizzazione Guidata Compiti */}
+            <button
+              type="button"
+              onClick={() => setShowPlannerModal(true)}
+              className="font-black px-4 py-1.5 rounded-full cursor-pointer transition-all text-[14px] shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 animate-pulse"
+              title="Organizza il pomeriggio senza ansia"
+            >
+              <span>▶️</span> START
+            </button>
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
@@ -1338,6 +1413,41 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
                     </span>
                   </div>
                 </div>
+
+                {/* Banner START - Studio senza Ansia */}
+                {agendaItems.some(item => !item.isCompleted) && (
+                  <div 
+                    onClick={() => setShowPlannerModal(true)}
+                    className={`p-4 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm ${
+                      isDarkMode 
+                        ? "bg-gradient-to-r from-emerald-950/60 via-teal-950/40 to-[#111B21] border-emerald-500/40" 
+                        : "bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-emerald-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl shadow-md shrink-0">
+                        ⏱️
+                      </div>
+                      <div>
+                        <h4 className={`font-black text-sm flex items-center gap-1.5 ${isDarkMode ? "text-emerald-400" : "text-emerald-800"}`}>
+                          Pianifica il Pomeriggio Antistress
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            IA Guidata
+                          </span>
+                        </h4>
+                        <p className={`text-xs mt-0.5 ${isDarkMode ? "text-[#8696A0]" : "text-slate-600"}`}>
+                          Spezza i compiti in blocchi da 15-20 min con pause rilassanti.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shrink-0 flex items-center gap-1.5 hover:from-emerald-600 hover:to-teal-600"
+                    >
+                      <span>▶️</span> START
+                    </button>
+                  </div>
+                )}
                 
                 {agendaItems.length === 0 ? (
                   <div className={`p-6 rounded-2xl border text-center flex flex-col items-center justify-center mt-4 shadow-sm ${
@@ -1960,6 +2070,19 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
           </div>
         </div>
       )}
+
+      {/* MODALE DI STUDIO GUIDATO / TABELLA DI MARCIA */}
+      <StudyPlanner
+        isOpen={showPlannerModal}
+        onClose={() => setShowPlannerModal(false)}
+        agendaItems={agendaItems}
+        tutors={tutors}
+        isDarkMode={Boolean(isDarkMode)}
+        onSelectTutor={handleOpenChat}
+        onCompleteTask={handleCompleteTaskById}
+        onSaveHabits={handleSaveHabits}
+        userHabits={userHabits}
+      />
     </div>
   );
 }
