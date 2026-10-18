@@ -109,7 +109,19 @@ const renderFormattedTaskText = (text: string) => {
   });
 };
 
-export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { tutors: Tutor[], isDarkMode?: boolean, toggleTheme?: () => void, onChatOpen?: (isOpen: boolean) => void }) {
+export default function Chat({ 
+  tutors, 
+  isDarkMode, 
+  toggleTheme, 
+  onChatOpen,
+  onSubTabChange
+}: { 
+  tutors: Tutor[]; 
+  isDarkMode?: boolean; 
+  toggleTheme?: () => void; 
+  onChatOpen?: (isOpen: boolean) => void;
+  onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti') => void;
+}) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
   
@@ -218,7 +230,12 @@ export default function Chat({ tutors, isDarkMode, toggleTheme, onChatOpen }: { 
       tabScrollMap.current[listFilter] = listScrollRef.current.scrollTop;
     }
     setListFilter(newFilter);
+    if (onSubTabChange) onSubTabChange(newFilter);
   };
+
+  useEffect(() => {
+    if (onSubTabChange) onSubTabChange(listFilter);
+  }, []);
 
   // Memorizza la posizione esatta dello scroll per ciascuna tab separatamente
   const handleListScroll = () => {
