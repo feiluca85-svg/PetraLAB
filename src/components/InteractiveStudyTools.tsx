@@ -25,6 +25,9 @@ export default function InteractiveStudyTools({
 }: InteractiveStudyToolsProps) {
   // Config state
   const [pagesQuery, setPagesQuery] = useState("");
+  const [startPage, setStartPage] = useState<string>("");
+  const [endPage, setEndPage] = useState<string>("");
+  const [topicSubject, setTopicSubject] = useState<string>("");
   const [cardCount, setCardCount] = useState<number>(5);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -71,8 +74,18 @@ export default function InteractiveStudyTools({
 
       if (relevant && relevant.description) {
         setPagesQuery(relevant.description);
+        // Cerca di estrarre i numeri di pagina dai compiti
+        const m = relevant.description.match(/(?:da\s+)?(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})\s*(?:a|-)\s*(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})/i)
+          || relevant.description.match(/(?:pag(?:ina)?\.?|p\.)\s*(\d{1,3})/i);
+        if (m) {
+          setStartPage(m[1] || "");
+          setEndPage(m[2] || m[1] || "");
+        }
       } else {
-        setPagesQuery(tutor.subject.toLowerCase().includes("geograf") ? "Spagna pag. 44-48" : "");
+        setPagesQuery("");
+        setStartPage("");
+        setEndPage("");
+        setTopicSubject("");
       }
     }
   }, [isOpen, tutor, agendaItems]);
@@ -81,8 +94,18 @@ export default function InteractiveStudyTools({
 
   // Start generation handler
   const handleStartGeneration = async () => {
-    if (!pagesQuery.trim()) {
-      setErrorMessage("Inserisci le pagine o l'argomento da studiare!");
+    // Costruisce la query forzata basandosi sulle caselle di pagina numeriche
+    let finalQuery = pagesQuery.trim();
+    if (startPage) {
+      if (endPage && endPage !== startPage) {
+        finalQuery = `da pag ${startPage} a ${endPage} ${topicSubject ? `(${topicSubject})` : ''}`.trim();
+      } else {
+        finalQuery = `pag ${startPage} ${topicSubject ? `(${topicSubject})` : ''}`.trim();
+      }
+    }
+
+    if (!finalQuery) {
+      setErrorMessage("Inserisci i numeri di pagina del libro da cui creare le schede!");
       return;
     }
 
@@ -93,8 +116,9 @@ export default function InteractiveStudyTools({
       if (toolType === "flashcard") {
         const res = await generateFlashcards({
           subject: tutor.subject,
-          pagesQuery,
-          count: cardCount
+          pagesQuery: finalQuery,
+          count: cardCount,
+          tutor
         });
 
         if (res.success && res.flashcards && res.flashcards.length > 0) {
@@ -106,8 +130,9 @@ export default function InteractiveStudyTools({
       } else {
         const res = await generateQuiz({
           subject: tutor.subject,
-          pagesQuery,
-          count: cardCount
+          pagesQuery: finalQuery,
+          count: cardCount,
+          tutor
         });
 
         if (res.success && res.questions && res.questions.length > 0) {
@@ -226,26 +251,87 @@ export default function InteractiveStudyTools({
           {/* STATE 1: SETUP FORM */}
           {!hasActiveSession && !isLoading && (
             <div className="flex flex-col gap-5 my-auto">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80">
-                  📖 Pagine o Argomento del Libro
-                </label>
-                <input
-                  type="text"
-                  value={pagesQuery}
-                  onChange={(e) => setPagesQuery(e.target.value)}
-                  placeholder="Es: Spagna pag. 44-48, Regno Unito, pag. 72..."
-                  className={`w-full px-4 py-3 rounded-2xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${
-                    isDarkMode
-                      ? "bg-[#111B21] border-[#2A3942] text-white placeholder-gray-500"
-                      : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400"
-                  }`}
-                />
+              {/* IMPOSTAZIONE SCHEMATICA CASSE DI PAGINA STAMPATE SUL LIBRO */}
+              <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#111B21] border-[#202C33]' : 'bg-emerald-50/60 border-emerald-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">📖</span>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                      Pagine Stampate sul Libro di Testo
+                    </h4>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>
+                      Indica il numero che leggi <strong>in basso nella pagina del libro</strong> (non il numero progressivo del PDF).
+                    </p>
+                  </div>
+                </div>
 
-                {/* Quick chip from agenda if available */}
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                      Da Pagina:
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={600}
+                      value={startPage}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setStartPage(val);
+                        if (!endPage || Number(endPage) < Number(val)) {
+                          setEndPage(val);
+                        }
+                      }}
+                      placeholder="es. 44"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-base font-bold text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${
+                        isDarkMode
+                          ? "bg-[#182229] border-[#2A3942] text-white placeholder-gray-600"
+                          : "bg-white border-slate-300 text-slate-900 placeholder-slate-400 shadow-xs"
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                      A Pagina (Opzionale):
+                    </label>
+                    <input
+                      type="number"
+                      min={startPage ? Number(startPage) : 1}
+                      max={600}
+                      value={endPage}
+                      onChange={(e) => setEndPage(e.target.value)}
+                      placeholder="es. 47"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-base font-bold text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${
+                        isDarkMode
+                          ? "bg-[#182229] border-[#2A3942] text-white placeholder-gray-600"
+                          : "bg-white border-slate-300 text-slate-900 placeholder-slate-400 shadow-xs"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                    Argomento o Capitolo (Opzionale):
+                  </label>
+                  <input
+                    type="text"
+                    value={topicSubject}
+                    onChange={(e) => setTopicSubject(e.target.value)}
+                    placeholder="es. La civiltà greca, Clima in Spagna, Verbi ausiliari..."
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${
+                      isDarkMode
+                        ? "bg-[#182229] border-[#2A3942] text-white placeholder-gray-600"
+                        : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                    }`}
+                  />
+                </div>
+
+                {/* Chip rapido dall'agenda */}
                 {agendaItems.some((item) => !item.isCompleted && item.description) && (
-                  <div className="flex flex-wrap gap-1.5 mt-2.5">
-                    <span className="text-[11px] opacity-70 self-center">Compiti trovati:</span>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-emerald-200/50 dark:border-[#202C33]">
+                    <span className="text-[10px] font-bold opacity-60">Dai compiti:</span>
                     {agendaItems
                       .filter((item) => !item.isCompleted && item.description)
                       .slice(0, 2)
@@ -253,14 +339,22 @@ export default function InteractiveStudyTools({
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => setPagesQuery(task.description)}
-                          className={`text-xs px-2.5 py-1 rounded-xl border font-semibold transition-all hover:scale-102 ${
+                          onClick={() => {
+                            setPagesQuery(task.description);
+                            const m = task.description.match(/(?:da\s+)?(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})\s*(?:a|-)\s*(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})/i)
+                              || task.description.match(/(?:pag(?:ina)?\.?|p\.)\s*(\d{1,3})/i);
+                            if (m) {
+                              setStartPage(m[1] || "");
+                              setEndPage(m[2] || m[1] || "");
+                            }
+                          }}
+                          className={`text-[11px] px-2.5 py-0.5 rounded-lg border font-semibold transition-all hover:scale-102 ${
                             isDarkMode
                               ? "bg-[#202C33] border-[#2A3942] text-emerald-400"
-                              : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                              : "bg-white border-emerald-300 text-emerald-800 shadow-2xs"
                           }`}
                         >
-                          📌 {task.subject}: {task.description.slice(0, 30)}...
+                          📌 {task.description.slice(0, 28)}...
                         </button>
                       ))}
                   </div>

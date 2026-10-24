@@ -37,15 +37,13 @@ export async function generateFlashcards(params: {
   subject: string;
   pagesQuery: string;
   count?: number;
+  tutor?: any;
 }) {
   try {
-    const { subject, pagesQuery, count = 5 } = params;
-    const isGeografia = subject.toLowerCase().includes("geograf");
-    let bookPagesData = null;
-
-    if (isGeografia) {
-      bookPagesData = getBookPagesForRange(pagesQuery, 3);
-    }
+    const { subject, pagesQuery, count = 5, tutor } = params;
+    
+    // Estrae le pagine esatte del libro associato al tutor usando i numeri stampati
+    let bookPagesData = getBookPagesForRange(pagesQuery, tutor, 4);
 
     const parts: Part[] = [];
 
@@ -60,10 +58,10 @@ Ogni elemento deve avere:
 - "question": la domanda o concetto da ricordare (max 15 parole, stimolante e chiara)
 - "answer": la spiegazione o risposta sintetica ed efficace (2-3 frasi, comprensibile e corretta)
 - "hint": un piccolo indizio per aiutarla a ricordare se è in difficoltà (1 frase)
-- "bookReference": riferimento al libro o pagina (es. "Greenway 2 - Pag. 44")`;
+- "bookReference": riferimento al libro e alla pagina stampata sul libro (es. "Pag. 44")`;
 
     if (bookPagesData && bookPagesData.images.length > 0) {
-      prompt += `\n\nATTENZIONE: Ho allegato ${bookPagesData.images.length} pagine scansionate del libro di testo "Greenway 2" (Pagine ${bookPagesData.pages.join(", ")}).
+      prompt += `\n\nATTENZIONE: Ho allegato ${bookPagesData.images.length} pagine scansionate del libro di testo adottato per questa materia (Pagine stampate del libro: ${bookPagesData.pages.join(", ")}).
 Estrai le flashcard ESATTAMENTE dai contenuti, definizioni, cartine e tabelle presenti in queste pagine!`;
       
       for (const img of bookPagesData.images) {
@@ -123,15 +121,13 @@ export async function generateQuiz(params: {
   subject: string;
   pagesQuery: string;
   count?: number;
+  tutor?: any;
 }) {
   try {
-    const { subject, pagesQuery, count = 5 } = params;
-    const isGeografia = subject.toLowerCase().includes("geograf");
-    let bookPagesData = null;
+    const { subject, pagesQuery, count = 5, tutor } = params;
 
-    if (isGeografia) {
-      bookPagesData = getBookPagesForRange(pagesQuery, 3);
-    }
+    // Estrae le pagine esatte del libro associato al tutor usando i numeri stampati
+    let bookPagesData = getBookPagesForRange(pagesQuery, tutor, 4);
 
     const parts: Part[] = [];
 
@@ -147,11 +143,11 @@ Ogni elemento deve avere:
 - "options": un array di esattamente 4 opzioni plausibili in lingua italiana
 - "correctIndex": il numero indice dell'opzione corretta (0, 1, 2, o 3)
 - "explanation": una spiegazione chiara, incoraggiante e istruttiva del perché questa risposta è corretta (1-2 frasi)
-- "bookReference": riferimento al libro o pagina (es. "Greenway 2 - Pag. 45")`;
+- "bookReference": riferimento al libro e alla pagina stampata sul libro (es. "Pag. 45")`;
 
     if (bookPagesData && bookPagesData.images.length > 0) {
-      prompt += `\n\nATTENZIONE: Ho allegato ${bookPagesData.images.length} pagine del libro "Greenway 2" (Pagine ${bookPagesData.pages.join(", ")}).
-Formula le domande e le opzioni basandoti DIRETTAMENTE su ciò che è scritto in queste pagine!`;
+      prompt += `\n\nATTENZIONE: Ho allegato ${bookPagesData.images.length} pagine del libro di testo adottato per questa materia (Pagine stampate del libro: ${bookPagesData.pages.join(", ")}).
+Formula le domande e le opzioni basandoti DIRETTAMENTE su ciò che è scritto e illustrato in queste pagine!`;
       
       for (const img of bookPagesData.images) {
         parts.push({
