@@ -48,8 +48,14 @@ export async function generateFlashcards(params: {
     const parts: Part[] = [];
 
     let prompt = `Sei un esperto professore e creatore didattico per le scuole medie (12-13 anni).
-Crea un mazzo di ${count} Flashcard di studio su: "${pagesQuery}" (Materia: ${subject}).
-Le flashcard devono essere chiare, coinvolgenti, basate su concetti chiave essenziali (definizioni, città/capitali, rilievi, fiumi, clima, economia o eventi storici).
+Crea un mazzo di ${count} Flashcard di studio focalizzate RIGOROSAMENTE sull'argomento delle pagine indicate: "${pagesQuery}" (Materia: ${subject}).
+
+${bookPagesData?.topicName ? `ARGOMENTO CHIAVE DI QUESTE PAGINE: "${bookPagesData.topicName}" (Capitolo/Unità: ${bookPagesData.unitTitle || ''}).` : ''}
+${bookPagesData?.pages?.length ? `PAGINE DEL LIBRO DI TESTO DA CUI GENERARE LE DOMANDE: Pagine stampate ${bookPagesData.pages.join(", ")}.` : ''}
+
+IMPORTANTE: 
+1. Le flashcard DEVONO vertere ESCLUSIVAMENTE sui concetti trattati in queste specifiche pagine (es. se le pagine 14-19 di Geografia parlano di Cittadinanza Europea, Diritti, Trattato di Schengen, Erasmus e Agenda 2030, NON fare domande sulla Spagna o su altri Stati!).
+2. Basati su nozioni, definizioni, date e concetti chiave essenziali.
 
 REQUISITI DI FORMATTAZIONE:
 Rispondi ESCLUSIVAMENTE con un array JSON valido senza markdown circostante o con blocco \`\`\`json.
@@ -58,11 +64,11 @@ Ogni elemento deve avere:
 - "question": la domanda o concetto da ricordare (max 15 parole, stimolante e chiara)
 - "answer": la spiegazione o risposta sintetica ed efficace (2-3 frasi, comprensibile e corretta)
 - "hint": un piccolo indizio per aiutarla a ricordare se è in difficoltà (1 frase)
-- "bookReference": riferimento al libro e alla pagina stampata sul libro (es. "Pag. 44")`;
+- "bookReference": riferimento alla pagina stampata sul libro (es. "Pag. ${bookPagesData?.pages?.[0] || '16'}")`;
 
     if (bookPagesData && bookPagesData.images.length > 0) {
       prompt += `\n\nATTENZIONE: Ho allegato ${bookPagesData.images.length} pagine scansionate del libro di testo adottato per questa materia (Pagine stampate del libro: ${bookPagesData.pages.join(", ")}).
-Estrai le flashcard ESATTAMENTE dai contenuti, definizioni, cartine e tabelle presenti in queste pagine!`;
+Estrai le flashcard ESATTAMENTE dai contenuti, definizioni, cartine e tabelle presenti in queste pagine allegate!`;
       
       for (const img of bookPagesData.images) {
         parts.push({
@@ -132,8 +138,14 @@ export async function generateQuiz(params: {
     const parts: Part[] = [];
 
     let prompt = `Sei un esperto professore e creatore didattico per ragazzi delle scuole medie (12-13 anni).
-Crea un quiz interattivo di ${count} domande a risposta multipla su: "${pagesQuery}" (Materia: ${subject}).
-Le domande devono essere divertenti, stimolanti, calibrate sul programma di 2ª media e focalizzate sui fatti e nozioni più importanti.
+Crea un quiz interattivo di ${count} domande a risposta multipla focalizzato RIGOROSAMENTE sulle pagine indicate: "${pagesQuery}" (Materia: ${subject}).
+
+${bookPagesData?.topicName ? `ARGOMENTO CHIAVE DI QUESTE PAGINE: "${bookPagesData.topicName}" (Capitolo/Unità: ${bookPagesData.unitTitle || ''}).` : ''}
+${bookPagesData?.pages?.length ? `PAGINE DEL LIBRO DI TESTO DA CUI GENERARE LE DOMANDE: Pagine stampate ${bookPagesData.pages.join(", ")}.` : ''}
+
+IMPORTANTE: 
+1. Le domande DEVONO vertere ESCLUSIVAMENTE sui concetti trattati in queste specifiche pagine (es. se le pagine 14-19 di Geografia parlano di Cittadinanza Europea, Diritti, Trattato di Schengen, Erasmus e Agenda 2030, NON fare domande sulla Spagna o su altri Stati!).
+2. Calibrate sul programma di 2ª media e focalizzate sui fatti e nozioni più importanti.
 
 REQUISITI DI FORMATTAZIONE:
 Rispondi ESCLUSIVAMENTE con un array JSON valido senza markdown circostante o con blocco \`\`\`json.
@@ -143,7 +155,7 @@ Ogni elemento deve avere:
 - "options": un array di esattamente 4 opzioni plausibili in lingua italiana
 - "correctIndex": il numero indice dell'opzione corretta (0, 1, 2, o 3)
 - "explanation": una spiegazione chiara, incoraggiante e istruttiva del perché questa risposta è corretta (1-2 frasi)
-- "bookReference": riferimento al libro e alla pagina stampata sul libro (es. "Pag. 45")`;
+- "bookReference": riferimento alla pagina stampata sul libro (es. "Pag. ${bookPagesData?.pages?.[0] || '16'}")`;
 
     if (bookPagesData && bookPagesData.images.length > 0) {
       prompt += `\n\nATTENZIONE: Ho allegato ${bookPagesData.images.length} pagine del libro di testo adottato per questa materia (Pagine stampate del libro: ${bookPagesData.pages.join(", ")}).
