@@ -92,7 +92,7 @@ export default function InteractiveStudyTools({
         setTopicSubject("");
       }
     }
-  }, [isOpen, tutor, agendaItems]);
+  }, [isOpen, toolType, tutor.id]);
 
   if (!isOpen || !toolType) return null;
 
@@ -207,7 +207,7 @@ export default function InteractiveStudyTools({
     setCurrentIndex(0);
   };
 
-  const hasActiveSession = flashcards.length > 0 || questions.length > 0;
+  const hasActiveSession = (flashcards.length > 0 || questions.length > 0) || isFinished;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
