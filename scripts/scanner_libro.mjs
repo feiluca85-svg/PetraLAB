@@ -382,16 +382,20 @@ async function main() {
   let consecutiveNoAdvancement = 0;
   let userWantsStop = false;
 
-  // Ascolto tasto Invio per consentire all'utente di fermare la scansione in qualunque momento
+  // Ascolto tasti e comandi da stdin per consentire all'utente di fermare la scansione in qualunque momento
   if (process.stdin.isTTY) {
-    process.stdin.setRawMode?.(false);
-    readline.emitKeypressEvents(process.stdin);
-    if (process.stdin.setRawMode) process.stdin.setRawMode(true);
-    process.stdin.on("keypress", (str, key) => {
-      if (key && (key.name === "return" || key.name === "enter" || (key.ctrl && key.name === "c"))) {
-        userWantsStop = true;
-      }
-    });
+    try {
+      process.stdin.setEncoding("utf8");
+      process.stdin.resume();
+      process.stdin.on("data", (chunk) => {
+        const str = chunk.toString();
+        // Se l'utente preme Invio (\n, \r) o q o Ctrl+C
+        if (str.includes("\n") || str.includes("\r") || str.toLowerCase().includes("q") || str.includes("\u0003")) {
+          userWantsStop = true;
+          console.log(`\n${C.yellow}Comando di stop ricevuto, completamento in corso...${C.reset}`);
+        }
+      });
+    } catch (_) {}
   }
 
   console.log(`\n${C.bold}Inizio acquisizione pagine...${C.reset}`);
@@ -509,8 +513,20 @@ async function main() {
   console.log(`\n${C.bold}Acquisizione completata! Totale pagine: ${imageFiles.length}${C.reset}`);
   console.log(`${C.dim}Compilazione file PDF in corso con Python PIL...${C.reset}`);
 
-  // Assembla il PDF finale
-  const finalPdfPath = path.join(BOOKS_DIR, finalPdfName);
+  // Salva il file nella sottocartella appropriata se esiste (es. libri/Geografia o libri/Storia)
+  let targetDir = BOOKS_DIR;
+  if (finalPdfName.toLowerCase().includes("geografia")) {
+    targetDir = path.join(BOOKS_DIR, "Geografia");
+  } else if (finalPdfName.toLowerCase().includes("storia")) {
+    targetDir = path.join(BOOKS_DIR, "Storia");
+  } else if (finalPdfName.toLowerCase().includes("scienze")) {
+    targetDir = path.join(BOOKS_DIR, "Scienze");
+  } else if (finalPdfName.toLowerCase().includes("italiano") || finalPdfName.toLowerCase().includes("antologia")) {
+    targetDir = path.join(BOOKS_DIR, "Italiano");
+  }
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  const finalPdfPath = path.join(targetDir, finalPdfName);
   const pyScript = `
 import sys, os
 from PIL import Image
