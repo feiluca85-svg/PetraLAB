@@ -320,10 +320,8 @@ async function main() {
     pageIndices.push(pIdxAttr);
 
     const pageRect = pageEl.getBoundingClientRect();
-    const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile, .PSPDFKit-PageOverview-Tile, img")).filter(el => {
-      const r = el.getBoundingClientRect();
-      return r.width > 20 && r.height > 20;
-    });
+    const imgs = Array.from(pageEl.querySelectorAll("img")).filter(i => i.complete && i.naturalWidth > 50);
+    const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
 
     const scale = ${scaleFactor};
     const canvas = document.createElement("canvas");
@@ -335,17 +333,24 @@ async function main() {
 
     ${isGrayscale ? `ctx.filter = "grayscale(100%) contrast(108%)";` : ""}
 
-    tiles.forEach(tile => {
-      const r = tile.getBoundingClientRect();
-      const img = tile.tagName === "IMG" ? tile : tile.querySelector("img");
-      if (img && img.naturalWidth > 0) {
-        const dx = (r.left - pageRect.left) * scale;
-        const dy = (r.top - pageRect.top) * scale;
-        const dw = r.width * scale;
-        const dh = r.height * scale;
-        ctx.drawImage(img, dx, dy, dw, dh);
-      }
-    });
+    // Se la pagina è in modalità panoramica/overview (1 sola immagine intera)
+    // disegniamo l'immagine sull'intero canvas senza dipendere dalle coordinate relative dei div
+    if (tiles.length === 0 && imgs.length >= 1) {
+      ctx.drawImage(imgs[0], 0, 0, canvas.width, canvas.height);
+    } else {
+      // Modalità tessere multiple
+      tiles.forEach(tile => {
+        const r = tile.getBoundingClientRect();
+        const img = tile.querySelector("img") || tile;
+        if (img && img.naturalWidth > 0) {
+          const dx = (r.left - pageRect.left) * scale;
+          const dy = (r.top - pageRect.top) * scale;
+          const dw = r.width * scale;
+          const dh = r.height * scale;
+          ctx.drawImage(img, dx, dy, dw, dh);
+        }
+      });
+    }
 
     captured.push({
       pageIndex: pIdxAttr,
