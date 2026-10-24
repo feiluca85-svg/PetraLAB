@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * PetraLAB - Scanner Automatico Libri Digitali (HUB Young / Mondadori / PSPDFKit)
+ * PetraLAB - Scanner Automatico Libri Digitali (HUB Young / Mondadori / bSmart / Sanoma LibroMedia 6.0)
  * 
  * Istruzioni:
- * 1. Apri il libro digitale in Google Chrome su https://young.hubscuola.it
+ * 1. Apri il libro digitale in Google Chrome su:
+ *    - HUB Young: https://young.hubscuola.it
+ *    - bSmart: https://books.bsmart.it
+ *    - Sanoma: https://ebook.sanoma.it oppure https://place.sanoma.it
  * 2. Esegui: npm run scan-book (oppure clicca su Scannerizza Libro.app)
  * 3. Funzionalità intelligenti:
+ *    - Supporto multipiattaforma nativo (HUB Young, bSmart, Sanoma)
  *    - Ripresa automatica: se interrotto, riprende esattamente da dove era rimasto!
- *    - Conteggio esatto: legge il totale reale delle pagine dal catalogo del libro (434 pagine)
+ *    - Conteggio esatto: legge il totale reale delle pagine dal catalogo del libro
  *    - Controllo manuale: puoi decidere tu quando terminare premendo Invio nel terminale
- *    - Attesa attiva rendering: 0 pagine bianche
+ *    - Rendering vettoriale e ad alta risoluzione: qualità nitida e zero pagine bianche
  */
 
 import fs from "fs";
@@ -52,14 +56,91 @@ function runJsInChrome(jsCode) {
 
   const applescript = `
 tell application "Google Chrome"
+    set foundTab to missing value
     repeat with w in windows
         repeat with t in tabs of w
-            if URL of t contains "young.hubscuola.it" or title of t contains "HUB Young" then
-                set jsContent to read POSIX file "${tmpJs}" as «class utf8»
-                return execute t javascript jsContent
+            set u to URL of t
+            if u contains "npmitaly-pro-apidistribucion.sanoma.it" or u contains "books.bsmart.it" or u contains "young.hubscuola.it" then
+                set foundTab to t
+                exit repeat
             end if
         end repeat
+        if foundTab is not missing value then exit repeat
     end repeat
+
+    -- Se Sanoma è aperto su ebook.sanoma.it, apri la scheda diretta del visualizzatore per accesso nativo
+    if foundTab is missing value then
+        repeat with w in windows
+            repeat with t in tabs of w
+                set u to URL of t
+                if u contains "ebook.sanoma.it" then
+                    tell w to set foundTab to make new tab at end of tabs with properties {URL:"https://npmitaly-pro-apidistribucion.sanoma.it/viewers/lm60/online/index.html"}
+                    delay 1.5
+                    exit repeat
+                end if
+            end repeat
+            if foundTab is not missing value then exit repeat
+        end repeat
+    end if
+
+    if foundTab is not missing value then
+        set jsContent to read POSIX file "${tmpJs}" as «class utf8»
+        return execute foundTab javascript jsContent
+    end if
+    return "ERR:NO_TAB"
+end tell`;
+
+  try {
+    return execFileSync("osascript", ["-e", applescript], { encoding: "utf8" }).trim();
+  } catch (err) {
+    return "ERR:" + err.message;
+  }
+}
+
+function runJsInChromeAsync(jsCode) {
+  const tmpJs = path.join("/tmp", "hub_scanner_exec.js");
+  fs.writeFileSync(tmpJs, jsCode, "utf8");
+
+  const applescript = `
+tell application "Google Chrome"
+    set foundTab to missing value
+    repeat with w in windows
+        repeat with t in tabs of w
+            set u to URL of t
+            if u contains "npmitaly-pro-apidistribucion.sanoma.it" or u contains "books.bsmart.it" or u contains "young.hubscuola.it" then
+                set foundTab to t
+                exit repeat
+            end if
+        end repeat
+        if foundTab is not missing value then exit repeat
+    end repeat
+
+    if foundTab is missing value then
+        repeat with w in windows
+            repeat with t in tabs of w
+                set u to URL of t
+                if u contains "ebook.sanoma.it" then
+                    tell w to set foundTab to make new tab at end of tabs with properties {URL:"https://npmitaly-pro-apidistribucion.sanoma.it/viewers/lm60/online/index.html"}
+                    delay 1.5
+                    exit repeat
+                end if
+            end repeat
+            if foundTab is not missing value then exit repeat
+        end repeat
+    end if
+
+    if foundTab is not missing value then
+        set jsContent to read POSIX file "${tmpJs}" as «class utf8»
+        execute foundTab javascript "window._scanAsyncRes = null; (" & jsContent & ")();"
+        repeat with i from 1 to 100
+            set res to execute foundTab javascript "window._scanAsyncRes"
+            if res is not "null" and res is not missing value and res is not "" then
+                return res
+            end if
+            delay 0.1
+        end repeat
+        return "ERR:TIMEOUT"
+    end if
     return "ERR:NO_TAB"
 end tell`;
 
@@ -95,8 +176,51 @@ async function main() {
   const tabCheckJs = `(function() {
     const title = document.title || "";
     const url = window.location.href || "";
-    const curPage = document.querySelector(".g-page-jump-value")?.innerText.trim() || "";
+
+    // 1. Riconoscimento Sanoma (LibroMedia 6.0)
+    if (url.includes("sanoma.it")) {
+      let productId = null;
+      const m = document.cookie.match(/CloudFront-Policy=([^;]+)/);
+      if (m) {
+        try {
+          const b64 = m[1].replace(/_/g, "/").replace(/-/g, "+");
+          const match = atob(b64).match(/product\\/(\\d+)\\/ONLINE/);
+          if (match) productId = match[1];
+        } catch (_) {}
+      }
+
+      let bookTitle = "Libro Sanoma";
+      let totalBookPages = null;
+      if (productId) {
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open("GET", "/product/" + productId + "/ONLINE/assets/book/data/master.json", false);
+          xhr.send();
+          if (xhr.status === 200) {
+            const d = JSON.parse(xhr.responseText);
+            bookTitle = d.name || bookTitle;
+            totalBookPages = d.pages ? d.pages.length : null;
+          }
+        } catch (_) {}
+      }
+
+      return JSON.stringify({
+        provider: "sanoma",
+        productId,
+        title: bookTitle,
+        url,
+        curPage: "1",
+        totalBookPages
+      });
+    }
+
+    // 2. Riconoscimento HUB Young / bSmart (PSPDFKit)
+    const curPage = document.querySelector(".g-page-jump-value")?.innerText.trim() 
+      || (url.includes("page=") ? url.split("page=")[1].split("&")[0] : "");
     
+    const bsmartTitle = document.querySelector(".book-title, [class*='title']")?.innerText.trim() || "";
+    const effectiveTitle = bsmartTitle || title;
+
     let totalBookPages = null;
     try {
       const entries = performance.getEntriesByType("resource");
@@ -112,20 +236,30 @@ async function main() {
       }
     } catch (_) {}
 
-    return JSON.stringify({ title, url, curPage, totalBookPages });
+    return JSON.stringify({
+      provider: "pspdfkit",
+      title: effectiveTitle,
+      url,
+      curPage,
+      totalBookPages
+    });
   })()`;
 
   const tabInfoRaw = runJsInChrome(tabCheckJs);
   if (!tabInfoRaw || tabInfoRaw.startsWith("ERR:")) {
-    console.log(`\n${C.red}❌ Nessuna scheda di HUB Young trovata in Google Chrome!${C.reset}`);
+    console.log(`\n${C.red}❌ Nessuna scheda di HUB Young, bSmart o Sanoma trovata in Google Chrome!${C.reset}`);
     console.log(`\nAssicurati che:`);
     console.log(`1. Google Chrome sia aperto.`);
-    console.log(`2. Il libro sia aperto su ${C.bold}https://young.hubscuola.it${C.reset}`);
+    console.log(`2. Il libro sia aperto su:`);
+    console.log(`   - ${C.bold}https://young.hubscuola.it${C.reset}`);
+    console.log(`   - ${C.bold}https://books.bsmart.it${C.reset}`);
+    console.log(`   - ${C.bold}https://ebook.sanoma.it${C.reset}`);
     process.exit(1);
   }
 
   const tabInfo = JSON.parse(tabInfoRaw);
-  console.log(`\n${C.green}✅ Libro rilevato con successo!${C.reset}`);
+  const platformLabel = tabInfo.provider === "sanoma" ? "Sanoma LibroMedia 6.0" : (tabInfo.url.includes("bsmart") ? "bSmart Books" : "HUB Young");
+  console.log(`\n${C.green}✅ Libro rilevato con successo (${platformLabel})!${C.reset}`);
   console.log(`   ${C.bold}Titolo:${C.reset} ${tabInfo.title}`);
   console.log(`   ${C.bold}Pagine totali reali nel libro:${C.reset} ${C.teal}${tabInfo.totalBookPages || "Rilevamento in corso..."}${C.reset}`);
   console.log(`   ${C.bold}Posizione attuale nel visualizzatore:${C.reset} Pagina ${tabInfo.curPage || "N/D"}`);
@@ -139,12 +273,22 @@ async function main() {
     } catch (_) {}
   }
 
-  // 3. Nome del File di Output
+  // 3. Nome del File di Output e cartella di destinazione
   console.log(`\n${C.yellow}────────────────────────────────────────────────────────────${C.reset}`);
-  let defaultName = "Libro_Storia 2.pdf";
-  if (tabInfo.title.toLowerCase().includes("geografia")) defaultName = "Libro_Geografia.pdf";
-  if (tabInfo.title.toLowerCase().includes("scienze")) defaultName = "Libro_Scienze.pdf";
-  if (tabInfo.title.toLowerCase().includes("antologia") || tabInfo.title.toLowerCase().includes("italiano")) defaultName = "Libro_Italiano.pdf";
+  let defaultName = "Libro_Scansionato.pdf";
+  const titLower = tabInfo.title.toLowerCase();
+  if (titLower.includes("geografia")) defaultName = "Libro_Geografia.pdf";
+  else if (titLower.includes("storia")) defaultName = "Libro_Storia 2.pdf";
+  else if (titLower.includes("scienze")) defaultName = "Libro_Scienze.pdf";
+  else if (titLower.includes("tecnologia") || titLower.includes("tecnologico") || titLower.includes("disegno")) defaultName = "Tecnologia_Disegno.pdf";
+  else if (titLower.includes("antologia") || titLower.includes("italiano")) defaultName = "Libro_Italiano.pdf";
+  else if (titLower.includes("francese") || titLower.includes("allez")) defaultName = "Libro_Francese.pdf";
+  else if (titLower.includes("inglese") || titLower.includes("twenty")) defaultName = "Libro_Inglese.pdf";
+  else if (titLower.includes("aritmetica") || titLower.includes("matematica") || titLower.includes("etabeta") || titLower.includes("geometria")) defaultName = "Libro_Matematica_Aritmetica_1.pdf";
+  else if (titLower.includes("arte") || titLower.includes("immagine")) defaultName = "Libro_Arte.pdf";
+  else if (tabInfo.title && tabInfo.title.length > 3) {
+    defaultName = tabInfo.title.replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ _-]/g, "").trim() + ".pdf";
+  }
 
   let finalPdfName = flagName;
   if (!finalPdfName) {
@@ -186,7 +330,6 @@ async function main() {
     if (resumeChoice === "1") {
       isResuming = true;
     } else {
-      // Pulisci
       existingImages.forEach(f => fs.unlinkSync(path.join(SESSION_DIR, f)));
       existingImages = [];
     }
@@ -213,9 +356,9 @@ async function main() {
   } else {
     console.log(`\n${C.yellow}────────────────────────────────────────────────────────────${C.reset}`);
     console.log(`${C.bold}Scegli la modalità di colore e qualità:${C.reset}`);
-    console.log(`  ${C.bold}1)${C.reset} ${C.green}Colori Standard${C.reset} (Consigliato: nitido, cartine a colori)`);
+    console.log(`  ${C.bold}1)${C.reset} ${C.green}Colori Standard${C.reset} (Consigliato: nitido, cartine e figure a colori)`);
     console.log(`  ${C.bold}2)${C.reset} ${C.teal}Bianco e Nero / Scala di grigi${C.reset} (Ultraleggero: testo chiarissimo)`);
-    console.log(`  ${C.bold}3)${C.reset} ${C.purple}Alta Risoluzione Colori${C.reset} (Massima qualità cartine)`);
+    console.log(`  ${C.bold}3)${C.reset} ${C.purple}Alta Risoluzione Colori${C.reset} (Massima qualità cartine e illustrazioni)`);
 
     const modeChoice = await askQuestion(`Scelta [1/2/3, default 1]: `, "1");
     isGrayscale = modeChoice === "2";
@@ -243,174 +386,20 @@ async function main() {
     }
   }
 
-  // 7. Partire dall'inizio se non stiamo riprendendo
-  if (!isResuming) {
-    let startFromBeginning = true;
-    if (!flagYes) {
-      const startAns = await askQuestion(
-        `Vuoi iniziare dalla prima pagina (Copertina)? [S/n]: `,
-        "s"
-      );
-      startFromBeginning = startAns.toLowerCase().startsWith("s");
-    }
-
-    if (startFromBeginning) {
-      process.stdout.write("\nRitorno alla copertina... ");
-      for (let attempt = 0; attempt < 50; attempt++) {
-        const prevRes = runJsInChrome(`(function() {
-          const prev = document.querySelector("#pspdfkit-prev-page, a.pdf-nav-btn--prev");
-          if (prev && !prev.classList.contains("disabled") && !prev.hasAttribute("disabled") && prev.style.display !== "none") {
-            prev.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
-            return "clicked";
-          }
-          return "start";
-        })()`);
-        if (prevRes === "start") break;
-        await sleep(250);
-      }
-      console.log("Fatto!");
-      await sleep(600);
-    }
-  } else {
-    console.log(`\n${C.green}▶️  Ripresa attiva: avanzo alla pagina successiva per non duplicare quella appena salvata...${C.reset}`);
-    // Quando si riprende una sessione, lo schermo di Chrome è fermo sulle ultime pagine catturate.
-    // Facciamo un passo avanti prima di ripartire con l'acquisizione!
-    runJsInChrome(nextJsCode);
-    await sleep(800);
-  }
-
-  // Cattura JavaScript intelligente e reattiva:
-  // - Riconosce all'istante quando i tasselli (.PSPDFKit-PageTile o Overview) sono pronti
-  // - Verifica che nessuna immagine sia in stato di loading o vuota
-  // - Se una pagina è già pronta (es. cache o caricata veloce), scatta subito senza attese artificiali
-  const captureJsCode = `
-(function() {
-  const container = document.querySelector(".PSPDFKit-Container");
-  if (!container || !container.shadowRoot) return JSON.stringify({ status: "WAITING", reason: "no_container" });
-  const sr = container.shadowRoot;
-  const pages = Array.from(sr.querySelectorAll(".PSPDFKit-Page"));
-  if (pages.length === 0) return JSON.stringify({ status: "WAITING", reason: "no_pages" });
-
-  const pageLabel = document.querySelector(".g-page-jump-value")?.innerText.trim() || "";
-  const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
-  const hasNext = nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none";
-
-  // Per ogni pagina visibile, verifichiamo se è pronta:
-  for (let i = 0; i < pages.length; i++) {
-    const pageEl = pages[i];
-    const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
-    const imgs = Array.from(pageEl.querySelectorAll("img"));
-
-    // Se non ci sono né tessere né immagini, la pagina si sta ancora istanziando
-    if (tiles.length === 0 && imgs.length === 0) {
-      return JSON.stringify({ status: "WAITING", reason: "empty_page", pageIdx: i });
-    }
-
-    // Se ci sono tessere multiple, verifichiamo che tutte abbiano un'immagine caricata
-    if (tiles.length > 0) {
-      for (let t = 0; t < tiles.length; t++) {
-        const tImg = tiles[t].querySelector("img") || (tiles[t].tagName === "IMG" ? tiles[t] : null);
-        if (!tImg || !tImg.complete || tImg.naturalWidth < 10) {
-          return JSON.stringify({ status: "WAITING", reason: "tiles_loading", tileIdx: t, pageIdx: i });
-        }
-      }
-    } else {
-      // Modalità overview o immagine singola
-      if (imgs.length === 0) {
-        return JSON.stringify({ status: "WAITING", reason: "no_imgs", pageIdx: i });
-      }
-      const readyImgs = imgs.filter(img => img.complete && img.naturalWidth > 50);
-      if (readyImgs.length < imgs.length) {
-        return JSON.stringify({ status: "WAITING", reason: "imgs_loading", ready: readyImgs.length, total: imgs.length, pageIdx: i });
-      }
-    }
-  }
-
-  const captured = [];
-  const pageIndices = [];
-
-  pages.forEach((pageEl) => {
-    const pIdxAttr = pageEl.getAttribute("data-page-index") || "";
-    pageIndices.push(pIdxAttr);
-
-    const pageRect = pageEl.getBoundingClientRect();
-    const imgs = Array.from(pageEl.querySelectorAll("img")).filter(i => i.complete && i.naturalWidth > 10);
-    const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
-
-    const scale = ${scaleFactor};
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(pageRect.width * scale);
-    canvas.height = Math.round(pageRect.height * scale);
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ${isGrayscale ? `ctx.filter = "grayscale(100%) contrast(108%)";` : ""}
-
-    if (tiles.length === 0 && imgs.length >= 1) {
-      // Singola panoramica
-      ctx.drawImage(imgs[0], 0, 0, canvas.width, canvas.height);
-    } else {
-      // Tessere multiple
-      tiles.forEach(tile => {
-        const r = tile.getBoundingClientRect();
-        const img = tile.querySelector("img") || tile;
-        if (img && img.naturalWidth > 0) {
-          const dx = (r.left - pageRect.left) * scale;
-          const dy = (r.top - pageRect.top) * scale;
-          const dw = r.width * scale;
-          const dh = r.height * scale;
-          ctx.drawImage(img, dx, dy, dw, dh);
-        }
-      });
-    }
-
-    captured.push({
-      pageIndex: pIdxAttr,
-      width: canvas.width,
-      height: canvas.height,
-      dataUrl: canvas.toDataURL("image/jpeg", ${jpegQuality})
-    });
-  });
-
-  return JSON.stringify({
-    status: "READY",
-    url: window.location.href,
-    pageIndices,
-    pageLabel,
-    hasNext: !!hasNext,
-    pages: captured
-  });
-})()`;
-
-  const nextJsCode = `(function() {
-    const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
-    if (nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none") {
-      nextBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
-      return "clicked";
-    }
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }));
-    return "keyboard_fallback";
-  })()`;
-
   let totalPagesCaptured = existingImages.length;
-  let screenIndex = 1;
   const imageFiles = existingImages.map(f => path.join(SESSION_DIR, f));
-  let lastCapturedIndicesKey = "";
-  let consecutiveNoAdvancement = 0;
   let userWantsStop = false;
 
-  // Ascolto tasti e comandi da stdin per consentire all'utente di fermare la scansione in qualunque momento
+  // Ascolto tasti da stdin per consentire interruzione e compilazione PDF in qualunque momento
   if (process.stdin.isTTY) {
     try {
       process.stdin.setEncoding("utf8");
       process.stdin.resume();
       process.stdin.on("data", (chunk) => {
         const str = chunk.toString();
-        // Se l'utente preme Invio (\n, \r) o q o Ctrl+C
         if (str.includes("\n") || str.includes("\r") || str.toLowerCase().includes("q") || str.includes("\u0003")) {
           userWantsStop = true;
-          console.log(`\n${C.yellow}Comando di stop ricevuto, completamento in corso...${C.reset}`);
+          console.log(`\n${C.yellow}Comando di stop ricevuto, completamento e compilazione in corso...${C.reset}`);
         }
       });
     } catch (_) {}
@@ -419,70 +408,103 @@ async function main() {
   console.log(`\n${C.bold}Inizio acquisizione pagine...${C.reset}`);
   console.log(`${C.dim}💡 Suggerimento: premi INVIO in qualunque momento nel terminale per terminare e compilare il PDF!${C.reset}\n`);
 
-  while (totalPagesCaptured < maxPages && !userWantsStop) {
-    // 1. Polling dinamico: attendiamo che le immagini siano pronte
-    let parsed = null;
-    let attempts = 0;
-    const maxWaitAttempts = 30;
+  // ==========================================================
+  // RAMO 1: SANOMA LIBROMEDIA 6.0 (Vettoriale ad Alta Velocità)
+  // ==========================================================
+  if (tabInfo.provider === "sanoma") {
+    const totalTarget = Math.min(tabInfo.totalBookPages || 9999, maxPages);
+    const startPage = isResuming ? (existingImages.length + 1) : 1;
 
-    while (attempts < maxWaitAttempts && !userWantsStop) {
-      attempts++;
-      const rawRes = runJsInChrome(captureJsCode);
+    for (let pNum = startPage; pNum <= totalTarget && !userWantsStop; pNum++) {
+      let captureRes = null;
+      let retries = 0;
 
-      try {
-        parsed = JSON.parse(rawRes);
-      } catch (e) {
-        parsed = null;
+      while (retries < 3 && !userWantsStop) {
+        retries++;
+        const sanomaPageJs = `async () => {
+          try {
+            const pageNum = ${pNum};
+            const basePath = "/product/${tabInfo.productId}/ONLINE/assets/book/pages/" + pageNum + "/";
+            const svgRes = await fetch(basePath + pageNum + ".svg");
+            if (svgRes.status !== 200) {
+              window._scanAsyncRes = JSON.stringify({ status: "ERROR", error: "HTTP " + svgRes.status });
+              return;
+            }
+            let svgText = await svgRes.text();
+
+            const imgMatches = Array.from(svgText.matchAll(/href="(img\\/[^"]+)"/g));
+            const uniqueHrefs = [...new Set(imgMatches.map(m => m[1]))];
+            for (const href of uniqueHrefs) {
+              try {
+                const imgRes = await fetch(basePath + href);
+                const buf = await imgRes.arrayBuffer();
+                let bin = "";
+                const bytes = new Uint8Array(buf);
+                for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+                const b64 = btoa(bin);
+                const mime = href.endsWith(".png") ? "image/png" : "image/jpeg";
+                svgText = svgText.replaceAll(\`href="\${href}"\`, \`href="data:\${mime};base64,\${b64}"\`);
+              } catch (_) {}
+            }
+
+            const vbMatch = svgText.match(/viewBox="([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+)"/);
+            let w = 909, h = 1242;
+            if (vbMatch) {
+              w = parseFloat(vbMatch[3]) || 909;
+              h = parseFloat(vbMatch[4]) || 1242;
+            }
+
+            const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = () => reject(new Error("img load fail"));
+              img.src = url;
+            });
+
+            const scale = ${scaleFactor};
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(w * scale);
+            canvas.height = Math.round(h * scale);
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ${isGrayscale ? `ctx.filter = "grayscale(100%) contrast(108%)";` : ""}
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+
+            window._scanAsyncRes = JSON.stringify({
+              status: "READY",
+              pageIndex: pageNum,
+              width: canvas.width,
+              height: canvas.height,
+              dataUrl: canvas.toDataURL("image/jpeg", ${jpegQuality})
+            });
+          } catch (err) {
+            window._scanAsyncRes = JSON.stringify({ status: "ERROR", error: err.message });
+          }
+        }`;
+
+        const raw = runJsInChromeAsync(sanomaPageJs);
+        try {
+          captureRes = JSON.parse(raw);
+          if (captureRes.status === "READY" && captureRes.dataUrl) break;
+        } catch (_) {}
+
+        await sleep(300);
       }
 
-      if (parsed && parsed.status === "READY" && parsed.pages && parsed.pages.length > 0) {
+      if (userWantsStop) break;
+
+      if (!captureRes || captureRes.status !== "READY" || !captureRes.dataUrl) {
+        console.log(`\n${C.yellow}Avviso: Pagina ${pNum} non disponibile o fine libro.${C.reset}`);
         break;
       }
 
-      process.stdout.write(`\r${C.yellow}⏳ Preparazione e rendering pagina (${attempts}/${maxWaitAttempts})...${C.reset}   `);
-      // Intervallo di polling rapido (120ms): appena la pagina è renderizzata scatta subito!
-      await sleep(120);
-    }
-
-    if (userWantsStop) break;
-
-    if (!parsed || parsed.status !== "READY" || !parsed.pages || parsed.pages.length === 0) {
-      consecutiveNoAdvancement++;
-      if (consecutiveNoAdvancement >= 4) {
-        if (!manualStopMode) {
-          console.log(`\n${C.teal}Nessun ulteriore avanzamento: completamento acquisizione.${C.reset}`);
-          break;
-        }
-      }
-      runJsInChrome(nextJsCode);
-      await sleep(1000);
-      continue;
-    }
-
-    // Controlla che le pagine catturate non siano duplicate
-    const currentIndicesKey = parsed.pageIndices.join(",");
-    if (currentIndicesKey && currentIndicesKey === lastCapturedIndicesKey) {
-      consecutiveNoAdvancement++;
-      if (consecutiveNoAdvancement >= 4) {
-        if (!manualStopMode) {
-          console.log(`\n\n${C.teal}Fine del libro raggiunta (le pagine non avanzano più).${C.reset}`);
-          break;
-        }
-      }
-      runJsInChrome(nextJsCode);
-      await sleep(1000);
-      continue;
-    }
-
-    consecutiveNoAdvancement = 0;
-    lastCapturedIndicesKey = currentIndicesKey;
-
-    // Salva le pagine su disco nella directory di sessione
-    for (let pIdx = 0; pIdx < parsed.pages.length; pIdx++) {
       totalPagesCaptured++;
-      const item = parsed.pages[pIdx];
-      const b64 = item.dataUrl.replace(/^data:image\/jpeg;base64,/, "");
-      const fileName = `page_${String(totalPagesCaptured).padStart(4, "0")}.jpg`;
+      const b64 = captureRes.dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+      const fileName = `page_${String(pNum).padStart(4, "0")}.jpg`;
       const filePath = path.join(SESSION_DIR, fileName);
       fs.writeFileSync(filePath, Buffer.from(b64, "base64"));
       imageFiles.push(filePath);
@@ -490,40 +512,275 @@ async function main() {
       const fSizeKb = Math.round(fs.statSync(filePath).size / 1024);
       const totalStr = tabInfo.totalBookPages ? `/${tabInfo.totalBookPages}` : "";
       process.stdout.write(
-        `\r${C.green}📖 Acquisita Pagina ${totalPagesCaptured}${totalStr}${C.reset} ${C.dim}(Libro: ${parsed.pageLabel || item.pageIndex || screenIndex}, ${fSizeKb} KB, nitida)${C.reset}   `
+        `\r${C.green}📖 Acquisita Pagina ${pNum}${totalStr}${C.reset} ${C.dim}(Libro: ${pNum}, ${fSizeKb} KB, nitida)${C.reset}   `
       );
 
-      // Salva progresso per consentire ripresa se interrotto
       fs.writeFileSync(SCAN_STATE_FILE, JSON.stringify({
         pdfName: finalPdfName,
         pagesCaptured: totalPagesCaptured,
         updatedAt: new Date().toISOString()
       }, null, 2));
 
-      if (totalPagesCaptured >= maxPages) break;
+      await sleep(80);
     }
+  }
 
-    if (userWantsStop) break;
-
-    // Se non siamo in modalità manuale e hasNext è falso, verifica
-    if (!manualStopMode && (!parsed.hasNext || totalPagesCaptured >= maxPages)) {
-      await sleep(500);
-      const recheck = runJsInChrome(`(function() {
-        const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
-        return !!(nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none");
-      })()`);
-
-      if (recheck !== "true" || totalPagesCaptured >= maxPages) {
-        console.log(`\n\n${C.teal}Raggiunta la fine del libro o il limite impostato!${C.reset}`);
-        break;
+  // ==========================================================
+  // RAMO 2: HUB YOUNG / BSMART (PSPDFKit & Tile Navigation)
+  // ==========================================================
+  else {
+    const nextJsCode = `(function() {
+      // 1. Bottone avanti HUB Young
+      const hubNext = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
+      if (hubNext && !hubNext.classList.contains("disabled") && !hubNext.hasAttribute("disabled") && hubNext.style.display !== "none") {
+        hubNext.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+        return "clicked_hub";
       }
+
+      // 2. Bottone avanti bSmart
+      const bsmartNext = document.querySelector("[aria-label*='successiva'], [aria-label*='next'], [aria-label*='avanti']");
+      if (bsmartNext && !bsmartNext.classList.contains("disabled") && !bsmartNext.hasAttribute("disabled") && bsmartNext.style.display !== "none") {
+        bsmartNext.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+        return "clicked_bsmart";
+      }
+
+      // 3. Fallback freccia destra da tastiera
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }));
+      return "keyboard_fallback";
+    })()`;
+
+    if (!isResuming) {
+      let startFromBeginning = true;
+      if (!flagYes) {
+        const startAns = await askQuestion(
+          `Vuoi iniziare dalla prima pagina (Copertina)? [S/n]: `,
+          "s"
+        );
+        startFromBeginning = startAns.toLowerCase().startsWith("s");
+      }
+
+      if (startFromBeginning) {
+        process.stdout.write("\nRitorno alla copertina... ");
+        for (let attempt = 0; attempt < 50; attempt++) {
+          const prevRes = runJsInChrome(`(function() {
+            const prev = document.querySelector("#pspdfkit-prev-page, a.pdf-nav-btn--prev");
+            if (prev && !prev.classList.contains("disabled") && !prev.hasAttribute("disabled") && prev.style.display !== "none") {
+              prev.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+              return "clicked";
+            }
+            return "start";
+          })()`);
+          if (prevRes === "start") break;
+          await sleep(250);
+        }
+        console.log("Fatto!");
+        await sleep(600);
+      }
+    } else {
+      console.log(`\n${C.green}▶️  Ripresa attiva: avanzo alla pagina successiva per non duplicare quella appena salvata...${C.reset}`);
+      runJsInChrome(nextJsCode);
+      await sleep(800);
     }
 
-    // Avanza alla pagina successiva
-    runJsInChrome(nextJsCode);
-    screenIndex++;
-    // Pausa minima iniziale per avviare il cambio pagina (250ms)
-    await sleep(250);
+    const captureJsCode = `
+    (function() {
+      const container = document.querySelector(".PSPDFKit-Container");
+      if (!container || !container.shadowRoot) return JSON.stringify({ status: "WAITING", reason: "no_container" });
+      const sr = container.shadowRoot;
+      const pages = Array.from(sr.querySelectorAll(".PSPDFKit-Page"));
+      if (pages.length === 0) return JSON.stringify({ status: "WAITING", reason: "no_pages" });
+
+      const pageLabel = document.querySelector(".g-page-jump-value")?.innerText.trim() 
+        || (window.location.href.includes("page=") ? window.location.href.split("page=")[1].split("&")[0] : "");
+      const hubNext = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
+      const bsmartNext = document.querySelector("[aria-label*='successiva'], [aria-label*='next'], [aria-label*='avanti']");
+      const nextBtn = hubNext || bsmartNext;
+      const hasNext = nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none";
+
+      for (let i = 0; i < pages.length; i++) {
+        const pageEl = pages[i];
+        const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
+        const imgs = Array.from(pageEl.querySelectorAll("img"));
+
+        if (tiles.length === 0 && imgs.length === 0) {
+          return JSON.stringify({ status: "WAITING", reason: "empty_page", pageIdx: i });
+        }
+
+        if (tiles.length > 0) {
+          for (let t = 0; t < tiles.length; t++) {
+            const tImg = tiles[t].querySelector("img") || (tiles[t].tagName === "IMG" ? tiles[t] : null);
+            if (!tImg || !tImg.complete || tImg.naturalWidth < 10) {
+              return JSON.stringify({ status: "WAITING", reason: "tiles_loading", tileIdx: t, pageIdx: i });
+            }
+          }
+        } else {
+          if (imgs.length === 0) {
+            return JSON.stringify({ status: "WAITING", reason: "no_imgs", pageIdx: i });
+          }
+          const readyImgs = imgs.filter(img => img.complete && img.naturalWidth > 50);
+          if (readyImgs.length < imgs.length) {
+            return JSON.stringify({ status: "WAITING", reason: "imgs_loading", ready: readyImgs.length, total: imgs.length, pageIdx: i });
+          }
+        }
+      }
+
+      const captured = [];
+      const pageIndices = [];
+
+      pages.forEach((pageEl) => {
+        const pIdxAttr = pageEl.getAttribute("data-page-index") || "";
+        pageIndices.push(pIdxAttr);
+
+        const pageRect = pageEl.getBoundingClientRect();
+        const imgs = Array.from(pageEl.querySelectorAll("img")).filter(i => i.complete && i.naturalWidth > 10);
+        const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
+
+        const scale = ${scaleFactor};
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(pageRect.width * scale);
+        canvas.height = Math.round(pageRect.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ${isGrayscale ? `ctx.filter = "grayscale(100%) contrast(108%)";` : ""}
+
+        if (tiles.length === 0 && imgs.length >= 1) {
+          ctx.drawImage(imgs[0], 0, 0, canvas.width, canvas.height);
+        } else {
+          tiles.forEach(tile => {
+            const r = tile.getBoundingClientRect();
+            const img = tile.querySelector("img") || tile;
+            if (img && img.naturalWidth > 0) {
+              const dx = (r.left - pageRect.left) * scale;
+              const dy = (r.top - pageRect.top) * scale;
+              const dw = r.width * scale;
+              const dh = r.height * scale;
+              ctx.drawImage(img, dx, dy, dw, dh);
+            }
+          });
+        }
+
+        captured.push({
+          pageIndex: pIdxAttr,
+          width: canvas.width,
+          height: canvas.height,
+          dataUrl: canvas.toDataURL("image/jpeg", ${jpegQuality})
+        });
+      });
+
+      return JSON.stringify({
+        status: "READY",
+        url: window.location.href,
+        pageIndices,
+        pageLabel,
+        hasNext: !!hasNext,
+        pages: captured
+      });
+    })()`;
+
+    let screenIndex = 1;
+    let lastCapturedIndicesKey = "";
+    let consecutiveNoAdvancement = 0;
+
+    while (totalPagesCaptured < maxPages && !userWantsStop) {
+      let parsed = null;
+      let attempts = 0;
+      const maxWaitAttempts = 30;
+
+      while (attempts < maxWaitAttempts && !userWantsStop) {
+        attempts++;
+        const rawRes = runJsInChrome(captureJsCode);
+
+        try {
+          parsed = JSON.parse(rawRes);
+        } catch (e) {
+          parsed = null;
+        }
+
+        if (parsed && parsed.status === "READY" && parsed.pages && parsed.pages.length > 0) {
+          break;
+        }
+
+        process.stdout.write(`\r${C.yellow}⏳ Preparazione e rendering pagina (${attempts}/${maxWaitAttempts})...${C.reset}   `);
+        await sleep(120);
+      }
+
+      if (userWantsStop) break;
+
+      if (!parsed || parsed.status !== "READY" || !parsed.pages || parsed.pages.length === 0) {
+        consecutiveNoAdvancement++;
+        if (consecutiveNoAdvancement >= 4) {
+          if (!manualStopMode) {
+            console.log(`\n${C.teal}Nessun ulteriore avanzamento: completamento acquisizione.${C.reset}`);
+            break;
+          }
+        }
+        runJsInChrome(nextJsCode);
+        await sleep(1000);
+        continue;
+      }
+
+      const currentIndicesKey = parsed.pageIndices.join(",");
+      if (currentIndicesKey && currentIndicesKey === lastCapturedIndicesKey) {
+        consecutiveNoAdvancement++;
+        if (consecutiveNoAdvancement >= 4) {
+          if (!manualStopMode) {
+            console.log(`\n\n${C.teal}Fine del libro raggiunta (le pagine non avanzano più).${C.reset}`);
+            break;
+          }
+        }
+        runJsInChrome(nextJsCode);
+        await sleep(1000);
+        continue;
+      }
+
+      consecutiveNoAdvancement = 0;
+      lastCapturedIndicesKey = currentIndicesKey;
+
+      for (let pIdx = 0; pIdx < parsed.pages.length; pIdx++) {
+        totalPagesCaptured++;
+        const item = parsed.pages[pIdx];
+        const b64 = item.dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+        const fileName = `page_${String(totalPagesCaptured).padStart(4, "0")}.jpg`;
+        const filePath = path.join(SESSION_DIR, fileName);
+        fs.writeFileSync(filePath, Buffer.from(b64, "base64"));
+        imageFiles.push(filePath);
+
+        const fSizeKb = Math.round(fs.statSync(filePath).size / 1024);
+        const totalStr = tabInfo.totalBookPages ? `/${tabInfo.totalBookPages}` : "";
+        process.stdout.write(
+          `\r${C.green}📖 Acquisita Pagina ${totalPagesCaptured}${totalStr}${C.reset} ${C.dim}(Libro: ${parsed.pageLabel || item.pageIndex || screenIndex}, ${fSizeKb} KB, nitida)${C.reset}   `
+        );
+
+        fs.writeFileSync(SCAN_STATE_FILE, JSON.stringify({
+          pdfName: finalPdfName,
+          pagesCaptured: totalPagesCaptured,
+          updatedAt: new Date().toISOString()
+        }, null, 2));
+
+        if (totalPagesCaptured >= maxPages) break;
+      }
+
+      if (userWantsStop) break;
+
+      if (!manualStopMode && (!parsed.hasNext || totalPagesCaptured >= maxPages)) {
+        await sleep(500);
+        const recheck = runJsInChrome(`(function() {
+          const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next, [aria-label*='successiva']");
+          return !!(nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none");
+        })()`);
+
+        if (recheck !== "true" || totalPagesCaptured >= maxPages) {
+          console.log(`\n\n${C.teal}Raggiunta la fine del libro o il limite impostato!${C.reset}`);
+          break;
+        }
+      }
+
+      runJsInChrome(nextJsCode);
+      screenIndex++;
+      await sleep(250);
+    }
   }
 
   if (userWantsStop) {
@@ -533,16 +790,27 @@ async function main() {
   console.log(`\n${C.bold}Acquisizione completata! Totale pagine: ${imageFiles.length}${C.reset}`);
   console.log(`${C.dim}Compilazione file PDF in corso con Python PIL...${C.reset}`);
 
-  // Salva il file nella sottocartella appropriata se esiste (es. libri/Geografia o libri/Storia)
+  // Salva il file nella sottocartella appropriata
   let targetDir = BOOKS_DIR;
-  if (finalPdfName.toLowerCase().includes("geografia")) {
+  const titLowerFinal = finalPdfName.toLowerCase();
+  if (titLowerFinal.includes("geografia")) {
     targetDir = path.join(BOOKS_DIR, "Geografia");
-  } else if (finalPdfName.toLowerCase().includes("storia")) {
+  } else if (titLowerFinal.includes("storia")) {
     targetDir = path.join(BOOKS_DIR, "Storia");
-  } else if (finalPdfName.toLowerCase().includes("scienze")) {
+  } else if (titLowerFinal.includes("scienze")) {
     targetDir = path.join(BOOKS_DIR, "Scienze");
-  } else if (finalPdfName.toLowerCase().includes("italiano") || finalPdfName.toLowerCase().includes("antologia")) {
+  } else if (titLowerFinal.includes("tecnolog") || titLowerFinal.includes("disegno")) {
+    targetDir = path.join(BOOKS_DIR, "Tecnologia");
+  } else if (titLowerFinal.includes("italiano") || titLowerFinal.includes("antologia")) {
     targetDir = path.join(BOOKS_DIR, "Italiano");
+  } else if (titLowerFinal.includes("francese") || titLowerFinal.includes("allez")) {
+    targetDir = path.join(BOOKS_DIR, "Francese");
+  } else if (titLowerFinal.includes("inglese") || titLowerFinal.includes("twenty")) {
+    targetDir = path.join(BOOKS_DIR, "Inglese");
+  } else if (titLowerFinal.includes("matematica") || titLowerFinal.includes("aritmetica") || titLowerFinal.includes("etabeta") || titLowerFinal.includes("geometria")) {
+    targetDir = path.join(BOOKS_DIR, "Matematica");
+  } else if (titLowerFinal.includes("arte") || titLowerFinal.includes("immagine")) {
+    targetDir = path.join(BOOKS_DIR, "Arte e Immagine");
   }
   fs.mkdirSync(targetDir, { recursive: true });
 
@@ -579,7 +847,6 @@ print("SUCCESS")
     console.log(`   ⚖️  Dimensione Finale: ${C.bold}${finalSizeMb} MB${C.reset}`);
     console.log(`${C.bold}${C.green}════════════════════════════════════════════════════════════${C.reset}\n`);
 
-    // Chiedi o rimuovi i file temporanei
     if (tabInfo.totalBookPages && imageFiles.length >= tabInfo.totalBookPages) {
       try {
         fs.rmSync(SESSION_DIR, { recursive: true, force: true });
