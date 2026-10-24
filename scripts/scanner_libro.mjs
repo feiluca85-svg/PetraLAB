@@ -194,36 +194,63 @@ async function main() {
   // Riporta alla prima pagina se richiesto
   if (startFromBeginning) {
     process.stdout.write("Ritorno alla copertina... ");
-    for (let attempt = 0; attempt < 15; attempt++) {
+    for (let attempt = 0; attempt < 40; attempt++) {
       const prevRes = runJsInChrome(`(function() {
         const prev = document.querySelector("#pspdfkit-prev-page, a.pdf-nav-btn--prev");
-        if (prev && !prev.classList.contains("disabled") && !prev.hasAttribute("disabled")) {
+        if (prev && !prev.classList.contains("disabled") && !prev.hasAttribute("disabled") && prev.style.display !== "none") {
           prev.click();
           return "clicked";
         }
         return "start";
       })()`);
       if (prevRes === "start") break;
-      await sleep(400);
+      await sleep(300);
     }
     console.log("Fatto!");
+    await sleep(800);
   }
 
-  // Costruisci la funzione JS di cattura per le pagine correnti
+  // Funzione JS:
+  // - Aspetta che tutte le tessere/immagini siano scaricate (complete == true && naturalWidth > 50)
+  // - Cattura con precisione ogni pagina visibile
+  // - Riporta gli indici effettivi per prevenire duplicati o premature interruzioni
   const captureJsCode = `
 (function() {
   const container = document.querySelector(".PSPDFKit-Container");
-  if (!container || !container.shadowRoot) return JSON.stringify({ error: "no_container" });
+  if (!container || !container.shadowRoot) return JSON.stringify({ status: "WAITING_CONTAINER" });
   const sr = container.shadowRoot;
   const pages = Array.from(sr.querySelectorAll(".PSPDFKit-Page"));
-  if (pages.length === 0) return JSON.stringify({ error: "no_pages" });
+  if (pages.length === 0) return JSON.stringify({ status: "WAITING_PAGES" });
 
   const pageLabel = document.querySelector(".g-page-jump-value")?.innerText.trim() || "";
   const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
-  const hasNext = nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled");
+  const hasNext = nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none";
 
+  // Verifica lo stato di tutte le tessere grafiche (immagini ad alta definizione)
+  let totalImgs = 0;
+  let loadedImgs = 0;
+  for (let i = 0; i < pages.length; i++) {
+    const pageEl = pages[i];
+    const imgs = Array.from(pageEl.querySelectorAll("img"));
+    if (imgs.length === 0) {
+      return JSON.stringify({ status: "WAITING_TILES", reason: "no_imgs_yet", pageIdx: i });
+    }
+    totalImgs += imgs.length;
+    const ready = imgs.filter(img => img.complete && img.naturalWidth > 50).length;
+    loadedImgs += ready;
+    if (ready < imgs.length) {
+      return JSON.stringify({ status: "WAITING_TILES", loaded: loadedImgs, total: totalImgs, pageIdx: i });
+    }
+  }
+
+  // Tutte le immagini sono caricate al 100%! Procediamo al rendering
   const captured = [];
-  pages.forEach((pageEl, pIdx) => {
+  const pageIndices = [];
+
+  pages.forEach((pageEl) => {
+    const pIdxAttr = pageEl.getAttribute("data-page-index") || "";
+    pageIndices.push(pIdxAttr);
+
     const pageRect = pageEl.getBoundingClientRect();
     const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile, img")).filter(el => {
       const r = el.getBoundingClientRect();
@@ -253,6 +280,7 @@ async function main() {
     });
 
     captured.push({
+      pageIndex: pIdxAttr,
       width: canvas.width,
       height: canvas.height,
       dataUrl: canvas.toDataURL("image/jpeg", ${jpegQuality})
@@ -260,6 +288,9 @@ async function main() {
   });
 
   return JSON.stringify({
+    status: "READY",
+    url: window.location.href,
+    pageIndices,
     pageLabel,
     hasNext: !!hasNext,
     pages: captured
@@ -268,39 +299,79 @@ async function main() {
 
   const nextJsCode = `(function() {
     const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
-    if (nextBtn) {
+    if (nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none") {
       nextBtn.click();
-      return "ok";
+      return "clicked";
     }
-    return "no_next";
+    // Fallback: evento da tastiera se il bottone non è accessibile
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }));
+    return "keyboard_fallback";
   })()`;
 
   let totalPagesCaptured = 0;
   let screenIndex = 1;
   const imageFiles = [];
+  let lastCapturedIndicesKey = "";
+  let consecutiveNoAdvancement = 0;
 
-  console.log(`\n${C.bold}Inizio acquisizione pagine... (premi Ctrl+C per fermare e salvare il PDF in ogni momento)${C.reset}\n`);
+  console.log(`\n${C.bold}Inizio acquisizione intelligente pagine...${C.reset}`);
+  console.log(`${C.dim}(Attesa attiva caricamento tessere in alta risoluzione abilitata)${C.reset}\n`);
 
   while (totalPagesCaptured < maxPages) {
-    // 1. Aspetta che le immagini ad alta risoluzione siano caricate
-    await sleep(850);
+    // 1. Polling dinamico: attendiamo che le immagini ad alta risoluzione siano al 100% caricate
+    let parsed = null;
+    let attempts = 0;
+    const maxWaitAttempts = 25; // Fino a ~10-12 secondi se il network è lento
 
-    // 2. Cattura le pagine visibili a schermo (gestisce 1 o 2 pagine per volta)
-    const rawRes = runJsInChrome(captureJsCode);
-    let parsed;
-    try {
-      parsed = JSON.parse(rawRes);
-    } catch (e) {
-      console.log(`${C.yellow}Attesa caricamento schermo ${screenIndex}...${C.reset}`);
+    while (attempts < maxWaitAttempts) {
+      attempts++;
+      const rawRes = runJsInChrome(captureJsCode);
+
+      try {
+        parsed = JSON.parse(rawRes);
+      } catch (e) {
+        parsed = null;
+      }
+
+      if (parsed && parsed.status === "READY" && parsed.pages && parsed.pages.length > 0) {
+        break;
+      }
+
+      if (parsed && parsed.status === "WAITING_TILES") {
+        process.stdout.write(`\r${C.yellow}⏳ Caricamento tessere alta risoluzione (${parsed.loaded || 0}/${parsed.total || "?"})...${C.reset}   `);
+      } else {
+        process.stdout.write(`\r${C.yellow}⏳ Preparazione pagina... (${attempts}/${maxWaitAttempts})${C.reset}   `);
+      }
+
+      await sleep(350);
+    }
+
+    if (!parsed || parsed.status !== "READY" || !parsed.pages || parsed.pages.length === 0) {
+      consecutiveNoAdvancement++;
+      if (consecutiveNoAdvancement >= 3) {
+        console.log(`\n${C.teal}Nessun ulteriore avanzamento rilevato: fine del libro raggiunta.${C.reset}`);
+        break;
+      }
+      runJsInChrome(nextJsCode);
       await sleep(1000);
       continue;
     }
 
-    if (parsed.error || !parsed.pages || parsed.pages.length === 0) {
-      console.log(`${C.yellow}Pagina non ancora pronta, riprovo tra un attimo...${C.reset}`);
+    // Controlla che le pagine catturate non siano un duplicato identico dello schermo precedente
+    const currentIndicesKey = parsed.pageIndices.join(",");
+    if (currentIndicesKey && currentIndicesKey === lastCapturedIndicesKey) {
+      consecutiveNoAdvancement++;
+      if (consecutiveNoAdvancement >= 3) {
+        console.log(`\n\n${C.teal}Fine del libro raggiunta (le pagine non avanzano più).${C.reset}`);
+        break;
+      }
+      runJsInChrome(nextJsCode);
       await sleep(1000);
       continue;
     }
+
+    consecutiveNoAdvancement = 0;
+    lastCapturedIndicesKey = currentIndicesKey;
 
     // Salva le pagine catturate
     for (let pIdx = 0; pIdx < parsed.pages.length; pIdx++) {
@@ -314,21 +385,31 @@ async function main() {
 
       const fSizeKb = Math.round(fs.statSync(filePath).size / 1024);
       process.stdout.write(
-        `\r${C.green}📖 Acquisita Pagina ${totalPagesCaptured}${C.reset} ${C.dim}(Schermo: ${parsed.pageLabel || screenIndex}, ${fSizeKb} KB)${C.reset}   `
+        `\r${C.green}📖 Acquisita Pagina ${totalPagesCaptured}${C.reset} ${C.dim}(Pag. Libro: ${parsed.pageLabel || item.pageIndex || screenIndex}, ${fSizeKb} KB, nitida)${C.reset}   `
       );
 
       if (totalPagesCaptured >= maxPages) break;
     }
 
-    // Se non ci sono più pagine successive o abbiamo superato il limite, stop
+    // Se non ci sono più pagine successive o abbiamo superato il limite
     if (!parsed.hasNext || totalPagesCaptured >= maxPages) {
-      console.log(`\n\n${C.teal}Raggiunta la fine del libro o il limite impostato!${C.reset}`);
-      break;
+      // Breve doppio controllo di sicurezza sul tasto next
+      await sleep(500);
+      const recheck = runJsInChrome(`(function() {
+        const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
+        return !!(nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none");
+      })()`);
+
+      if (recheck !== "true" || totalPagesCaptured >= maxPages) {
+        console.log(`\n\n${C.teal}Raggiunta la fine del libro o il limite impostato!${C.reset}`);
+        break;
+      }
     }
 
-    // 3. Clicca pagina successiva
+    // Avanza alla pagina successiva
     runJsInChrome(nextJsCode);
     screenIndex++;
+    await sleep(400);
   }
 
   console.log(`\n${C.bold}Acquisizione completata! Totale pagine: ${imageFiles.length}${C.reset}`);
