@@ -1,0 +1,158 @@
+{
+  "bookTitle": "Greenway 2 - Verso un futuro sostenibile (Unione Europea e Stati d'Europa)",
+  "authors": "Emanuele Meli, Anna Franceschini",
+  "publisher": "A. Mondadori Scuola",
+  "pdfFileName": "Libro_Geografia 2.pdf",
+  "defaultOffset": 13,
+  "units": [
+    {
+      "number": 1,
+      "title": "L'Unione Europea",
+      "bookPageStart": 2,
+      "bookPageEnd": 22,
+      "pdfOffset": 13,
+      "topics": [
+        { "name": "Nascita e storia dell'UE", "bookPages": "2-7", "keywords": ["storia ue", "nascita unione europea", "trattato di roma", "fondatori"] },
+        { "name": "Organizzazione e istituzioni dell'UE", "bookPages": "8-9", "keywords": ["istituzioni", "parlamento europeo", "commissione", "consiglio europeo"] },
+        { "name": "Obiettivi e simboli dell'UE", "bookPages": "10-13", "keywords": ["simboli", "bandiera europea", "inno", "euro", "obiettivi"] },
+        { "name": "Cittadinanza europea e Agenda 2030", "bookPages": "14-19", "keywords": ["cittadini europei", "diritti", "erasmus", "schengen", "agenda 2030"] },
+        { "name": "Mappa attiva e sintesi UE", "bookPages": "20-22", "keywords": ["mappa concettuale ue", "sintesi unione europea", "verifica ue"] }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Sfide e problemi dell'Europa",
+      "bookPageStart": 24,
+      "bookPageEnd": 38,
+      "pdfOffset": 13,
+      "topics": [
+        { "name": "Mediterraneo: cerniera tra civiltà", "bookPages": "26-27", "keywords": ["mediterraneo", "migrazioni", "rotte"] },
+        { "name": "Aree di crisi e conflitti", "bookPages": "28-31", "keywords": ["guerra", "crisi", "indipendentismo", "conflitti"] },
+        { "name": "Energia e ambiente", "bookPages": "32-33", "keywords": ["energie rinnovabili", "inquinamento", "clima", "transizione ecologica"] },
+        { "name": "Società e diritti in Europa", "bookPages": "34-35", "keywords": ["diritti umani", "disuguaglianze", "welfare"] },
+        { "name": "Mappa attiva e verifica sfide Europa", "bookPages": "36-38", "keywords": ["mappa sfide europa", "verifica sfide"] }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Regione iberica (Spagna, Portogallo)",
+      "bookPageStart": 44,
+      "bookPageEnd": 69,
+      "pdfOffset": 13,
+      "topics": [
+        { "name": "Spagna: Territorio, clima e ambienti", "bookPages": "44-45", "keywords": ["spagna", "meseta", "pirenei", "ebro", "clima spagnolo"] },
+        { "name": "Spagna: Storia, Alhambra e cultura", "bookPages": "46-47", "keywords": ["spagna storia", "alhambra", "granada", "arabi in spagna"] },
+        { "name": "Spagna: Popolazione, città e vita quotidiana", "bookPages": "48-51", "keywords": ["madrid", "barcellona", "andalusia", "patio", "città spagnole"] },
+        { "name": "Spagna: Economia e lavoro", "bookPages": "52-53", "keywords": ["economia spagna", "agricoltura spagna", "turismo spagna", "chitarra classica"] },
+        { "name": "Spagna: Mappa attiva, verifica e ricerca", "bookPages": "54-57", "keywords": ["mappa spagna", "verifica spagna", "ricerca spagna"] },
+        { "name": "Portogallo: Territorio, ambienti e popolazione", "bookPages": "58-61", "keywords": ["portogallo", "lisbona", "porto", "tago", "atlantico"] },
+        { "name": "Portogallo: Economia, sughero e sintesi", "bookPages": "62-65", "keywords": ["economia portogallo", "sughero", "mappa portogallo"] },
+        { "name": "Andorra e Gibilterra & Verifica", "bookPages": "66-69", "keywords": ["andorra", "gibilterra", "verifica regione iberica"] }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Regione franco-olandese / centro-occidentale (Francia, Benelux)",
+      "bookPageStart": 70,
+      "bookPageEnd": 110,
+      "pdfOffset": 13,
+      "topics": [
+        { "name": "Inquadramento e geografia generale", "bookPages": "70-71", "keywords": ["regione franco olandese", "benelux carta"] },
+        { "name": "Francia: Territorio, fiumi e coste", "bookPages": "72-75", "keywords": ["francia territorio", "senna", "loira", "alpi francesi", "clima francia"] },
+        { "name": "Francia: Popolazione, Parigi e cultura", "bookPages": "76-85", "keywords": ["parigi", "città francesi", "popolazione francia", "storia francia"] },
+        { "name": "Francia: Economia e industrie", "bookPages": "86-95", "keywords": ["economia francia", "agricoltura francia", "tgv", "moda", "turismo francia"] },
+        { "name": "Belgio, Paesi Bassi e Lussemburgo (Benelux)", "bookPages": "96-107", "keywords": ["benelux", "belgio", "bruxelles", "paesi bassi", "olanda", "amsterdam", "polder", "dighe", "lussemburgo"] },
+        { "name": "Mappa attiva e verifica Unità 4", "bookPages": "108-110", "keywords": ["mappa francia", "mappa benelux", "verifica francia"] }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Regione britannica (Regno Unito, Irlanda)",
+      "bookPageStart": 112,
+      "bookPageEnd": 136,
+      "pdfOffset": 14,
+      "topics": [
+        { "name": "Regno Unito: Territorio, coste e rilievi", "bookPages": "112-113", "keywords": ["regno unito", "gran bretagna", "inghilterra", "scozia", "galles", "tamigi"] },
+        { "name": "Regno Unito: Storia, rivoluzione industriale e Iron Bridge", "bookPages": "114-115", "keywords": ["storia regno unito", "rivoluzione industriale", "iron bridge"] },
+        { "name": "Regno Unito: Popolazione, Londra e cultura", "bookPages": "116-119", "keywords": ["londra", "london eye", "british invasion", "popolazione uk"] },
+        { "name": "Regno Unito: Economia, finanza e Brexit", "bookPages": "120-123", "keywords": ["economia regno unito", "city di londra", "brexit", "finanza"] },
+        { "name": "Regno Unito: Mappa attiva e verifica", "bookPages": "124-127", "keywords": ["mappa regno unito", "verifica regno unito", "ricerca uk"] },
+        { "name": "Irlanda: Territorio, città, cultura e economia", "bookPages": "128-135", "keywords": ["irlanda", "dublino", "san patrizio", "st patrick", "economia irlanda", "isola di smeraldo"] },
+        { "name": "Verifica finale Regione britannica", "bookPages": "136", "keywords": ["verifica regione britannica"] }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Regione nordica e baltica (Scandinavia, Islanda, Baltici)",
+      "bookPageStart": 142,
+      "bookPageEnd": 177,
+      "pdfOffset": 14,
+      "topics": [
+        { "name": "Danimarca, Groenlandia e Islanda", "bookPages": "142-147", "keywords": ["danimarca", "copenaghen", "hygge", "groenlandia", "islanda", "geyser", "vulcani"] },
+        { "name": "Norvegia: Territorio, fiordi ed economia", "bookPages": "148-152", "keywords": ["norvegia", "oslo", "fiordi", "petrolio", "pesca", "vichinghi"] },
+        { "name": "Svezia: Territorio, foreste ed economia", "bookPages": "153-160", "keywords": ["svezia", "stoccolma", "foreste", "welfare svedese", "ikea", "miniere"] },
+        { "name": "Finlandia: Laghi, renne e innovazione", "bookPages": "161-168", "keywords": ["finlandia", "helsinki", "terra dei mille laghi", "sauna", "scuola finlandese"] },
+        { "name": "Paesi Baltici (Estonia, Lettonia, Lituania)", "bookPages": "169-174", "keywords": ["estonia", "lettonia", "lituania", "repubbliche baltiche", "tallinn", "riga", "vilnius"] },
+        { "name": "Mappa attiva e verifica Regione nordica", "bookPages": "175-177", "keywords": ["mappa regione nordica", "verifica paesi nordici"] }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Regione germanica e alpina (Germania, Austria, Svizzera)",
+      "bookPageStart": 178,
+      "bookPageEnd": 208,
+      "pdfOffset": 14,
+      "topics": [
+        { "name": "Inquadramento e geografia dell'Europa centrale", "bookPages": "178-179", "keywords": ["regione alpina", "alpi", "europa centrale"] },
+        { "name": "Germania: Territorio, bacini fluviali e clima", "bookPages": "180-185", "keywords": ["germania", "reno", "elba", "danubio germania", "foresta nera"] },
+        { "name": "Germania: Storia, Berlino e città principali", "bookPages": "186-191", "keywords": ["berlino", "muro di berlino", "monaco di baviera", "francoforte", "amburgo"] },
+        { "name": "Germania: Economia, industrie e sostenibilità", "bookPages": "192-198", "keywords": ["economia germania", "industria automobilistica", "ruhr"] },
+        { "name": "Austria, Svizzera e Liechtenstein", "bookPages": "199-206", "keywords": ["austria", "vienna", "svizzera", "berna", "cantoni", "banche svizzere", "liechtenstein"] },
+        { "name": "Mappa attiva e verifica Regione germanica", "bookPages": "207-208", "keywords": ["mappa germania", "verifica germania austria"] }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "Regione centro-orientale (Polonia, Rep. Ceca, Slovacchia, Ungheria, Romania, Bulgaria)",
+      "bookPageStart": 210,
+      "bookPageEnd": 240,
+      "pdfOffset": 14,
+      "topics": [
+        { "name": "Polonia: Territorio, Varsavia, Auschwitz ed economia", "bookPages": "210-217", "keywords": ["polonia", "varsavia", "cracovia", "auschwitz", "vistola"] },
+        { "name": "Repubblica Ceca e Slovacchia", "bookPages": "218-223", "keywords": ["repubblica ceca", "praga", "boemia", "cristallo di boemia", "slovacchia", "bratislava"] },
+        { "name": "Ungheria: Territorio, Budapest e biro", "bookPages": "224-229", "keywords": ["ungheria", "budapest", "balaton", "biro", "danubio ungheria"] },
+        { "name": "Romania e Bulgaria", "bookPages": "230-239", "keywords": ["romania", "bucarest", "carpazi", "delta del danubio", "bulgaria", "sofia", "valle delle rose"] },
+        { "name": "Verifica finale Regione centro-orientale", "bookPages": "240", "keywords": ["verifica europa centro orientale"] }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "Regione sud-orientale e balcanica (Ex Iugoslavia, Albania, Grecia, Cipro, Malta)",
+      "bookPageStart": 246,
+      "bookPageEnd": 288,
+      "pdfOffset": 14,
+      "topics": [
+        { "name": "Ex Iugoslavia e Balcani (storia e ponte di Mostar)", "bookPages": "246-247", "keywords": ["ex iugoslavia", "guerre balcaniche", "ponte di mostar"] },
+        { "name": "Slovenia e Croazia", "bookPages": "248-257", "keywords": ["slovenia", "lubiana", "croazia", "zagabria", "dalmazia", "laghi di plitvice", "merletti di idrija"] },
+        { "name": "Serbia, Bosnia, Montenegro, Kosovo, Macedonia", "bookPages": "258-265", "keywords": ["serbia", "belgrado", "bosnia", "sarajevo", "montenegro", "kosovo", "macedonia del nord"] },
+        { "name": "Albania: Territorio, società e rotta balcanica", "bookPages": "266-271", "keywords": ["albania", "tirana", "rotta dei balcani"] },
+        { "name": "Grecia: Territorio, isole, storia e cultura", "bookPages": "272-279", "keywords": ["grecia", "atene", "peloponneso", "isole greche", "creta", "cnosso", "sirtaki", "canale di corinto"] },
+        { "name": "Grecia: Economia, marmo di Tinos e verifiche", "bookPages": "280-285", "keywords": ["economia grecia", "turismo grecia", "marmo di tinos", "mappa grecia"] },
+        { "name": "Cipro e Malta & Verifica finale", "bookPages": "286-288", "keywords": ["cipro", "malta", "la valletta", "verifica balcani"] }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Regione orientale (Ucraina, Russia, Bielorussia, Moldova)",
+      "bookPageStart": 294,
+      "bookPageEnd": 322,
+      "pdfOffset": 14,
+      "topics": [
+        { "name": "Ucraina: Territorio, Kiev, Donbass ed economia", "bookPages": "294-301", "keywords": ["ucraina", "kiev", "dnepr", "donbass", "terre rare", "granaio d'europa"] },
+        { "name": "Russia: Territorio, monti Urali, Siberia e clima", "bookPages": "302-306", "keywords": ["russia", "mosca", "san pietroburgo", "urali", "siberia", "baikal", "taiga", "tundra", "cosmonauta"] },
+        { "name": "Russia: Economia, Transiberiana, Cremlino e società", "bookPages": "307-319", "keywords": ["economia russia", "transiberiana", "cremlino", "piazza rossa", "gas", "petrolio", "diritti"] },
+        { "name": "Bielorussia, Moldova e Verifica finale", "bookPages": "320-322", "keywords": ["bielorussia", "minsk", "moldova", "chisinau", "verifica regione orientale"] }
+      ]
+    }
+  ]
+}

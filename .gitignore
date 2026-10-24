@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Large book PDFs
+/libri/*.pdf
+/Libri/*.pdf
+/scripts/render_pdf_page.swift
+/tmp/petralab_book_cache
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

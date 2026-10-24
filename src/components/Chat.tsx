@@ -20,6 +20,12 @@ type UIMessage = {
   role: "user" | "model";
   text: string;
   imageUrl?: string;
+  bookPageInfo?: {
+    bookPage: number;
+    pdfPage: number;
+    topicName?: string;
+    unitTitle?: string;
+  } | null;
   time?: string;
   date?: string;
   timestamp?: number;
@@ -781,7 +787,7 @@ export default function Chat({
     const currentMem = subjectsMemory[tutorId];
     let response;
     try {
-      response = await sendMessage(userText, history, imagePayload, selectedTutor, currentMem);
+      response = await sendMessage(userText, history, imagePayload, selectedTutor, currentMem, agendaItems);
     } catch (e: any) {
       console.error("Critical chat error:", e);
       response = { success: false, error: "Si è verificato un errore critico di connessione con l'AI." };
@@ -793,7 +799,14 @@ export default function Chat({
       const replyTimestamp = Date.now();
       const finalMsgs: UIMessage[] = [
         ...newMessages, 
-        { role: "model", text: response.text, time: replyTime, date: replyDate, timestamp: replyTimestamp }
+        { 
+          role: "model", 
+          text: response.text, 
+          bookPageInfo: response.bookPageInfo,
+          time: replyTime, 
+          date: replyDate, 
+          timestamp: replyTimestamp 
+        }
       ];
       
       const finalChats = {
@@ -855,6 +868,7 @@ export default function Chat({
             time: m.time || null,
             date: m.date || null,
             timestamp: m.timestamp || null,
+            bookPageInfo: m.bookPageInfo || null,
             imageUrl: img && (img.startsWith("http") || (img.startsWith("data:image") && img.length < 80000)) ? img : null
           };
         });
@@ -1617,7 +1631,8 @@ export default function Chat({
                                            {(() => {
                                              const matchingTutor = tutors.find((t: any) => 
                                                t.id === item.subject?.toLowerCase() || 
-                                               t.subject.toLowerCase().includes(item.subject?.toLowerCase())
+                                               t.subject.toLowerCase().includes(item.subject?.toLowerCase()) ||
+                                               item.subject?.toLowerCase().includes(t.subject.split(' ')[0].toLowerCase())
                                              );
                                              if (matchingTutor) {
                                                return (
@@ -1626,6 +1641,7 @@ export default function Chat({
                                                    onClick={(e) => {
                                                      e.stopPropagation();
                                                      handleSelectTutor(matchingTutor);
+                                                     setInput(`Ciao ${matchingTutor.name}! Ho un dubbio su questo compito di ${item.subject}: "${item.description}". Mi aiuti a capirlo?`);
                                                    }}
                                                    className="px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all"
                                                  >
@@ -1953,6 +1969,16 @@ export default function Chat({
                       alt="Allegato" 
                       className="rounded-xl max-h-60 object-contain mb-2 bg-black/5" 
                     />
+                  )}
+
+                  {msg.bookPageInfo && (
+                    <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 select-none">
+                      <span>📖</span>
+                      <span>Libro Greenway 2: Pagina {msg.bookPageInfo.bookPage}</span>
+                      {msg.bookPageInfo.topicName && (
+                        <span className="opacity-80 truncate">• {msg.bookPageInfo.topicName}</span>
+                      )}
+                    </div>
                   )}
 
                   {msg.text && (

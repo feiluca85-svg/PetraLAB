@@ -3,6 +3,7 @@
 import { genAI, SYSTEM_INSTRUCTION } from "@/lib/gemini";
 import { Content, Part } from "@google/generative-ai";
 import { buildTutorPrompt, SubjectMemory, Tutor } from "@/lib/tutors";
+import { getRelevantBookPage } from "@/lib/bookReader";
 
 const FALLBACK_MODELS = [
   "gemini-3.5-flash-lite", // 500 RPD
@@ -54,7 +55,45 @@ export async function sendMessage(
 
     // Costruisci il payload: testo ed eventuale immagine
     const parts: Part[] = [];
+    let loadedBookPageInfo: { bookPage: number; pdfPage: number; topicName?: string; unitTitle?: string } | null = null;
     
+    // Integrazione libro di testo automatico per Magellano / Geografia
+    if (!image && tutor && (tutor.subject.toLowerCase().includes("geograf") || tutor.name.toLowerCase().includes("magellano"))) {
+      let bookPage = getRelevantBookPage(message);
+      
+      // Se non menzionato esplicitamente nel messaggio, controlla i compiti in agenda
+      if (!bookPage && agendaItems && agendaItems.length > 0) {
+        const relevantTasks = agendaItems.filter(item => 
+          !item.isCompleted && 
+          (item.subject.toLowerCase().includes("geograf") || tutor.subject.toLowerCase().includes(item.subject.split(' ')[0].toLowerCase()))
+        );
+        for (const task of relevantTasks) {
+          bookPage = getRelevantBookPage(task.description);
+          if (bookPage) break;
+        }
+      }
+
+      if (bookPage) {
+        parts.push({
+          inlineData: {
+            data: bookPage.base64,
+            mimeType: bookPage.mimeType,
+          }
+        });
+        loadedBookPageInfo = {
+          bookPage: bookPage.bookPage,
+          pdfPage: bookPage.pdfPage,
+          topicName: bookPage.topicName,
+          unitTitle: bookPage.unitTitle
+        };
+        dynamicInstruction += `\n\n[LIBRO DI TESTO GREENWAY 2 APERTO SUL BANCO]:
+Hai aperto automaticamente davanti a te la pagina ${bookPage.bookPage} (PDF p. ${bookPage.pdfPage}) del libro di testo "Greenway 2" ${bookPage.topicName ? `(Argomento: ${bookPage.topicName})` : ""} ${bookPage.unitTitle ? `(${bookPage.unitTitle})` : ""}.
+L'immagine di questa pagina è allegata a questo messaggio come input visivo.
+Fai riferimento a questa pagina (es. "Ho aperto il tuo libro Greenway 2 a pagina ${bookPage.bookPage}!").
+Osserva i paragrafi, le cartine, i grafici o gli esercizi stampati sulla pagina per guidare l'alunna socraticamente senza fare il lavoro al suo posto.`;
+      }
+    }
+
     if (message.trim()) {
       parts.push({ text: message });
     }
@@ -68,8 +107,8 @@ export async function sendMessage(
       });
     }
 
-    if (parts.length === 1 && image) {
-      parts.unshift({ text: "Spiegami cosa vedi in questa immagine e aiutami a risolverlo passo passo." });
+    if (parts.length === 1 && (image || loadedBookPageInfo)) {
+      parts.unshift({ text: "Spiegami cosa vedi in questa pagina e aiutami a studiarla o fare gli esercizi passo passo." });
     }
 
     let result = null;
@@ -135,7 +174,8 @@ export async function sendMessage(
     return { 
       success: true, 
       text: rawText,
-      trackData 
+      trackData,
+      bookPageInfo: loadedBookPageInfo
     };
   } catch (error: any) {
     console.error("All Gemini Fallbacks Failed:", error);
