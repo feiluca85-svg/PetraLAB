@@ -65,6 +65,8 @@ export default function InteractiveStudyTools({
       setQuizScore(0);
       setKnownCards([]);
       setReviewCards([]);
+      setFlashcards([]);
+      setQuestions([]);
 
       const relevant = agendaItems.find((item) =>
         !item.isCompleted &&
