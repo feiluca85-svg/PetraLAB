@@ -15,6 +15,7 @@ import { db, storage } from "@/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import StudyPlanner from "@/components/StudyPlanner";
+import InteractiveStudyTools from "@/components/InteractiveStudyTools";
 
 type UIMessage = {
   role: "user" | "model";
@@ -151,6 +152,9 @@ export default function Chat({
   // Voice states
   const [isListening, setIsListening] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
+
+  // Interactive study tools state (Flashcard & Quiz)
+  const [studyToolType, setStudyToolType] = useState<"flashcard" | "quiz" | null>(null);
 
     // Gestione tasto indietro infallibile tramite Hash
   useEffect(() => {
@@ -2069,6 +2073,35 @@ export default function Chat({
               </div>
             )}
 
+            {/* Pillole Rapide Flashcard & Quiz per il tutor attivo */}
+            <div className="flex items-center gap-2 mb-2 px-1 animate-in fade-in slide-in-from-bottom-1 select-none">
+              <button
+                type="button"
+                onClick={() => setStudyToolType("flashcard")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-95 shadow-xs ${
+                  isDarkMode 
+                    ? 'bg-[#202C33]/90 hover:bg-[#2A3942] border-[#2A3942] text-emerald-400' 
+                    : 'bg-white/90 hover:bg-slate-100 border-slate-200 text-emerald-700'
+                }`}
+              >
+                <span>🗂️</span>
+                <span>Flashcard</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStudyToolType("quiz")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-95 shadow-xs ${
+                  isDarkMode 
+                    ? 'bg-[#202C33]/90 hover:bg-[#2A3942] border-[#2A3942] text-teal-400' 
+                    : 'bg-white/90 hover:bg-slate-100 border-slate-200 text-teal-700'
+                }`}
+              >
+                <span>❓</span>
+                <span>Quiz Rapido</span>
+              </button>
+            </div>
+
             <div className="flex items-center gap-2">
               {/* Contenitore Input Arrotondato */}
               <div className={`flex-1 min-h-[44px] flex items-center px-2 py-1 rounded-3xl shadow-sm border border-transparent ${
@@ -2183,6 +2216,19 @@ export default function Chat({
         onSaveHabits={handleSaveHabits}
         userHabits={userHabits}
       />
+
+      {/* MODALE FLASHCARD & QUIZ INTERATTIVI */}
+      {selectedTutor && (
+        <InteractiveStudyTools
+          isOpen={studyToolType !== null}
+          onClose={() => setStudyToolType(null)}
+          toolType={studyToolType}
+          tutor={selectedTutor}
+          agendaItems={agendaItems}
+          isDarkMode={Boolean(isDarkMode)}
+          onAwardXP={awardXP}
+        />
+      )}
     </div>
   );
 }

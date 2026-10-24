@@ -161,3 +161,72 @@ export function getRelevantBookPage(query: string): BookPageImage | null {
     unitTitle: match.unitTitle
   };
 }
+
+/**
+ * Extracts multiple consecutive pages for flashcards or quiz generation.
+ */
+export function getBookPagesForRange(query: string, maxPages = 3) {
+  if (!query) return null;
+  const clean = query.toLowerCase().trim();
+
+  let startPage = 0;
+  let endPage = 0;
+  let topicName: string | undefined;
+  let unitTitle: string | undefined;
+  let offset = bookIndexData.defaultOffset || 13;
+
+  // Range pattern: "da pag 44 a 48" or "44-48" or "44 a 46"
+  const rangeMatch = clean.match(/(?:da\s+)?(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})\s*(?:a|-)\s*(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})/i);
+  if (rangeMatch) {
+    startPage = parseInt(rangeMatch[1], 10);
+    endPage = parseInt(rangeMatch[2], 10);
+  } else {
+    // Single page match or topic match
+    const singleMatch = findBookPage(query);
+    if (singleMatch) {
+      startPage = singleMatch.bookPage;
+      endPage = singleMatch.bookPage + 1;
+      topicName = singleMatch.topicName;
+      unitTitle = singleMatch.unitTitle;
+    }
+  }
+
+  if (startPage <= 0) return null;
+  if (endPage < startPage) endPage = startPage;
+
+  // Cap pages
+  const total = Math.min(maxPages, endPage - startPage + 1);
+  const matchedUnit = bookIndexData.units.find(
+    (u) => startPage >= u.bookPageStart && startPage <= u.bookPageEnd
+  );
+  if (matchedUnit) {
+    offset = matchedUnit.pdfOffset || offset;
+    unitTitle = unitTitle || matchedUnit.title;
+  }
+
+  const images: { base64: string; mimeType: string; bookPage: number }[] = [];
+  const pagesList: number[] = [];
+
+  for (let i = 0; i < total; i++) {
+    const curBookPage = startPage + i;
+    const curPdfPage = Math.min(326, Math.max(1, curBookPage + offset));
+    pagesList.push(curBookPage);
+    const ss = getBookPageScreenshot(curPdfPage);
+    if (ss) {
+      images.push({
+        base64: ss.base64,
+        mimeType: ss.mimeType,
+        bookPage: curBookPage
+      });
+    }
+  }
+
+  return {
+    startPage,
+    endPage: startPage + total - 1,
+    pages: pagesList,
+    topicName,
+    unitTitle,
+    images
+  };
+}
