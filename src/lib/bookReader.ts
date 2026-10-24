@@ -6,6 +6,7 @@ import bookIndexData from "@/data/geografia_libro_index.json";
 export interface BookMatchResult {
   bookPage: number;
   pdfPage: number;
+  pdfPath: string;
   topicName?: string;
   unitTitle?: string;
   unitNumber?: number;
@@ -16,73 +17,54 @@ export interface BookPageImage {
   mimeType: string;
   bookPage: number;
   pdfPage: number;
+  pdfPath: string;
   topicName?: string;
   unitTitle?: string;
 }
 
-const PDF_FILE_PATH = path.join(process.cwd(), "libri", bookIndexData.pdfFileName || "Libro_Geografia 2.pdf");
 const CACHE_DIR = path.join("/tmp", "petralab_book_cache");
+const PYTHON_EXTRACTOR = path.join(process.cwd(), "scripts", "extract_page.py");
 
 /**
- * Finds the most relevant book page number and PDF page for a student query or homework text.
+ * Risolve il percorso del PDF preferito per il tutor:
+ * 1. Se il tutor ha un `bookFile` specificato e valido, usa quello.
+ * 2. Altrimenti cerca il primo PDF disponibile nella cartella della sua materia (es. libri/Storia/).
  */
-export function findBookPage(text: string): BookMatchResult | null {
-  if (!text || typeof text !== "string") return null;
-  const clean = text.toLowerCase().trim();
+export function resolveTutorBookPath(tutor?: { subject?: string; name?: string; bookFile?: string }): { pdfPath: string; offset: number } | null {
+  if (!tutor) return null;
 
-  // 1. Explicit page numbers in text: "pag. 44", "pagina 52", "p. 112", "pag 8", "da pag 44 a 48"
-  const pageMatch = clean.match(/(?:pag(?:ina)?\.?|p\.)\s*(\d{1,3})/i);
-  if (pageMatch) {
-    const bookPage = parseInt(pageMatch[1], 10);
-    if (bookPage >= 1 && bookPage <= 320) {
-      // Find which unit it belongs to to get accurate offset
-      let offset = bookIndexData.defaultOffset || 13;
-      let matchedUnit = bookIndexData.units.find(
-        (u) => bookPage >= u.bookPageStart && bookPage <= u.bookPageEnd
-      );
-      if (matchedUnit) {
-        offset = matchedUnit.pdfOffset || offset;
-      }
-      return {
-        bookPage,
-        pdfPage: Math.min(326, Math.max(1, bookPage + offset)),
-        unitTitle: matchedUnit?.title,
-        unitNumber: matchedUnit?.number
-      };
+  // 1. File esplicito nel tutor
+  if (tutor.bookFile) {
+    const full = path.isAbsolute(tutor.bookFile) ? tutor.bookFile : path.join(process.cwd(), tutor.bookFile);
+    if (fs.existsSync(full)) {
+      return { pdfPath: full, offset: 0 };
     }
   }
 
-  // 2. Keyword / Topic matching
-  for (const unit of bookIndexData.units) {
-    for (const topic of unit.topics) {
-      for (const kw of topic.keywords) {
-        if (clean.includes(kw.toLowerCase())) {
-          // Extract start page from "bookPages" (e.g. "44-45" -> 44)
-          const startPage = parseInt(topic.bookPages.split("-")[0], 10);
-          const offset = unit.pdfOffset || bookIndexData.defaultOffset || 13;
-          return {
-            bookPage: startPage,
-            pdfPage: Math.min(326, Math.max(1, startPage + offset)),
-            topicName: topic.name,
-            unitTitle: unit.title,
-            unitNumber: unit.number
-          };
-        }
-      }
-    }
-  }
+  // 2. Risoluzione automatica per materia
+  const s = (tutor.subject || "").toLowerCase();
+  let folderName = "";
+  if (s.includes("geograf") || (tutor.name || "").toLowerCase().includes("magellano")) folderName = "Geografia";
+  else if (s.includes("stori") || (tutor.name || "").toLowerCase().includes("cleopatra")) folderName = "Storia";
+  else if (s.includes("ingles") || (tutor.name || "").toLowerCase().includes("arthur")) folderName = "Inglese";
+  else if (s.includes("frances")) folderName = "Francese";
+  else if (s.includes("scienz")) folderName = "Scienze";
 
-  // 3. Search Unit titles (e.g. "regione iberica", "regione britannica", "unione europea")
-  for (const unit of bookIndexData.units) {
-    if (clean.includes(unit.title.toLowerCase()) || clean.includes(`unità ${unit.number}`)) {
-      const offset = unit.pdfOffset || bookIndexData.defaultOffset || 13;
-      return {
-        bookPage: unit.bookPageStart,
-        pdfPage: Math.min(326, Math.max(1, unit.bookPageStart + offset)),
-        topicName: unit.topics[0]?.name,
-        unitTitle: unit.title,
-        unitNumber: unit.number
-      };
+  if (folderName) {
+    const folderPath = path.join(process.cwd(), "libri", folderName);
+    if (fs.existsSync(folderPath)) {
+      const pdfs = fs.readdirSync(folderPath).filter(f => f.toLowerCase().endsWith(".pdf"));
+      if (pdfs.length > 0) {
+        let chosen = pdfs[0];
+        const main = pdfs.find(p => !p.toLowerCase().includes("atlante") && !p.toLowerCase().includes("civica") && !p.toLowerCase().includes("culture"));
+        if (main) chosen = main;
+
+        const defaultOffset = folderName === "Geografia" ? (bookIndexData.defaultOffset || 13) : 0;
+        return {
+          pdfPath: path.join(folderPath, chosen),
+          offset: defaultOffset
+        };
+      }
     }
   }
 
@@ -90,12 +72,82 @@ export function findBookPage(text: string): BookMatchResult | null {
 }
 
 /**
- * Extracts on-demand screenshot of a given PDF page with local caching.
+ * Individua il numero di pagina del libro e del PDF a partire dal messaggio o dai compiti.
  */
-export function getBookPageScreenshot(pdfPage: number): { base64: string; mimeType: string } | null {
+export function findBookPage(
+  text: string, 
+  tutor?: { subject?: string; name?: string; bookFile?: string; bookOffset?: number }
+): BookMatchResult | null {
+  if (!text || typeof text !== "string") return null;
+  const clean = text.toLowerCase().trim();
+
+  const resolved = resolveTutorBookPath(tutor);
+  if (!resolved) return null;
+
+  const defaultOffset = tutor?.bookOffset !== undefined ? tutor.bookOffset : resolved.offset;
+
+  // 1. Match esplicito "pag. 44", "pagina 52", "p. 112", "pag 8", "da pag 44 a 48"
+  const pageMatch = clean.match(/(?:pag(?:ina)?\.?|p\.)\s*(\d{1,3})/i);
+  if (pageMatch) {
+    const bookPage = parseInt(pageMatch[1], 10);
+    if (bookPage >= 1 && bookPage <= 500) {
+      let offset = defaultOffset;
+      let matchedUnit = undefined;
+
+      if (resolved.pdfPath.toLowerCase().includes("greenway")) {
+        matchedUnit = bookIndexData.units.find(
+          (u) => bookPage >= u.bookPageStart && bookPage <= u.bookPageEnd
+        );
+        if (matchedUnit) {
+          offset = matchedUnit.pdfOffset || offset;
+        }
+      }
+
+      const calculatedPdfPage = Math.max(1, bookPage + offset);
+
+      return {
+        bookPage,
+        pdfPage: calculatedPdfPage,
+        pdfPath: resolved.pdfPath,
+        unitTitle: matchedUnit?.title,
+        unitNumber: matchedUnit?.number
+      };
+    }
+  }
+
+  // 2. Se è Geografia, cerchiamo anche i topic dall'indice tematico
+  if (resolved.pdfPath.toLowerCase().includes("greenway")) {
+    for (const unit of bookIndexData.units) {
+      for (const topic of unit.topics) {
+        for (const kw of topic.keywords) {
+          if (clean.includes(kw.toLowerCase())) {
+            const startPage = parseInt(topic.bookPages.split("-")[0], 10);
+            const offset = unit.pdfOffset || defaultOffset || 13;
+            return {
+              bookPage: startPage,
+              pdfPage: Math.max(1, startPage + offset),
+              pdfPath: resolved.pdfPath,
+              topicName: topic.name,
+              unitTitle: unit.title,
+              unitNumber: unit.number
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Estrae ultra-velocemente l'immagine della pagina dal PDF utilizzando Python pypdf (40ms).
+ * Include cache locale in /tmp/petralab_book_cache.
+ */
+export function getBookPageScreenshot(pdfPath: string, pdfPage: number): { base64: string; mimeType: string } | null {
   try {
-    if (!fs.existsSync(PDF_FILE_PATH)) {
-      console.warn(`[BookReader] PDF file not found at: ${PDF_FILE_PATH}`);
+    if (!fs.existsSync(pdfPath)) {
+      console.warn(`[BookReader] File PDF non trovato: ${pdfPath}`);
       return null;
     }
 
@@ -103,86 +155,101 @@ export function getBookPageScreenshot(pdfPage: number): { base64: string; mimeTy
       fs.mkdirSync(CACHE_DIR, { recursive: true });
     }
 
-    const cachedFilePath = path.join(CACHE_DIR, `page_${pdfPage}_screenshot.png`);
+    const safeName = path.basename(pdfPath).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const cachedFilePath = path.join(CACHE_DIR, `${safeName}_p${pdfPage}.jpg`);
 
     if (fs.existsSync(cachedFilePath)) {
       const imgBuffer = fs.readFileSync(cachedFilePath);
       if (imgBuffer.length > 1000) {
         return {
           base64: imgBuffer.toString("base64"),
-          mimeType: "image/png"
+          mimeType: "image/jpeg"
         };
       }
     }
 
-    // Generate screenshot on-demand using pdf-parse CLI
-    const cliPath = path.join(process.cwd(), "node_modules", "pdf-parse", "bin", "cli.mjs");
-    if (!fs.existsSync(cliPath)) {
-      console.warn(`[BookReader] pdf-parse CLI not found at: ${cliPath}`);
-      return null;
-    }
-
-    execFileSync(
-      process.execPath,
-      [cliPath, "screenshot", PDF_FILE_PATH, "--pages", String(pdfPage), "--output", CACHE_DIR, "--scale", "1.2"],
-      { timeout: 10000, stdio: "ignore" }
+    // Estrazione ad alte prestazioni con scripts/extract_page.py
+    const output = execFileSync(
+      "python3",
+      [PYTHON_EXTRACTOR, pdfPath, String(pdfPage)],
+      { timeout: 8000, encoding: "utf8" }
     );
 
-    if (fs.existsSync(cachedFilePath)) {
-      const imgBuffer = fs.readFileSync(cachedFilePath);
+    const parsed = JSON.parse(output);
+    if (parsed.status === "ok" && parsed.base64) {
+      fs.writeFileSync(cachedFilePath, Buffer.from(parsed.base64, "base64"));
       return {
-        base64: imgBuffer.toString("base64"),
-        mimeType: "image/png"
+        base64: parsed.base64,
+        mimeType: parsed.mimeType || "image/jpeg"
       };
     }
 
     return null;
   } catch (err) {
-    console.error(`[BookReader] Error extracting screenshot for PDF page ${pdfPage}:`, err);
+    console.error(`[BookReader] Errore estrazione pagina ${pdfPage} da ${pdfPath}:`, err);
     return null;
   }
 }
 
 /**
- * High-level helper for tutor chat and homework sessions.
+ * Helper principale per la chat del tutor: rileva se l'alunna o i compiti fanno riferimento a una pagina.
  */
-export function getRelevantBookPage(query: string): BookPageImage | null {
-  const match = findBookPage(query);
+export function getRelevantBookPage(
+  query: string,
+  tutor?: { subject?: string; name?: string; bookFile?: string; bookOffset?: number }
+): BookPageImage | null {
+  const match = findBookPage(query, tutor);
   if (!match) return null;
 
-  const screenshot = getBookPageScreenshot(match.pdfPage);
+  const screenshot = getBookPageScreenshot(match.pdfPath, match.pdfPage);
   if (!screenshot) return null;
 
   return {
     ...screenshot,
     bookPage: match.bookPage,
     pdfPage: match.pdfPage,
+    pdfPath: match.pdfPath,
     topicName: match.topicName,
     unitTitle: match.unitTitle
   };
 }
 
 /**
- * Extracts multiple consecutive pages for flashcards or quiz generation.
+ * Estrae una serie di pagine per flashcard, schemi o quiz di studio.
  */
-export function getBookPagesForRange(query: string, maxPages = 3) {
+export function getBookPagesForRange(
+  query: string, 
+  tutorOrMaxPages?: { subject?: string; name?: string; bookFile?: string; bookOffset?: number } | number,
+  maxPagesParam = 3
+) {
   if (!query) return null;
   const clean = query.toLowerCase().trim();
+
+  let tutor: { subject?: string; name?: string; bookFile?: string; bookOffset?: number } | undefined = undefined;
+  let maxPages = maxPagesParam;
+
+  if (typeof tutorOrMaxPages === "number") {
+    maxPages = tutorOrMaxPages;
+  } else if (typeof tutorOrMaxPages === "object") {
+    tutor = tutorOrMaxPages;
+  }
+
+  const resolved = resolveTutorBookPath(tutor);
+  if (!resolved) return null;
+
+  const defaultOffset = tutor?.bookOffset !== undefined ? tutor.bookOffset : resolved.offset;
 
   let startPage = 0;
   let endPage = 0;
   let topicName: string | undefined;
   let unitTitle: string | undefined;
-  let offset = bookIndexData.defaultOffset || 13;
 
-  // Range pattern: "da pag 44 a 48" or "44-48" or "44 a 46"
   const rangeMatch = clean.match(/(?:da\s+)?(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})\s*(?:a|-)\s*(?:pag(?:ina)?\.?|p\.)?\s*(\d{1,3})/i);
   if (rangeMatch) {
     startPage = parseInt(rangeMatch[1], 10);
     endPage = parseInt(rangeMatch[2], 10);
   } else {
-    // Single page match or topic match
-    const singleMatch = findBookPage(query);
+    const singleMatch = findBookPage(query, tutor);
     if (singleMatch) {
       startPage = singleMatch.bookPage;
       endPage = singleMatch.bookPage + 1;
@@ -194,24 +261,15 @@ export function getBookPagesForRange(query: string, maxPages = 3) {
   if (startPage <= 0) return null;
   if (endPage < startPage) endPage = startPage;
 
-  // Cap pages
   const total = Math.min(maxPages, endPage - startPage + 1);
-  const matchedUnit = bookIndexData.units.find(
-    (u) => startPage >= u.bookPageStart && startPage <= u.bookPageEnd
-  );
-  if (matchedUnit) {
-    offset = matchedUnit.pdfOffset || offset;
-    unitTitle = unitTitle || matchedUnit.title;
-  }
-
   const images: { base64: string; mimeType: string; bookPage: number }[] = [];
   const pagesList: number[] = [];
 
   for (let i = 0; i < total; i++) {
     const curBookPage = startPage + i;
-    const curPdfPage = Math.min(326, Math.max(1, curBookPage + offset));
+    const curPdfPage = Math.max(1, curBookPage + defaultOffset);
     pagesList.push(curBookPage);
-    const ss = getBookPageScreenshot(curPdfPage);
+    const ss = getBookPageScreenshot(resolved.pdfPath, curPdfPage);
     if (ss) {
       images.push({
         base64: ss.base64,

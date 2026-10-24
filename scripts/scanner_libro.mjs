@@ -279,36 +279,50 @@ async function main() {
     await sleep(800);
   }
 
-  // Cattura JavaScript millimetrica:
-  // - Supporta sia le tessere multiple (.PSPDFKit-PageTile) sia le tessere panoramiche (.PSPDFKit-PageOverview-Tile)
-  // - Supporta sia visualizzazione affiancata (2 pagine) che singola (1 pagina)
-  // - Attende che tutte le immagini visibili abbiano completato il caricamento
+  // Cattura JavaScript intelligente e reattiva:
+  // - Riconosce all'istante quando i tasselli (.PSPDFKit-PageTile o Overview) sono pronti
+  // - Verifica che nessuna immagine sia in stato di loading o vuota
+  // - Se una pagina è già pronta (es. cache o caricata veloce), scatta subito senza attese artificiali
   const captureJsCode = `
 (function() {
   const container = document.querySelector(".PSPDFKit-Container");
-  if (!container || !container.shadowRoot) return JSON.stringify({ status: "WAITING_CONTAINER" });
+  if (!container || !container.shadowRoot) return JSON.stringify({ status: "WAITING", reason: "no_container" });
   const sr = container.shadowRoot;
   const pages = Array.from(sr.querySelectorAll(".PSPDFKit-Page"));
-  if (pages.length === 0) return JSON.stringify({ status: "WAITING_PAGES" });
+  if (pages.length === 0) return JSON.stringify({ status: "WAITING", reason: "no_pages" });
 
   const pageLabel = document.querySelector(".g-page-jump-value")?.innerText.trim() || "";
   const nextBtn = document.querySelector("#pspdfkit-next-page, a.pdf-nav-btn--next");
   const hasNext = nextBtn && !nextBtn.classList.contains("disabled") && !nextBtn.hasAttribute("disabled") && nextBtn.style.display !== "none";
 
-  // Verifica che tutte le immagini visibili delle pagine siano caricate
-  let totalImgs = 0;
-  let loadedImgs = 0;
+  // Per ogni pagina visibile, verifichiamo se è pronta:
   for (let i = 0; i < pages.length; i++) {
     const pageEl = pages[i];
+    const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
     const imgs = Array.from(pageEl.querySelectorAll("img"));
-    if (imgs.length === 0) {
-      return JSON.stringify({ status: "WAITING_TILES", reason: "no_imgs_yet", pageIdx: i });
+
+    // Se non ci sono né tessere né immagini, la pagina si sta ancora istanziando
+    if (tiles.length === 0 && imgs.length === 0) {
+      return JSON.stringify({ status: "WAITING", reason: "empty_page", pageIdx: i });
     }
-    totalImgs += imgs.length;
-    const ready = imgs.filter(img => img.complete && img.naturalWidth > 0).length;
-    loadedImgs += ready;
-    if (ready < imgs.length) {
-      return JSON.stringify({ status: "WAITING_TILES", loaded: loadedImgs, total: totalImgs, pageIdx: i });
+
+    // Se ci sono tessere multiple, verifichiamo che tutte abbiano un'immagine caricata
+    if (tiles.length > 0) {
+      for (let t = 0; t < tiles.length; t++) {
+        const tImg = tiles[t].querySelector("img") || (tiles[t].tagName === "IMG" ? tiles[t] : null);
+        if (!tImg || !tImg.complete || tImg.naturalWidth < 10) {
+          return JSON.stringify({ status: "WAITING", reason: "tiles_loading", tileIdx: t, pageIdx: i });
+        }
+      }
+    } else {
+      // Modalità overview o immagine singola
+      if (imgs.length === 0) {
+        return JSON.stringify({ status: "WAITING", reason: "no_imgs", pageIdx: i });
+      }
+      const readyImgs = imgs.filter(img => img.complete && img.naturalWidth > 50);
+      if (readyImgs.length < imgs.length) {
+        return JSON.stringify({ status: "WAITING", reason: "imgs_loading", ready: readyImgs.length, total: imgs.length, pageIdx: i });
+      }
     }
   }
 
@@ -320,7 +334,7 @@ async function main() {
     pageIndices.push(pIdxAttr);
 
     const pageRect = pageEl.getBoundingClientRect();
-    const imgs = Array.from(pageEl.querySelectorAll("img")).filter(i => i.complete && i.naturalWidth > 50);
+    const imgs = Array.from(pageEl.querySelectorAll("img")).filter(i => i.complete && i.naturalWidth > 10);
     const tiles = Array.from(pageEl.querySelectorAll(".PSPDFKit-PageTile"));
 
     const scale = ${scaleFactor};
@@ -333,12 +347,11 @@ async function main() {
 
     ${isGrayscale ? `ctx.filter = "grayscale(100%) contrast(108%)";` : ""}
 
-    // Se la pagina è in modalità panoramica/overview (1 sola immagine intera)
-    // disegniamo l'immagine sull'intero canvas senza dipendere dalle coordinate relative dei div
     if (tiles.length === 0 && imgs.length >= 1) {
+      // Singola panoramica
       ctx.drawImage(imgs[0], 0, 0, canvas.width, canvas.height);
     } else {
-      // Modalità tessere multiple
+      // Tessere multiple
       tiles.forEach(tile => {
         const r = tile.getBoundingClientRect();
         const img = tile.querySelector("img") || tile;
@@ -410,7 +423,7 @@ async function main() {
     // 1. Polling dinamico: attendiamo che le immagini siano pronte
     let parsed = null;
     let attempts = 0;
-    const maxWaitAttempts = 25;
+    const maxWaitAttempts = 30;
 
     while (attempts < maxWaitAttempts && !userWantsStop) {
       attempts++;
@@ -427,7 +440,8 @@ async function main() {
       }
 
       process.stdout.write(`\r${C.yellow}⏳ Preparazione e rendering pagina (${attempts}/${maxWaitAttempts})...${C.reset}   `);
-      await sleep(350);
+      // Intervallo di polling rapido (120ms): appena la pagina è renderizzata scatta subito!
+      await sleep(120);
     }
 
     if (userWantsStop) break;
@@ -505,10 +519,11 @@ async function main() {
       }
     }
 
-    // Avanza
+    // Avanza alla pagina successiva
     runJsInChrome(nextJsCode);
     screenIndex++;
-    await sleep(400);
+    // Pausa minima iniziale per avviare il cambio pagina (250ms)
+    await sleep(250);
   }
 
   if (userWantsStop) {

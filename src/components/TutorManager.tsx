@@ -43,8 +43,20 @@ export default function TutorManager({
   const { tutors, loading } = useTutors();
   const [editingTutor, setEditingTutor] = useState<Tutor | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [availableBooks, setAvailableBooks] = useState<Array<{ fileName: string; relativePath: string; subjectFolder: string }>>([]);
 
   const [formData, setFormData] = useState<Partial<Tutor>>({});
+
+  useEffect(() => {
+    fetch("/api/books")
+      .then(res => res.json())
+      .then(data => {
+        if (data.books) {
+          setAvailableBooks(data.books);
+        }
+      })
+      .catch(err => console.error("Errore caricamento libri:", err));
+  }, []);
   
 
   const handleEdit = (tutor: Tutor) => {
@@ -83,6 +95,8 @@ export default function TutorManager({
         gender: formData.gender || "male",
         voiceLang: formData.voiceLang || "it-IT",
         voiceURI: formData.voiceURI || null,
+        bookFile: formData.bookFile || null,
+        bookOffset: formData.bookOffset !== undefined ? Number(formData.bookOffset) : 0,
         greeting: formData.greeting || "Ciao! Come posso aiutarti oggi?",
         prompt: formData.prompt || "Sei un tutor socratico amichevole per ragazzi delle scuole medie."
       };
@@ -342,6 +356,63 @@ export default function TutorManager({
                 </div>
               </div>
 
+              {/* Selezione Libro di Testo Associato */}
+              <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-emerald-50/50 border-emerald-100'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${isDarkMode ? 'text-[#8696A0]' : 'text-emerald-800'}`}>
+                    <span>📖</span>
+                    <span>Libro di Testo Adottato (Opzionale)</span>
+                  </label>
+                  {formData.bookFile && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, bookFile: "", bookOffset: 0 })}
+                      className="text-[11px] font-semibold text-rose-500 hover:underline"
+                    >
+                      Scollega Libro
+                    </button>
+                  )}
+                </div>
+
+                <select 
+                  value={formData.bookFile || ""} 
+                  onChange={(e) => {
+                    const chosenPath = e.target.value;
+                    let defaultOffset = 0;
+                    if (chosenPath.toLowerCase().includes("greenway")) defaultOffset = 13;
+                    setFormData({
+                      ...formData,
+                      bookFile: chosenPath,
+                      bookOffset: defaultOffset
+                    });
+                  }}
+                  className={`w-full rounded-[20px] px-3.5 py-2.5 text-sm border outline-none font-medium transition-colors ${
+                    isDarkMode 
+                      ? 'bg-[#0B141A] border-[#2A3942] text-white focus:border-[#25D366]' 
+                      : 'bg-white border-slate-200 text-slate-800 focus:border-[#25D366]'
+                  }`}
+                >
+                  <option value="">-- Nessun libro (Risposte senza consultazione visiva) --</option>
+                  
+                  {/* Libri raggruppati */}
+                  {Array.from(new Set(availableBooks.map(b => b.subjectFolder))).map(folder => (
+                    <optgroup key={folder} label={`Cartella ${folder}`}>
+                      {availableBooks
+                        .filter(b => b.subjectFolder === folder)
+                        .map(b => (
+                          <option key={b.relativePath} value={b.relativePath}>
+                            {b.fileName}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+                </select>
+
+                <p className={`mt-2 text-[11px] leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-slate-500'}`}>
+                  Quando l&apos;alunna cita una pagina o ha un compito, il tutor aprirà automaticamente l&apos;immagine esatta di questo libro sul suo banco.
+                </p>
+              </div>
+
               {/* Messaggio di Benvenuto */}
               <div>
                 <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
@@ -435,6 +506,14 @@ export default function TutorManager({
                       }`}>
                         {tutor.subject}
                       </span>
+                      {tutor.bookFile && (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                          isDarkMode ? 'bg-amber-900/30 text-amber-300 border border-amber-800/40' : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        }`} title={`Libro: ${tutor.bookFile}`}>
+                          <span>📖</span>
+                          <span className="truncate max-w-[120px]">{tutor.bookFile.split("/").pop()?.replace(".pdf", "")}</span>
+                        </span>
+                      )}
                     </div>
                     <p className={`text-xs mt-1 truncate ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
                       {tutor.gender === 'male' ? '👨 Voce Maschile' : '👩 Voce Femminile'} • {tutor.voiceLang || 'it-IT'}

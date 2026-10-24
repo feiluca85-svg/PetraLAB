@@ -2,6 +2,7 @@
 
 import { genAI, SYSTEM_INSTRUCTION } from "@/lib/gemini";
 import { Content, Part } from "@google/generative-ai";
+import path from "path";
 import { buildTutorPrompt, SubjectMemory, Tutor } from "@/lib/tutors";
 import { getRelevantBookPage } from "@/lib/bookReader";
 
@@ -57,18 +58,19 @@ export async function sendMessage(
     const parts: Part[] = [];
     let loadedBookPageInfo: { bookPage: number; pdfPage: number; topicName?: string; unitTitle?: string } | null = null;
     
-    // Integrazione libro di testo automatico per Magellano / Geografia
-    if (!image && tutor && (tutor.subject.toLowerCase().includes("geograf") || tutor.name.toLowerCase().includes("magellano"))) {
-      let bookPage = getRelevantBookPage(message);
+    // Integrazione automatica Libro di Testo per qualsiasi Tutor (Geografia, Storia, Inglese, Francese, ecc.)
+    if (!image && tutor) {
+      let bookPage = getRelevantBookPage(message, tutor);
       
-      // Se non menzionato esplicitamente nel messaggio, controlla i compiti in agenda
+      // Se non menzionato esplicitamente nel messaggio, controlla i compiti in agenda per questa materia
       if (!bookPage && agendaItems && agendaItems.length > 0) {
         const relevantTasks = agendaItems.filter(item => 
           !item.isCompleted && 
-          (item.subject.toLowerCase().includes("geograf") || tutor.subject.toLowerCase().includes(item.subject.split(' ')[0].toLowerCase()))
+          (tutor.subject.toLowerCase().includes(item.subject.toLowerCase().split(' ')[0]) ||
+           item.subject.toLowerCase().includes(tutor.subject.toLowerCase().split(' ')[0]))
         );
         for (const task of relevantTasks) {
-          bookPage = getRelevantBookPage(task.description);
+          bookPage = getRelevantBookPage(task.description, tutor);
           if (bookPage) break;
         }
       }
@@ -86,11 +88,13 @@ export async function sendMessage(
           topicName: bookPage.topicName,
           unitTitle: bookPage.unitTitle
         };
-        dynamicInstruction += `\n\n[LIBRO DI TESTO GREENWAY 2 APERTO SUL BANCO]:
-Hai aperto automaticamente davanti a te la pagina ${bookPage.bookPage} (PDF p. ${bookPage.pdfPage}) del libro di testo "Greenway 2" ${bookPage.topicName ? `(Argomento: ${bookPage.topicName})` : ""} ${bookPage.unitTitle ? `(${bookPage.unitTitle})` : ""}.
-L'immagine di questa pagina è allegata a questo messaggio come input visivo.
-Fai riferimento a questa pagina (es. "Ho aperto il tuo libro Greenway 2 a pagina ${bookPage.bookPage}!").
-Osserva i paragrafi, le cartine, i grafici o gli esercizi stampati sulla pagina per guidare l'alunna socraticamente senza fare il lavoro al suo posto.`;
+
+        const bookTitle = path.basename(bookPage.pdfPath, ".pdf");
+        dynamicInstruction += `\n\n[LIBRO DI TESTO "${bookTitle}" APERTO SUL BANCO]:
+Hai aperto automaticamente davanti a te la pagina ${bookPage.bookPage} (PDF p. ${bookPage.pdfPage}) del libro di testo "${bookTitle}" ${bookPage.topicName ? `(Argomento: ${bookPage.topicName})` : ""} ${bookPage.unitTitle ? `(${bookPage.unitTitle})` : ""}.
+L'immagine ad alta definizione di questa pagina è allegata a questo messaggio come input visivo.
+Fai riferimento esplicito a questa pagina (es. "Ho qui davanti a me il tuo libro ${bookTitle} aperto a pagina ${bookPage.bookPage}!").
+Osserva con grandissima attenzione il testo, i paragrafi, le cartine, i grafici o gli esercizi stampati sulla pagina per guidare l'alunna con metodo socratico, stimolando la sua osservazione e comprensione senza fare il lavoro al suo posto.`;
       }
     }
 
