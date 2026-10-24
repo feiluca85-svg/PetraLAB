@@ -2069,9 +2069,9 @@ export default function Chat({
               </div>
             )}
 
-            <div className="flex items-end gap-2">
+            <div className="flex items-center gap-2">
               {/* Contenitore Input Arrotondato */}
-              <div className={`flex-1 flex items-center px-2 py-1 sm:py-1.5 rounded-3xl shadow-sm border border-transparent ${
+              <div className={`flex-1 min-h-[44px] flex items-center px-2 py-1 rounded-3xl shadow-sm border border-transparent ${
                 isDarkMode ? 'bg-[#202C33] focus-within:border-[#25D366]' : 'bg-white focus-within:border-transparent'
               } ${isListening ? 'ring-2 ring-red-400' : ''}`}>
                 
@@ -2141,7 +2141,7 @@ export default function Chat({
                 <button 
                   onClick={handleSend}
                   disabled={isLoading}
-                  className={`w-10 h-10 active:scale-95 text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
+                  className={`w-11 h-11 active:scale-95 text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
                     isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#25D366] hover:bg-[#118B44]'
                   }`}
                   aria-label="Invia messaggio"
@@ -2153,7 +2153,7 @@ export default function Chat({
               ) : (
                 <button 
                   onClick={toggleMicrophone}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
+                  className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
                     isListening 
                       ? 'bg-red-500 text-white animate-pulse' 
                       : (isDarkMode ? 'bg-[#25D366] hover:bg-[#25D366]/90 text-[#111B21]' : 'bg-[#25D366] hover:bg-[#118B44] text-white')
