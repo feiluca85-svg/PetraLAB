@@ -21,7 +21,8 @@ export type Tutor = {
   voiceURI?: string;
   prompt: string;
   greeting: string;
-  bookFile?: string; // Percorso relativo del PDF (es. "libri/Storia/Salto nel Tempo 2.pdf")
+  bookFile?: string; // Percorso legacy singolo
+  bookFiles?: string[]; // Percorsi multipli PDF (es. ["libri/Scienze/Scienze A.pdf", "libri/Scienze/Scienze B.pdf"])
   bookOffset?: number; // Offset pagine (pagina libro -> pagina PDF)
 };
 

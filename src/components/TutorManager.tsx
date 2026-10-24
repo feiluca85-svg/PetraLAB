@@ -61,7 +61,14 @@ export default function TutorManager({
 
   const handleEdit = (tutor: Tutor) => {
     setEditingTutor(tutor);
-    setFormData(tutor);
+    const initialFiles = tutor.bookFiles && tutor.bookFiles.length > 0
+      ? tutor.bookFiles
+      : (tutor.bookFile ? [tutor.bookFile] : []);
+    setFormData({
+      ...tutor,
+      bookFiles: initialFiles,
+      bookFile: initialFiles[0] || ""
+    });
     setIsCreating(false);
   };
 
@@ -95,7 +102,8 @@ export default function TutorManager({
         gender: formData.gender || "male",
         voiceLang: formData.voiceLang || "it-IT",
         voiceURI: formData.voiceURI || null,
-        bookFile: formData.bookFile || null,
+        bookFile: (formData.bookFiles && formData.bookFiles.length > 0) ? formData.bookFiles[0] : (formData.bookFile || null),
+        bookFiles: formData.bookFiles || (formData.bookFile ? [formData.bookFile] : []),
         bookOffset: formData.bookOffset !== undefined ? Number(formData.bookOffset) : 0,
         greeting: formData.greeting || "Ciao! Come posso aiutarti oggi?",
         prompt: formData.prompt || "Sei un tutor socratico amichevole per ragazzi delle scuole medie."
@@ -356,61 +364,82 @@ export default function TutorManager({
                 </div>
               </div>
 
-              {/* Selezione Libro di Testo Associato */}
+              {/* Selezione Multipla Libri di Testo Associati */}
               <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#182229] border-[#2A3942]' : 'bg-emerald-50/50 border-emerald-100'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${isDarkMode ? 'text-[#8696A0]' : 'text-emerald-800'}`}>
                     <span>📖</span>
-                    <span>Libro di Testo Adottato (Opzionale)</span>
+                    <span>Libri di Testo Associati (Selezione Multipla)</span>
                   </label>
-                  {formData.bookFile && (
+                  {((formData.bookFiles && formData.bookFiles.length > 0) || formData.bookFile) && (
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, bookFile: "", bookOffset: 0 })}
+                      onClick={() => setFormData({ ...formData, bookFile: "", bookFiles: [], bookOffset: 0 })}
                       className="text-[11px] font-semibold text-rose-500 hover:underline"
                     >
-                      Scollega Libro
+                      Deseleziona tutti
                     </button>
                   )}
                 </div>
 
-                <select 
-                  value={formData.bookFile || ""} 
-                  onChange={(e) => {
-                    const chosenPath = e.target.value;
-                    let defaultOffset = 0;
-                    if (chosenPath.toLowerCase().includes("greenway")) defaultOffset = 13;
-                    setFormData({
-                      ...formData,
-                      bookFile: chosenPath,
-                      bookOffset: defaultOffset
-                    });
-                  }}
-                  className={`w-full rounded-[20px] px-3.5 py-2.5 text-sm border outline-none font-medium transition-colors ${
-                    isDarkMode 
-                      ? 'bg-[#0B141A] border-[#2A3942] text-white focus:border-[#25D366]' 
-                      : 'bg-white border-slate-200 text-slate-800 focus:border-[#25D366]'
-                  }`}
-                >
-                  <option value="">-- Nessun libro (Risposte senza consultazione visiva) --</option>
-                  
-                  {/* Libri raggruppati */}
-                  {Array.from(new Set(availableBooks.map(b => b.subjectFolder))).map(folder => (
-                    <optgroup key={folder} label={`Cartella ${folder}`}>
-                      {availableBooks
-                        .filter(b => b.subjectFolder === folder)
-                        .map(b => (
-                          <option key={b.relativePath} value={b.relativePath}>
-                            {b.fileName}
-                          </option>
-                        ))}
-                    </optgroup>
-                  ))}
-                </select>
-
-                <p className={`mt-2 text-[11px] leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-slate-500'}`}>
-                  Quando l&apos;alunna cita una pagina o ha un compito, il tutor aprirà automaticamente l&apos;immagine esatta di questo libro sul suo banco.
+                <p className={`text-[11px] mb-3 leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-slate-500'}`}>
+                  Spunta uno o più libri che questo tutor potrà consultare durante lo studio e i compiti:
                 </p>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {Array.from(new Set(availableBooks.map(b => b.subjectFolder))).map(folder => {
+                    const folderBooks = availableBooks.filter(b => b.subjectFolder === folder);
+                    const selectedInFolder = folderBooks.filter(b => (formData.bookFiles || []).includes(b.relativePath));
+
+                    return (
+                      <div key={folder} className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-[#0B141A] border-[#202C33]' : 'bg-white border-slate-200'}`}>
+                        <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-gray-800 mb-1.5">
+                          <span className="text-xs font-bold text-[#25D366] flex items-center gap-1">
+                            <span>📁</span> {folder}
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-medium">
+                            {selectedInFolder.length}/{folderBooks.length} selezionati
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {folderBooks.map(b => {
+                            const isChecked = (formData.bookFiles || []).includes(b.relativePath) || formData.bookFile === b.relativePath;
+                            return (
+                              <label
+                                key={b.relativePath}
+                                className={`flex items-center gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                                  isChecked 
+                                    ? (isDarkMode ? 'bg-[#25D366]/15 text-white font-medium' : 'bg-emerald-50 text-emerald-950 font-medium')
+                                    : (isDarkMode ? 'hover:bg-[#182229] text-gray-300' : 'hover:bg-slate-50 text-slate-700')
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    let current = formData.bookFiles ? [...formData.bookFiles] : (formData.bookFile ? [formData.bookFile] : []);
+                                    if (e.target.checked) {
+                                      if (!current.includes(b.relativePath)) current.push(b.relativePath);
+                                    } else {
+                                      current = current.filter(x => x !== b.relativePath);
+                                    }
+                                    setFormData({
+                                      ...formData,
+                                      bookFiles: current,
+                                      bookFile: current[0] || ""
+                                    });
+                                  }}
+                                  className="w-4 h-4 rounded text-[#25D366] accent-[#25D366] focus:ring-0"
+                                />
+                                <span className="truncate flex-1">{b.fileName}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Messaggio di Benvenuto */}
@@ -506,12 +535,16 @@ export default function TutorManager({
                       }`}>
                         {tutor.subject}
                       </span>
-                      {tutor.bookFile && (
+                      {((tutor.bookFiles && tutor.bookFiles.length > 0) || tutor.bookFile) && (
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                           isDarkMode ? 'bg-amber-900/30 text-amber-300 border border-amber-800/40' : 'bg-amber-50 text-amber-800 border border-amber-200'
-                        }`} title={`Libro: ${tutor.bookFile}`}>
+                        }`} title={tutor.bookFiles ? tutor.bookFiles.join(", ") : tutor.bookFile}>
                           <span>📖</span>
-                          <span className="truncate max-w-[120px]">{tutor.bookFile.split("/").pop()?.replace(".pdf", "")}</span>
+                          <span className="truncate max-w-[140px]">
+                            {tutor.bookFiles && tutor.bookFiles.length > 1
+                              ? `${tutor.bookFiles.length} Libri collegati`
+                              : (tutor.bookFiles?.[0] || tutor.bookFile || "").split("/").pop()?.replace(".pdf", "")}
+                          </span>
                         </span>
                       )}
                     </div>

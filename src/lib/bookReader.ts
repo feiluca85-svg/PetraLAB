@@ -26,22 +26,58 @@ const CACHE_DIR = path.join("/tmp", "petralab_book_cache");
 const PYTHON_EXTRACTOR = path.join(process.cwd(), "scripts", "extract_page.py");
 
 /**
- * Risolve il percorso del PDF preferito per il tutor:
- * 1. Se il tutor ha un `bookFile` specificato e valido, usa quello.
- * 2. Altrimenti cerca il primo PDF disponibile nella cartella della sua materia (es. libri/Storia/).
+ * Risolve la lista o il singolo percorso del PDF per il tutor:
+ * 1. Se il tutor ha `bookFiles` (multipli), seleziona quello più pertinente al testo o il primo principale.
+ * 2. Se ha `bookFile` (singolo), usa quello.
+ * 3. Altrimenti cerca i PDF disponibili nella cartella della sua materia.
  */
-export function resolveTutorBookPath(tutor?: { subject?: string; name?: string; bookFile?: string }): { pdfPath: string; offset: number } | null {
+export function resolveTutorBookPath(
+  tutor?: { subject?: string; name?: string; bookFile?: string; bookFiles?: string[] },
+  queryText?: string
+): { pdfPath: string; offset: number } | null {
   if (!tutor) return null;
 
-  // 1. File esplicito nel tutor
-  if (tutor.bookFile) {
-    const full = path.isAbsolute(tutor.bookFile) ? tutor.bookFile : path.join(process.cwd(), tutor.bookFile);
-    if (fs.existsSync(full)) {
-      return { pdfPath: full, offset: 0 };
+  const candidateFiles: string[] = [];
+
+  if (Array.isArray(tutor.bookFiles) && tutor.bookFiles.length > 0) {
+    candidateFiles.push(...tutor.bookFiles);
+  } else if (tutor.bookFile) {
+    candidateFiles.push(tutor.bookFile);
+  }
+
+  // Se ha libri espliciti associati:
+  if (candidateFiles.length > 0) {
+    // Se c'è più di un libro, prova a vedere se il testo cita un libro specifico (es. "atlante", "civica", "scienze b")
+    if (candidateFiles.length > 1 && queryText) {
+      const q = queryText.toLowerCase();
+      const matched = candidateFiles.find(f => {
+        const base = path.basename(f, ".pdf").toLowerCase();
+        // Esempi: "scienze a", "scienze b", "atlante", "civica", "culture"
+        const words = base.split(/[^a-z0-9]/).filter(w => w.length > 2);
+        return words.some(w => q.includes(w));
+      });
+      if (matched) {
+        const full = path.isAbsolute(matched) ? matched : path.join(process.cwd(), matched);
+        if (fs.existsSync(full)) {
+          return { pdfPath: full, offset: 0 };
+        }
+      }
+    }
+
+    // Altrimenti usa il primo valido
+    for (const f of candidateFiles) {
+      const full = path.isAbsolute(f) ? f : path.join(process.cwd(), f);
+      if (fs.existsSync(full)) {
+        let offset = 0;
+        if (f.toLowerCase().includes("greenway") && !f.toLowerCase().includes("atlante")) {
+          offset = bookIndexData.defaultOffset || 13;
+        }
+        return { pdfPath: full, offset };
+      }
     }
   }
 
-  // 2. Risoluzione automatica per materia
+  // Risoluzione automatica per materia se nessun file esplicito esiste su disco
   const s = (tutor.subject || "").toLowerCase();
   let folderName = "";
   if (s.includes("geograf") || (tutor.name || "").toLowerCase().includes("magellano")) folderName = "Geografia";
@@ -49,6 +85,7 @@ export function resolveTutorBookPath(tutor?: { subject?: string; name?: string; 
   else if (s.includes("ingles") || (tutor.name || "").toLowerCase().includes("arthur")) folderName = "Inglese";
   else if (s.includes("frances")) folderName = "Francese";
   else if (s.includes("scienz")) folderName = "Scienze";
+  else if (s.includes("arte")) folderName = "Arte e Immagine";
 
   if (folderName) {
     const folderPath = path.join(process.cwd(), "libri", folderName);
@@ -76,12 +113,12 @@ export function resolveTutorBookPath(tutor?: { subject?: string; name?: string; 
  */
 export function findBookPage(
   text: string, 
-  tutor?: { subject?: string; name?: string; bookFile?: string; bookOffset?: number }
+  tutor?: { subject?: string; name?: string; bookFile?: string; bookFiles?: string[]; bookOffset?: number }
 ): BookMatchResult | null {
   if (!text || typeof text !== "string") return null;
   const clean = text.toLowerCase().trim();
 
-  const resolved = resolveTutorBookPath(tutor);
+  const resolved = resolveTutorBookPath(tutor, text);
   if (!resolved) return null;
 
   const defaultOffset = tutor?.bookOffset !== undefined ? tutor.bookOffset : resolved.offset;
