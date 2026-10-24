@@ -272,7 +272,11 @@ async function main() {
       await sleep(600);
     }
   } else {
-    console.log(`\n${C.green}▶️  Ripresa attiva da dove si trova attualmente il visualizzatore in Chrome.${C.reset}`);
+    console.log(`\n${C.green}▶️  Ripresa attiva: avanzo alla pagina successiva per non duplicare quella appena salvata...${C.reset}`);
+    // Quando si riprende una sessione, lo schermo di Chrome è fermo sulle ultime pagine catturate.
+    // Facciamo un passo avanti prima di ripartire con l'acquisizione!
+    runJsInChrome(nextJsCode);
+    await sleep(800);
   }
 
   // Cattura JavaScript millimetrica:
