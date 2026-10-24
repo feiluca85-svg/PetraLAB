@@ -2172,6 +2172,7 @@ export default function Chat({
               {/* Bottone Tondo Verde: Microfono o Invio */}
               {input.trim() || selectedImage ? (
                 <button 
+                  id="chat-send-btn"
                   onClick={handleSend}
                   disabled={isLoading}
                   className={`w-11 h-11 active:scale-95 text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all ${
@@ -2227,6 +2228,14 @@ export default function Chat({
           agendaItems={agendaItems}
           isDarkMode={Boolean(isDarkMode)}
           onAwardXP={awardXP}
+          onSendChatMessage={(msg) => {
+            setInput(msg);
+            // Trigger automatic sending in next tick
+            setTimeout(() => {
+              const sendBtn = document.querySelector("#chat-send-btn") as HTMLButtonElement | null;
+              if (sendBtn) sendBtn.click();
+            }, 100);
+          }}
         />
       )}
     </div>

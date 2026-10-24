@@ -12,6 +12,7 @@ interface InteractiveStudyToolsProps {
   agendaItems: any[];
   isDarkMode: boolean;
   onAwardXP: (xp: number) => void;
+  onSendChatMessage?: (text: string) => void;
 }
 
 export default function InteractiveStudyTools({
@@ -21,7 +22,8 @@ export default function InteractiveStudyTools({
   tutor,
   agendaItems,
   isDarkMode,
-  onAwardXP
+  onAwardXP,
+  onSendChatMessage
 }: InteractiveStudyToolsProps) {
   // Config state
   const [pagesQuery, setPagesQuery] = useState("");
@@ -648,65 +650,132 @@ export default function InteractiveStudyTools({
 
           {/* STATE 5: COMPLETION / CELEBRATION */}
           {isFinished && (
-            <div className="flex flex-col items-center justify-center py-6 text-center my-auto animate-in zoom-in-95 duration-200">
-              <span className="text-5xl mb-3">🎉</span>
-              <h4 className="text-2xl font-black mb-1">Sessione Completata!</h4>
-              <p className="text-xs opacity-75 max-w-xs mb-5">
-                Ottimo ripasso! Ogni volta che ti alleni così la tua memoria diventa di ferro.
-              </p>
+            <div className="flex flex-col items-center justify-center py-4 text-center my-auto animate-in zoom-in-95 duration-200">
+              {(() => {
+                const total = toolType === "flashcard" ? flashcards.length : questions.length;
+                const correct = toolType === "flashcard" ? knownCards.length : quizScore;
+                const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+                
+                let emojiBadge = "🥉";
+                let feedbackTitle = "Buon inizio!";
+                let feedbackDesc = "Hai rotto il ghiaccio! Facciamo un veloce ripasso insieme per chiarire ogni dubbio.";
+                let badgeColor = "from-amber-500 to-orange-500";
 
-              <div
-                className={`w-full p-5 rounded-3xl border mb-6 flex flex-col items-center gap-3 ${
-                  isDarkMode ? "bg-[#111B21] border-[#2A3942]" : "bg-slate-50 border-slate-200"
-                }`}
-              >
-                {toolType === "flashcard" ? (
+                if (percentage === 100) {
+                  emojiBadge = "👑";
+                  feedbackTitle = "Punteggio Perfetto! 100%";
+                  feedbackDesc = "Incredibile maestria! Hai dominato tutti i concetti del libro senza esitazione!";
+                  badgeColor = "from-emerald-400 via-teal-500 to-cyan-500";
+                } else if (percentage >= 80) {
+                  emojiBadge = "🥇";
+                  feedbackTitle = `Eccellente! ${percentage}%`;
+                  feedbackDesc = "Padronanza quasi totale! Sei prontissima per verifiche e interrogazioni.";
+                  badgeColor = "from-emerald-500 to-teal-500";
+                } else if (percentage >= 60) {
+                  emojiBadge = "🥈";
+                  feedbackTitle = `Ottimo traguardo! ${percentage}%`;
+                  feedbackDesc = "Buona preparazione! Ti manca pochissimo per raggiungere il massimo.";
+                  badgeColor = "from-blue-500 to-indigo-500";
+                } else {
+                  emojiBadge = "💪";
+                  feedbackTitle = `Punteggio: ${percentage}%`;
+                  feedbackDesc = "Nessun problema, stiamo imparando! Chiediamo al tutor di rispiegarci i punti chiave.";
+                  badgeColor = "from-amber-500 to-orange-500";
+                }
+
+                // Trova gli elementi contrassegnati come "Da ripassare"
+                const cardsToReview = flashcards.filter(f => reviewCards.includes(f.id));
+
+                return (
                   <>
-                    <div className="text-3xl font-black text-emerald-500">
-                      {knownCards.length} / {flashcards.length}
-                    </div>
-                    <p className="text-xs opacity-80">Concetti che sapevi già benissimo!</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-3xl font-black text-emerald-500">
-                      {quizScore} / {questions.length}
-                    </div>
-                    <p className="text-xs opacity-80">
-                      {quizScore === questions.length
-                        ? "Punteggio perfetto! Sei un fenomeno! 🌟"
-                        : quizScore >= questions.length / 2
-                        ? "Ottimo risultato! Continua così! 👍"
-                        : "Buon allenamento! Ripassa i dettagli del libro 📖"}
+                    <span className="text-5xl mb-2">{emojiBadge}</span>
+                    <h4 className="text-2xl font-black mb-1">{feedbackTitle}</h4>
+                    <p className="text-xs opacity-80 max-w-sm mb-4 leading-relaxed">
+                      {feedbackDesc}
                     </p>
+
+                    {/* BADGE PERCENTUALE E FEEDBACK */}
+                    <div
+                      className={`w-full p-4 rounded-3xl border mb-4 flex flex-col items-center gap-2.5 ${
+                        isDarkMode ? "bg-[#111B21] border-[#2A3942]" : "bg-slate-50 border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-3">
+                        <div className={`px-4 py-2 rounded-2xl bg-gradient-to-r ${badgeColor} text-white font-black text-2xl shadow-md`}>
+                          {percentage}%
+                        </div>
+                        <div className="text-left">
+                          <div className="text-base font-bold">
+                            {correct} su {total} {toolType === "flashcard" ? "Concetti Noti" : "Risposte Esatte"}
+                          </div>
+                          <div className="text-[11px] opacity-70">
+                            {toolType === "flashcard" && reviewCards.length > 0 && `${reviewCards.length} da ripassare`}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Barra di Avanzamento Grafica */}
+                      <div className="w-full h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden mt-1">
+                        <div 
+                          className={`h-full rounded-full bg-gradient-to-r ${badgeColor} transition-all duration-1000`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+
+                      <div className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-500 text-xs font-black mt-1">
+                        ⭐ +{toolType === "flashcard" ? knownCards.length * 5 + 10 : quizScore * 8 + 15} XP Assegnati!
+                      </div>
+                    </div>
+
+                    {/* SEZIONE: RIPASSO CON IL TUTOR PER GLI ERRORI / DA RIPASSARE */}
+                    {toolType === "flashcard" && cardsToReview.length > 0 && onSendChatMessage && (
+                      <div className="w-full mb-4 p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-left">
+                        <div className="flex items-center gap-2 mb-1.5 font-bold text-xs text-amber-500 dark:text-amber-400">
+                          <span>💡</span>
+                          <span>Hai {cardsToReview.length} {cardsToReview.length === 1 ? 'argomento' : 'argomenti'} da ripassare:</span>
+                        </div>
+                        <ul className="text-[11px] list-disc list-inside space-y-0.5 opacity-90 mb-3">
+                          {cardsToReview.slice(0, 3).map((c, i) => (
+                            <li key={i} className="truncate">{c.question}</li>
+                          ))}
+                        </ul>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const topicsList = cardsToReview.map(c => `"${c.question}"`).join(", ");
+                            onSendChatMessage(`Ho appena fatto le flashcard sulle pagine studiate! Ho avuto qualche dubbio su: ${topicsList}. Puoi spiegarmeli con parole semplici e guidarmi socraticamente sul libro?`);
+                            onClose();
+                          }}
+                          className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5"
+                        >
+                          <span>💬 Ripassa questi punti con {tutor.name} in chat</span>
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="w-full flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleResetSession}
+                        className={`flex-1 py-3 px-4 rounded-2xl border font-bold text-xs transition-all ${
+                          isDarkMode
+                            ? "border-[#2A3942] bg-[#111B21] text-gray-300 hover:bg-[#202C33]"
+                            : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        Altro argomento 🔄
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-3 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md hover:from-emerald-600 hover:to-teal-600"
+                      >
+                        Torna alla Chat ✓
+                      </button>
+                    </div>
                   </>
-                )}
-
-                <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-500 text-xs font-black">
-                  ⭐ +{toolType === "flashcard" ? knownCards.length * 5 + 10 : quizScore * 8 + 15} XP Guadagnati!
-                </div>
-              </div>
-
-              <div className="w-full flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleResetSession}
-                  className={`flex-1 py-3 px-4 rounded-2xl border font-bold text-xs transition-all ${
-                    isDarkMode
-                      ? "border-[#2A3942] bg-[#111B21] text-gray-300"
-                      : "border-slate-200 bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  Altro argomento 🔄
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-3 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md"
-                >
-                  Torna alla Chat ✓
-                </button>
-              </div>
+                );
+              })()}
             </div>
           )}
         </div>
