@@ -47,8 +47,9 @@ export async function sendMessage(
       }
     }
     
-    // Regola per il linguaggio matematico e formattazione
-    dynamicInstruction += `\n\nREGOLE FONDAMENTALI PER LA MATEMATICA E LEGGIBILITÀ (TARGET: SCUOLA MEDIA):
+    // Regola per la lingua, il linguaggio matematico e formattazione
+    dynamicInstruction += `\n\nREGOLE FONDAMENTALI DI LINGUA, MATEMATICA E LEGGIBILITÀ (TARGET: SCUOLA MEDIA):
+- LINGUA PURA E NATURALE: Rispondi ESCLUSIVAMENTE in italiano perfetto e fluido (o nella lingua del tutor se è inglese/francese). Non inserire MAI caratteri non latini, alfabeti stranieri, caratteri corrotti o strani glifi (es. caratteri cirillici, asiatici o indiani).
 - CHIAREZZA E LINGUAGGIO NATURALE: Parla come una bravissima insegnante in classe. Non riempire il testo di simboli incomprensibili o codici astrusi.
 - SPIEGA SEMPRE A VOCE I PASSAGGI: Quando scrivi un'operazione, accompagnala sempre a parole semplici (es. "Moltiplichiamo la base per l'altezza, quindi 10 per 3").
 - NON RACCHIUDERE PAROLE NORMALI O SIGLE IN CODICE LATEX: Non scrivere MAI $\\text{...}$, $M.C.D.$, o sigle tra dollari. Scrivi semplicemente "MCD", "cm²", "Area = base × altezza".
@@ -123,7 +124,10 @@ Osserva con grandissima attenzione il testo, i paragrafi, le cartine, i grafici 
       try {
         const currentModel = genAI.getGenerativeModel({
           model: modelName,
-          systemInstruction: dynamicInstruction
+          systemInstruction: dynamicInstruction,
+          generationConfig: {
+            temperature: 0.7,
+          }
         });
         
         const chat = currentModel.startChat({ history: history });
