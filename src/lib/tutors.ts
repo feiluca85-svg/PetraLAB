@@ -36,7 +36,13 @@ export const TUTORS: Tutor[] = [
     voiceLang: "it-IT",
     prompt: "Sei Archimede, un geniale inventore e matematico entusiasta, ironico e simpaticissimo! Parli con allegria travolgente (es. 'Eureka!', 'Per tutti i teoremi di Siracusa!'). Rendi i numeri e la geometria una caccia al tesoro divertente, senza mai annoiare. Fai complimenti esilaranti quando capisce i passaggi e sdrammatizza ogni errore ricordandole che anche i più grandi scienziati sbagliavano calcoli. Non dare MAI la soluzione pronta, ma falle piccoli indovinelli che la portino a esclamare 'Eureka!' da sola.",
     greeting: "Eureka! ⚡ Meno male che sei arrivata! Stavo giusto misurando l'angolo perfetto per lanciare un aeroplanino di carta! 📐 Come va a scuola con i numeri? Qualche voto o novità sulle verifiche? Su quale enigma matematico o geometrico ci tuffiamo oggi?",
-    bookFiles: []
+    bookFiles: [
+      "libri/Matematica/Matematica_Aritmetica_1.pdf",
+      "libri/Matematica/Matematica_Aritmetica_2.pdf",
+      "libri/Geometria/Matematica_Geometria_1.pdf",
+      "libri/Geometria/Matematica_Geometria_2.pdf",
+      "libri/Matematica/Matematica_Laboratorio delle Competenze 2.pdf"
+    ]
   },
   {
     id: "scienze",
@@ -63,7 +69,10 @@ export const TUTORS: Tutor[] = [
     voiceLang: "it-IT",
     prompt: "Sei Dante Alighieri in persona, ma in una versione moderna, sprintosa, simpatica e amichevole per ragazzi delle medie! Ti diverti a giocare con le parole, citi battute spiritose e ami la poesia e le storie avvincenti. Rassicuri sempre l'alunna: la grammatica, l'analisi logica e i temi non sono 'selve oscure', ma mappe da decifrare insieme con un sorriso. Non correggi mai brutalmente: fai domande curiose del tipo 'Mmh, senti come suona questo verbo... c'è un tranello o fila liscio?'.",
     greeting: "O nobilissima fanciulla! 📜 Ti do il benvenuto tra le mie rime e i miei quaderni! Tranquilla, oggi niente terzine complicate, solo buon umore e parole giuste. Dimmi un po': com'è andato l'ultimo tema o verifica di grammatica? Di cosa dobbiamo occuparci oggi per stupire la prof?",
-    bookFiles: []
+    bookFiles: [
+      "libri/Grammatica/Parole Attive.pdf",
+      "libri/Grammatica/Parole attive - Quaderno.pdf"
+    ]
   },
   {
     id: "inglese",

@@ -96,5 +96,54 @@
     "subjectFolder": "Storia",
     "driveFileId": "1SPEcTXBewjiCDQlB21aqcNo7gpgFLmBb",
     "driveUrl": "https://drive.google.com/file/d/1SPEcTXBewjiCDQlB21aqcNo7gpgFLmBb/view"
+  },
+  {
+    "fileName": "Matematica_Geometria_1.pdf",
+    "relativePath": "libri/Geometria/Matematica_Geometria_1.pdf",
+    "subjectFolder": "Geometria",
+    "driveFileId": "1udWc42kox7oe38COl447oIhxjEkici6p",
+    "driveUrl": "https://drive.google.com/file/d/1udWc42kox7oe38COl447oIhxjEkici6p/view"
+  },
+  {
+    "fileName": "Matematica_Geometria_2.pdf",
+    "relativePath": "libri/Geometria/Matematica_Geometria_2.pdf",
+    "subjectFolder": "Geometria",
+    "driveFileId": "11ubVJX_raTPdXRDVVfXKdc8UQnVjemX_",
+    "driveUrl": "https://drive.google.com/file/d/11ubVJX_raTPdXRDVVfXKdc8UQnVjemX_/view"
+  },
+  {
+    "fileName": "Parole attive - Quaderno.pdf",
+    "relativePath": "libri/Grammatica/Parole attive - Quaderno.pdf",
+    "subjectFolder": "Grammatica",
+    "driveFileId": "1wBgJJqGiFb46TnULFBfiVjhAmCkShtWm",
+    "driveUrl": "https://drive.google.com/file/d/1wBgJJqGiFb46TnULFBfiVjhAmCkShtWm/view"
+  },
+  {
+    "fileName": "Parole Attive.pdf",
+    "relativePath": "libri/Grammatica/Parole Attive.pdf",
+    "subjectFolder": "Grammatica",
+    "driveFileId": "1L1zHB96TNitgVYGDxmVn3jPqdPCr76KW",
+    "driveUrl": "https://drive.google.com/file/d/1L1zHB96TNitgVYGDxmVn3jPqdPCr76KW/view"
+  },
+  {
+    "fileName": "Matematica_Aritmetica_1.pdf",
+    "relativePath": "libri/Matematica/Matematica_Aritmetica_1.pdf",
+    "subjectFolder": "Matematica",
+    "driveFileId": "1jrhfqgOzDnqOhRDzbDWck_5I6UYCuMIy",
+    "driveUrl": "https://drive.google.com/file/d/1jrhfqgOzDnqOhRDzbDWck_5I6UYCuMIy/view"
+  },
+  {
+    "fileName": "Matematica_Aritmetica_2.pdf",
+    "relativePath": "libri/Matematica/Matematica_Aritmetica_2.pdf",
+    "subjectFolder": "Matematica",
+    "driveFileId": "17rnzcko0_QBsqj82wTSFvm7YDaFI9jq6",
+    "driveUrl": "https://drive.google.com/file/d/17rnzcko0_QBsqj82wTSFvm7YDaFI9jq6/view"
+  },
+  {
+    "fileName": "Matematica_Laboratorio delle Competenze 2.pdf",
+    "relativePath": "libri/Matematica/Matematica_Laboratorio delle Competenze 2.pdf",
+    "subjectFolder": "Matematica",
+    "driveFileId": "1tr_IUm28DrC7DF11JPtAjTa3sygoYoA8",
+    "driveUrl": "https://drive.google.com/file/d/1tr_IUm28DrC7DF11JPtAjTa3sygoYoA8/view"
   }
 ]
