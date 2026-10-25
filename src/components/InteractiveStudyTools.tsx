@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Tutor } from "@/lib/tutors";
-import { FlashcardItem, QuizQuestion, generateFlashcards, generateQuiz } from "@/app/actions/studyTools";
+import { FlashcardItem, QuizQuestion, StudyDifficulty, generateFlashcards, generateQuiz } from "@/app/actions/studyTools";
 
 interface InteractiveStudyToolsProps {
   isOpen: boolean;
@@ -13,6 +13,32 @@ interface InteractiveStudyToolsProps {
   isDarkMode: boolean;
   onAwardXP: (xp: number) => void;
   onSendChatMessage?: (text: string) => void;
+}
+
+export function getBookLabel(filePath: string): string {
+  const base = filePath.split("/").pop() || filePath;
+  const clean = base.replace(/\.pdf$/i, "");
+  if (clean.includes("Aritmetica_1")) return "Aritmetica 1 🔢";
+  if (clean.includes("Aritmetica_2")) return "Aritmetica 2 🔢";
+  if (clean.includes("Geometria_1")) return "Geometria 1 📐";
+  if (clean.includes("Geometria_2")) return "Geometria 2 📐";
+  if (clean.includes("Laboratorio delle Competenze 1")) return "Lab. Competenze 1 🧪";
+  if (clean.includes("Laboratorio delle Competenze 2")) return "Lab. Competenze 2 🧪";
+  if (clean.includes("Scienze A")) return "Scienze A (Terra & Spazio) 🌍";
+  if (clean.includes("Scienze B")) return "Scienze B (Materia & Chimica) ⚗️";
+  if (clean.includes("Scienze C")) return "Scienze C (Biologia & Viventi) 🌿";
+  if (clean.includes("Scienze D")) return "Scienze D (Corpo Umano) 🧬";
+  if (clean.includes("Parole attive - Quaderno")) return "Parole Attive - Quaderno 📝";
+  if (clean.includes("Parole Attive")) return "Parole Attive - Teoria 📖";
+  if (clean.includes("Twenty-One Global")) return "Twenty-One Global 🇬🇧";
+  if (clean.includes("Think Culture Compact")) return "Think Culture Compact 🏰";
+  if (clean.includes("Think Educazione Civica")) return "Think Ed. Civica ⚖️";
+  if (clean.includes("Greenway 2")) return "Greenway 2 (Testo) 🌍";
+  if (clean.includes("Greenway Atlante 2")) return "Greenway Atlante 🗺️";
+  if (clean.includes("Salto nel Tempo 2")) return "Salto nel Tempo 2 🏛️";
+  if (clean.includes("Infinito Tecnologico")) return "Infinito Tecnologico ⚙️";
+  if (clean.includes("Sfidando le Stelle")) return "Sfidando le Stelle 🎨";
+  return clean;
 }
 
 export default function InteractiveStudyTools({
@@ -31,8 +57,21 @@ export default function InteractiveStudyTools({
   const [endPage, setEndPage] = useState<string>("");
   const [topicSubject, setTopicSubject] = useState<string>("");
   const [cardCount, setCardCount] = useState<number>(5);
+  const [difficulty, setDifficulty] = useState<StudyDifficulty>("medio");
+  const [selectedBook, setSelectedBook] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Lista libri associati al tutor corrente
+  const candidateBooks: string[] = useMemo(() => {
+    if (Array.isArray(tutor.bookFiles) && tutor.bookFiles.length > 0) {
+      return tutor.bookFiles;
+    }
+    if (tutor.bookFile) {
+      return [tutor.bookFile];
+    }
+    return [];
+  }, [tutor]);
 
   // Active session data
   const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
@@ -76,6 +115,31 @@ export default function InteractiveStudyTools({
          tutor.subject.toLowerCase().includes(item.subject.toLowerCase()))
       );
 
+      // Preselezione libro intelligente
+      if (candidateBooks.length > 0) {
+        let initialBook = candidateBooks[0];
+        if (relevant && relevant.description) {
+          const desc = relevant.description.toLowerCase();
+          const match = candidateBooks.find(b => {
+            const bLow = b.toLowerCase();
+            if (desc.includes("geometria") && bLow.includes("geometria")) return true;
+            if (desc.includes("aritmetica") && bLow.includes("aritmetica")) return true;
+            if (desc.includes("laboratorio") && bLow.includes("laboratorio")) return true;
+            if (desc.includes("scienze a") && bLow.includes("scienze a")) return true;
+            if (desc.includes("scienze b") && bLow.includes("scienze b")) return true;
+            if (desc.includes("scienze c") && bLow.includes("scienze c")) return true;
+            if (desc.includes("scienze d") && bLow.includes("scienze d")) return true;
+            if (desc.includes("atlante") && bLow.includes("atlante")) return true;
+            if (desc.includes("quaderno") && bLow.includes("quaderno")) return true;
+            return false;
+          });
+          if (match) initialBook = match;
+        }
+        setSelectedBook(initialBook);
+      } else {
+        setSelectedBook("");
+      }
+
       if (relevant && relevant.description) {
         setPagesQuery(relevant.description);
         // Cerca di estrarre i numeri di pagina dai compiti
@@ -92,7 +156,7 @@ export default function InteractiveStudyTools({
         setTopicSubject("");
       }
     }
-  }, [isOpen, toolType, tutor.id]);
+  }, [isOpen, toolType, tutor.id, candidateBooks]);
 
   if (!isOpen || !toolType) return null;
 
@@ -115,6 +179,17 @@ export default function InteractiveStudyTools({
 
     setIsLoading(true);
     setErrorMessage(null);
+    setIsFinished(false);
+    setFlashcards([]);
+    setQuestions([]);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setShowHint(false);
+    setSelectedOption(null);
+    setIsAnswerChecked(false);
+    setQuizScore(0);
+    setKnownCards([]);
+    setReviewCards([]);
 
     try {
       if (toolType === "flashcard") {
@@ -122,6 +197,8 @@ export default function InteractiveStudyTools({
           subject: tutor.subject,
           pagesQuery: finalQuery,
           count: cardCount,
+          difficulty,
+          selectedBookFile: selectedBook,
           tutor
         });
 
@@ -136,6 +213,8 @@ export default function InteractiveStudyTools({
           subject: tutor.subject,
           pagesQuery: finalQuery,
           count: cardCount,
+          difficulty,
+          selectedBookFile: selectedBook,
           tutor
         });
 
@@ -269,6 +348,44 @@ export default function InteractiveStudyTools({
                   </div>
                 </div>
 
+                {/* SCELTA DEL LIBRO (se il tutor ha più libri assegnati) */}
+                {candidateBooks.length > 1 && (
+                  <div className="mt-3 mb-2">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5 opacity-80">
+                      📚 Quale libro stai usando?
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                      {candidateBooks.map((bPath) => {
+                        const isChosen = selectedBook === bPath;
+                        return (
+                          <button
+                            key={bPath}
+                            type="button"
+                            onClick={() => setSelectedBook(bPath)}
+                            className={`px-3 py-2 rounded-xl text-left text-xs font-bold transition-all border flex items-center justify-between ${
+                              isChosen
+                                ? "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/30"
+                                : isDarkMode
+                                ? "bg-[#182229] border-[#2A3942] text-gray-300 hover:border-gray-500"
+                                : "bg-white border-slate-200 text-slate-700 hover:border-emerald-300"
+                            }`}
+                          >
+                            <span className="truncate">{getBookLabel(bPath)}</span>
+                            {isChosen && <span className="text-xs ml-1 font-black">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {candidateBooks.length === 1 && (
+                  <div className="mt-2 mb-1 px-3 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-xs font-semibold flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <span>📚 Libro:</span>
+                    <span className="font-bold">{getBookLabel(candidateBooks[0])}</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 opacity-70">
@@ -363,6 +480,64 @@ export default function InteractiveStudyTools({
                       ))}
                   </div>
                 )}
+              </div>
+
+              {/* SCELTA DEL LIVELLO DI DIFFICOLTÀ */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80 flex items-center justify-between">
+                  <span>⚡ Livello di Difficoltà:</span>
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {difficulty === "facile" && "🟢 Basi e definizioni"}
+                    {difficulty === "medio" && "🟡 Standard 2ª media"}
+                    {difficulty === "difficile" && "🔴 Sfida per esperti (10 e lode)"}
+                  </span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDifficulty("facile")}
+                    className={`py-2.5 px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition-all ${
+                      difficulty === "facile"
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20 shadow-xs"
+                        : isDarkMode
+                        ? "border-[#2A3942] bg-[#111B21] text-gray-300 hover:border-gray-500"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="text-sm">🟢 Facile</span>
+                    <span className="text-[10px] opacity-70 font-normal">Concetti base</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDifficulty("medio")}
+                    className={`py-2.5 px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition-all ${
+                      difficulty === "medio"
+                        ? "border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20 shadow-xs"
+                        : isDarkMode
+                        ? "border-[#2A3942] bg-[#111B21] text-gray-300 hover:border-gray-500"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="text-sm">🟡 Medio</span>
+                    <span className="text-[10px] opacity-70 font-normal">Equilibrato</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDifficulty("difficile")}
+                    className={`py-2.5 px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 transition-all ${
+                      difficulty === "difficile"
+                        ? "border-rose-500 bg-rose-500/15 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/20 shadow-xs"
+                        : isDarkMode
+                        ? "border-[#2A3942] bg-[#111B21] text-gray-300 hover:border-gray-500"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="text-sm">🔴 Difficile</span>
+                    <span className="text-[10px] opacity-70 font-normal">Sfida da 10</span>
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -753,22 +928,33 @@ export default function InteractiveStudyTools({
                       </div>
                     )}
 
-                    <div className="w-full flex gap-3">
+                    <div className="w-full flex flex-col sm:flex-row gap-2.5">
+                      <button
+                        type="button"
+                        onClick={handleStartGeneration}
+                        className="flex-1 py-3 px-3 rounded-2xl font-bold text-xs text-white bg-gradient-to-r from-teal-500 to-emerald-600 shadow-md hover:from-teal-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>🎲 Altre diverse (stesse pag.)</span>
+                      </button>
                       <button
                         type="button"
                         onClick={handleResetSession}
-                        className={`flex-1 py-3 px-4 rounded-2xl border font-bold text-xs transition-all ${
+                        className={`flex-1 py-3 px-3 rounded-2xl border font-bold text-xs transition-all ${
                           isDarkMode
                             ? "border-[#2A3942] bg-[#111B21] text-gray-300 hover:bg-[#202C33]"
                             : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
                         }`}
                       >
-                        Altro argomento 🔄
+                        Altre Pagine 🔄
                       </button>
                       <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-3 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md hover:from-emerald-600 hover:to-teal-600"
+                        className={`flex-1 py-3 px-3 rounded-2xl font-bold text-xs border transition-all ${
+                          isDarkMode
+                            ? "border-[#2A3942] bg-[#202C33] text-gray-200 hover:bg-[#2A3942]"
+                            : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                        }`}
                       >
                         Torna alla Chat ✓
                       </button>

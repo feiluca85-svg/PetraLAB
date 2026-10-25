@@ -32,10 +32,23 @@ const PYTHON_EXTRACTOR = path.join(process.cwd(), "scripts", "extract_page.py");
  * 3. Altrimenti cerca i PDF disponibili nella cartella della sua materia.
  */
 export function resolveTutorBookPath(
-  tutor?: { subject?: string; name?: string; bookFile?: string; bookFiles?: string[] },
-  queryText?: string
+  tutor?: { subject?: string; name?: string; bookFile?: string; bookFiles?: string[]; bookOffset?: number },
+  queryText?: string,
+  selectedBookFile?: string
 ): { pdfPath: string; offset: number } | null {
   if (!tutor) return null;
+
+  // 1. Se il chiamante ha specificato esplicitamente un libro (es. scelto dall'interfaccia modal)
+  if (selectedBookFile) {
+    const full = path.isAbsolute(selectedBookFile) ? selectedBookFile : path.join(process.cwd(), selectedBookFile);
+    if (fs.existsSync(full)) {
+      let offset = tutor.bookOffset !== undefined ? tutor.bookOffset : 0;
+      if (selectedBookFile.toLowerCase().includes("greenway") && !selectedBookFile.toLowerCase().includes("atlante")) {
+        offset = bookIndexData.defaultOffset || 13;
+      }
+      return { pdfPath: full, offset };
+    }
+  }
 
   const candidateFiles: string[] = [];
 
@@ -52,14 +65,18 @@ export function resolveTutorBookPath(
       const q = queryText.toLowerCase();
       const matched = candidateFiles.find(f => {
         const base = path.basename(f, ".pdf").toLowerCase();
-        // Esempi: "scienze a", "scienze b", "atlante", "civica", "culture"
+        // Esempi: "scienze a", "scienze b", "atlante", "civica", "geometria", "aritmetica"
         const words = base.split(/[^a-z0-9]/).filter(w => w.length > 2);
         return words.some(w => q.includes(w));
       });
       if (matched) {
         const full = path.isAbsolute(matched) ? matched : path.join(process.cwd(), matched);
         if (fs.existsSync(full)) {
-          return { pdfPath: full, offset: 0 };
+          let offset = 0;
+          if (matched.toLowerCase().includes("greenway") && !matched.toLowerCase().includes("atlante")) {
+            offset = bookIndexData.defaultOffset || 13;
+          }
+          return { pdfPath: full, offset };
         }
       }
     }
@@ -256,13 +273,14 @@ export function getRelevantBookPage(
  */
 export function getBookPagesForRange(
   query: string, 
-  tutorOrMaxPages?: { subject?: string; name?: string; bookFile?: string; bookOffset?: number } | number,
-  maxPagesParam = 3
+  tutorOrMaxPages?: { subject?: string; name?: string; bookFile?: string; bookFiles?: string[]; bookOffset?: number } | number,
+  maxPagesParam = 8,
+  selectedBookFile?: string
 ) {
   if (!query) return null;
   const clean = query.toLowerCase().trim();
 
-  let tutor: { subject?: string; name?: string; bookFile?: string; bookOffset?: number } | undefined = undefined;
+  let tutor: { subject?: string; name?: string; bookFile?: string; bookFiles?: string[]; bookOffset?: number } | undefined = undefined;
   let maxPages = maxPagesParam;
 
   if (typeof tutorOrMaxPages === "number") {
@@ -271,10 +289,8 @@ export function getBookPagesForRange(
     tutor = tutorOrMaxPages;
   }
 
-  const resolved = resolveTutorBookPath(tutor);
+  const resolved = resolveTutorBookPath(tutor, clean, selectedBookFile);
   if (!resolved) return null;
-
-  const defaultOffset = tutor?.bookOffset !== undefined ? tutor.bookOffset : resolved.offset;
 
   let startPage = 0;
   let endPage = 0;
@@ -289,7 +305,7 @@ export function getBookPagesForRange(
     const singleMatch = findBookPage(query, tutor);
     if (singleMatch) {
       startPage = singleMatch.bookPage;
-      endPage = singleMatch.bookPage + 1;
+      endPage = singleMatch.bookPage;
       topicName = singleMatch.topicName;
       unitTitle = singleMatch.unitTitle;
     }
@@ -298,13 +314,40 @@ export function getBookPagesForRange(
   if (startPage <= 0) return null;
   if (endPage < startPage) endPage = startPage;
 
+  // Se è Greenway e abbiamo l'indice tematico, estraiamo topicName e unitTitle anche per il range!
+  if (resolved.pdfPath.toLowerCase().includes("greenway")) {
+    const matchedUnit = bookIndexData.units.find(
+      (u) => (startPage >= u.bookPageStart && startPage <= u.bookPageEnd) || (endPage >= u.bookPageStart && endPage <= u.bookPageEnd)
+    );
+    if (matchedUnit) {
+      unitTitle = matchedUnit.title;
+      const matchedTopic = matchedUnit.topics.find((t) => {
+        const parts = t.bookPages.split("-").map(n => parseInt(n, 10));
+        if (parts.length === 2) {
+          return (startPage <= parts[1] && endPage >= parts[0]);
+        }
+        return false;
+      });
+      if (matchedTopic) {
+        topicName = matchedTopic.name;
+      }
+    }
+  }
+
   const total = Math.min(maxPages, endPage - startPage + 1);
   const images: { base64: string; mimeType: string; bookPage: number }[] = [];
   const pagesList: number[] = [];
 
   for (let i = 0; i < total; i++) {
     const curBookPage = startPage + i;
-    const curPdfPage = Math.max(1, curBookPage + defaultOffset);
+    let offset = tutor?.bookOffset !== undefined ? tutor.bookOffset : resolved.offset;
+    if (resolved.pdfPath.toLowerCase().includes("greenway")) {
+      const u = bookIndexData.units.find(un => curBookPage >= un.bookPageStart && curBookPage <= un.bookPageEnd);
+      if (u && u.pdfOffset !== undefined) {
+        offset = u.pdfOffset;
+      }
+    }
+    const curPdfPage = Math.max(1, curBookPage + offset);
     pagesList.push(curBookPage);
     const ss = getBookPageScreenshot(resolved.pdfPath, curPdfPage);
     if (ss) {
@@ -322,6 +365,7 @@ export function getBookPagesForRange(
     pages: pagesList,
     topicName,
     unitTitle,
-    images
+    images,
+    pdfPath: resolved.pdfPath
   };
 }
