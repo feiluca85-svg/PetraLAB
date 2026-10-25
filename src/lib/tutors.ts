@@ -41,6 +41,7 @@ export const TUTORS: Tutor[] = [
       "libri/Matematica/Matematica_Aritmetica_2.pdf",
       "libri/Geometria/Matematica_Geometria_1.pdf",
       "libri/Geometria/Matematica_Geometria_2.pdf",
+      "libri/Matematica/Matematica_Laboratorio delle Competenze 1.pdf",
       "libri/Matematica/Matematica_Laboratorio delle Competenze 2.pdf"
     ]
   },
