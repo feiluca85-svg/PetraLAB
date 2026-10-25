@@ -56,37 +56,52 @@ function runJsInChrome(jsCode) {
 
   const applescript = `
 tell application "Google Chrome"
-    set foundTab to missing value
+    -- 1. Se c'è una scheda attiva del visualizzatore Sanoma (npmitaly), chiudila se ebook.sanoma.it ha cambiato libro o assicuriamoci di sincronizzare con l'ultimo libro aperto su ebook.sanoma.it
+    set ebookTab to missing value
+    set sanomaDirectTab to missing value
+    set pspdfTab to missing value
+
     repeat with w in windows
         repeat with t in tabs of w
             set u to URL of t
-            if u contains "npmitaly-pro-apidistribucion.sanoma.it" or u contains "books.bsmart.it" or u contains "young.hubscuola.it" then
-                set foundTab to t
-                exit repeat
+            if u contains "ebook.sanoma.it" then
+                set ebookTab to t
+            else if u contains "npmitaly-pro-apidistribucion.sanoma.it" then
+                set sanomaDirectTab to t
+            else if u contains "books.bsmart.it" or u contains "young.hubscuola.it" then
+                set pspdfTab to t
             end if
         end repeat
-        if foundTab is not missing value then exit repeat
     end repeat
 
-    -- Se Sanoma è aperto su ebook.sanoma.it, apri la scheda diretta del visualizzatore per accesso nativo
-    if foundTab is missing value then
-        repeat with w in windows
-            repeat with t in tabs of w
-                set u to URL of t
-                if u contains "ebook.sanoma.it" then
-                    tell w to set foundTab to make new tab at end of tabs with properties {URL:"https://npmitaly-pro-apidistribucion.sanoma.it/viewers/lm60/online/index.html"}
-                    delay 1.5
-                    exit repeat
-                end if
-            end repeat
-            if foundTab is not missing value then exit repeat
-        end repeat
-    end if
-
-    if foundTab is not missing value then
+    -- Se è aperto Sanoma (ebook.sanoma.it):
+    if ebookTab is not missing value then
+        -- Se c'era una vecchia scheda diretta npmitaly aperta, chiudila per evitare di scansionare il libro precedente
+        if sanomaDirectTab is not missing value then
+            close sanomaDirectTab
+            delay 0.5
+        end if
+        -- Apri la nuova scheda diretta per il libro attualmente attivo in ebook.sanoma.it
+        tell (first window)
+            set foundTab to make new tab at end of tabs with properties {URL:"https://npmitaly-pro-apidistribucion.sanoma.it/viewers/lm60/online/index.html"}
+            delay 1.8
+        end tell
         set jsContent to read POSIX file "${tmpJs}" as «class utf8»
         return execute foundTab javascript jsContent
     end if
+
+    -- Se c'è solo sanomaDirectTab senza ebook.sanoma.it
+    if sanomaDirectTab is not missing value then
+        set jsContent to read POSIX file "${tmpJs}" as «class utf8»
+        return execute sanomaDirectTab javascript jsContent
+    end if
+
+    -- Altrimenti controlla PSPDFKit (HUB Young o bSmart)
+    if pspdfTab is not missing value then
+        set jsContent to read POSIX file "${tmpJs}" as «class utf8»
+        return execute pspdfTab javascript jsContent
+    end if
+
     return "ERR:NO_TAB"
 end tell`;
 
@@ -121,7 +136,7 @@ tell application "Google Chrome"
                 set u to URL of t
                 if u contains "ebook.sanoma.it" then
                     tell w to set foundTab to make new tab at end of tabs with properties {URL:"https://npmitaly-pro-apidistribucion.sanoma.it/viewers/lm60/online/index.html"}
-                    delay 1.5
+                    delay 1.8
                     exit repeat
                 end if
             end repeat
@@ -277,14 +292,16 @@ async function main() {
   console.log(`\n${C.yellow}────────────────────────────────────────────────────────────${C.reset}`);
   let defaultName = "Libro_Scansionato.pdf";
   const titLower = tabInfo.title.toLowerCase();
-  if (titLower.includes("geografia")) defaultName = "Libro_Geografia.pdf";
+  if (titLower.includes("geometria")) defaultName = "Libro_Matematica_Geometria_1.pdf";
+  else if (titLower.includes("aritmetica")) defaultName = "Libro_Matematica_Aritmetica_1.pdf";
+  else if (titLower.includes("matematica") || titLower.includes("etabeta")) defaultName = "Libro_Matematica.pdf";
+  else if (titLower.includes("geografia")) defaultName = "Libro_Geografia.pdf";
   else if (titLower.includes("storia")) defaultName = "Libro_Storia 2.pdf";
   else if (titLower.includes("scienze")) defaultName = "Libro_Scienze.pdf";
   else if (titLower.includes("tecnologia") || titLower.includes("tecnologico") || titLower.includes("disegno")) defaultName = "Tecnologia_Disegno.pdf";
-  else if (titLower.includes("antologia") || titLower.includes("italiano")) defaultName = "Libro_Italiano.pdf";
+  else if (titLower.includes("antologia") || titLower.includes("italiano") || titLower.includes("grammatica")) defaultName = "Libro_Italiano.pdf";
   else if (titLower.includes("francese") || titLower.includes("allez")) defaultName = "Libro_Francese.pdf";
   else if (titLower.includes("inglese") || titLower.includes("twenty")) defaultName = "Libro_Inglese.pdf";
-  else if (titLower.includes("aritmetica") || titLower.includes("matematica") || titLower.includes("etabeta") || titLower.includes("geometria")) defaultName = "Libro_Matematica_Aritmetica_1.pdf";
   else if (titLower.includes("arte") || titLower.includes("immagine")) defaultName = "Libro_Arte.pdf";
   else if (tabInfo.title && tabInfo.title.length > 3) {
     defaultName = tabInfo.title.replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ _-]/g, "").trim() + ".pdf";
@@ -292,7 +309,8 @@ async function main() {
 
   let finalPdfName = flagName;
   if (!finalPdfName) {
-    if (savedState && savedState.pdfName) {
+    // Usa lo stato salvato precedente solo se corrisponde allo stesso libro
+    if (savedState && savedState.pdfName && savedState.title === tabInfo.title) {
       defaultName = savedState.pdfName;
     }
     if (flagYes) {
@@ -516,6 +534,7 @@ async function main() {
       );
 
       fs.writeFileSync(SCAN_STATE_FILE, JSON.stringify({
+        title: tabInfo.title,
         pdfName: finalPdfName,
         pagesCaptured: totalPagesCaptured,
         updatedAt: new Date().toISOString()
@@ -754,6 +773,7 @@ async function main() {
         );
 
         fs.writeFileSync(SCAN_STATE_FILE, JSON.stringify({
+          title: tabInfo.title,
           pdfName: finalPdfName,
           pagesCaptured: totalPagesCaptured,
           updatedAt: new Date().toISOString()
