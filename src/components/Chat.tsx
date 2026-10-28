@@ -16,6 +16,7 @@ import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import StudyPlanner from "@/components/StudyPlanner";
 import InteractiveStudyTools from "@/components/InteractiveStudyTools";
+import staticManifest from "@/data/books_manifest.json";
 
 type UIMessage = {
   role: "user" | "model";
@@ -115,6 +116,62 @@ const renderFormattedTaskText = (text: string) => {
     return part;
   });
 };
+
+export function getBookCleanTitle(fileName: string): string {
+  const clean = fileName.replace(/\.pdf$/i, "");
+  if (clean === "Matematica_Aritmetica_1") return "Aritmetica 1";
+  if (clean === "Matematica_Aritmetica_2") return "Aritmetica 2";
+  if (clean === "Matematica_Geometria_1") return "Geometria 1";
+  if (clean === "Matematica_Geometria_2") return "Geometria 2";
+  if (clean === "Matematica_Laboratorio delle Competenze 1") return "Laboratorio delle Competenze 1";
+  if (clean === "Matematica_Laboratorio delle Competenze 2") return "Laboratorio delle Competenze 2";
+  if (clean === "Scienze A") return "Scienze A • Terra, Aria, Acqua";
+  if (clean === "Scienze B") return "Scienze B • Materia ed Energia";
+  if (clean === "Scienze C") return "Scienze C • I Viventi e la Cellula";
+  if (clean === "Scienze D") return "Scienze D • Il Corpo Umano";
+  if (clean === "Parole attive - Quaderno") return "Parole Attive • Quaderno";
+  if (clean === "Parole Attive") return "Parole Attive • Grammatica & Teoria";
+  if (clean === "Greenway 2") return "Greenway 2 • Testo";
+  if (clean === "Greenway Atlante 2") return "Greenway 2 • Atlante";
+  if (clean === "Salto nel Tempo 2") return "Salto nel Tempo 2";
+  if (clean === "Twenty-One Global") return "Twenty-One Global";
+  if (clean === "Think Culture Compact") return "Think Culture Compact";
+  if (clean === "Think Educazione Civica") return "Think Educazione Civica";
+  if (clean === "Infinito Tecnologico") return "Infinito Tecnologico";
+  if (clean === "Sfidando le Stelle") return "Sfidando le Stelle";
+  if (clean === "Allez! 1") return "Allez! 1";
+  if (clean === "Parler culture en poche") return "Parler • Culture en poche";
+  if (clean === "Parler èducation civique") return "Parler • Éducation Civique";
+  return clean.replace(/_/g, " ");
+}
+
+export function getSubjectBadge(folder: string) {
+  switch (folder.toLowerCase()) {
+    case "matematica":
+    case "geometria":
+      return { label: "Matematica", emoji: "🧮", bgLight: "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700/50" };
+    case "scienze":
+      return { label: "Scienze", emoji: "🔬", bgLight: "bg-cyan-50 text-cyan-800 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-700/50" };
+    case "grammatica":
+    case "italiano":
+      return { label: "Italiano", emoji: "📚", bgLight: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700/50" };
+    case "inglese":
+      return { label: "Inglese", emoji: "🇬🇧", bgLight: "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-700/50" };
+    case "storia":
+      return { label: "Storia", emoji: "🏛️", bgLight: "bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-700/50" };
+    case "geografia":
+      return { label: "Geografia", emoji: "🌍", bgLight: "bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-700/50" };
+    case "tecnologia":
+      return { label: "Tecnologia", emoji: "⚙️", bgLight: "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-700/50" };
+    case "arte e immagine":
+    case "arte":
+      return { label: "Arte", emoji: "🎨", bgLight: "bg-pink-50 text-pink-800 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-700/50" };
+    case "francese":
+      return { label: "Francese", emoji: "🥐", bgLight: "bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-700/50" };
+    default:
+      return { label: folder, emoji: "📖", bgLight: "bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700" };
+  }
+}
 
 /**
  * Riconosce intelligentemente la materia e il miglior tutor per rispondere alla domanda dell'utente.
@@ -262,7 +319,7 @@ export default function Chat({
   isDarkMode?: boolean; 
   toggleTheme?: () => void; 
   onChatOpen?: (isOpen: boolean) => void;
-  onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti') => void;
+  onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti' | 'libreria') => void;
 }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -361,16 +418,23 @@ export default function Chat({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
 
-  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'>('tutte');
+  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'|'libreria'>('tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
+
+  // State per il visualizzatore e ricerca libri di testo
+  const [selectedBookForViewer, setSelectedBookForViewer] = useState<typeof staticManifest[0] | null>(null);
+  const [librarySearch, setLibrarySearch] = useState("");
+  const [librarySubjectFilter, setLibrarySubjectFilter] = useState<string>("tutti");
+  const [isViewerLoading, setIsViewerLoading] = useState(false);
 
   const tabScrollMap = useRef<Record<string, number>>({
     tutte: 0,
     compiti: -1,
-    voti: 0
+    voti: 0,
+    libreria: 0
   });
 
-  const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti') => {
+  const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti'|'libreria') => {
     if (listScrollRef.current) {
       tabScrollMap.current[listFilter] = listScrollRef.current.scrollTop;
     }
@@ -396,8 +460,8 @@ export default function Chat({
 
     const restoreTabPosition = () => {
       if (!container) return;
-      if (listFilter === 'tutte' || listFilter === 'voti') {
-        // "Tutte" e "Voti" partono sempre dall'inizio assoluto (0) a meno che l'utente non abbia già scorso in questa sessione
+      if (listFilter === 'tutte' || listFilter === 'voti' || listFilter === 'libreria') {
+        // "Tutte", "Voti" e "Libreria" partono sempre dall'inizio assoluto (0) a meno che l'utente non abbia già scorso in questa sessione
         container.scrollTop = tabScrollMap.current[listFilter] || 0;
       } else if (listFilter === 'compiti') {
         const saved = tabScrollMap.current[listFilter];
@@ -426,6 +490,75 @@ export default function Chat({
     restoreTabPosition();
     requestAnimationFrame(restoreTabPosition);
   }, [listFilter]);
+
+  // Libri filtrati per la tab Libreria
+  const filteredBooks = useMemo(() => {
+    return (staticManifest as Array<{
+      fileName: string;
+      relativePath: string;
+      subjectFolder: string;
+      driveFileId: string;
+      driveUrl: string;
+    }>).filter(book => {
+      const q = librarySearch.trim().toLowerCase();
+      const cleanTitle = getBookCleanTitle(book.fileName).toLowerCase();
+      const fileName = book.fileName.toLowerCase();
+      const subject = book.subjectFolder.toLowerCase();
+      const badge = getSubjectBadge(book.subjectFolder);
+
+      const matchesSearch = !q || fileName.includes(q) || cleanTitle.includes(q) || subject.includes(q);
+
+      let matchesSubject = true;
+      if (librarySubjectFilter !== "tutti") {
+        const filterVal = librarySubjectFilter.toLowerCase();
+        matchesSubject = subject.includes(filterVal) || badge.label.toLowerCase().includes(filterVal);
+      }
+
+      return matchesSearch && matchesSubject;
+    });
+  }, [librarySearch, librarySubjectFilter]);
+
+  // Libro di testo primario associato al tutor attivo in chat
+  const tutorBook = useMemo(() => {
+    if (!selectedTutor) return null;
+    const sub = (selectedTutor.subject || "").toLowerCase();
+    const name = (selectedTutor.name || "").toLowerCase();
+    
+    if (sub.includes("geografia") || name.includes("geografia")) {
+      return staticManifest.find(b => b.fileName.includes("Greenway 2")) || staticManifest.find(b => b.subjectFolder.toLowerCase().includes("geografia"));
+    }
+    if (sub.includes("scienze") || name.includes("scienze")) {
+      return staticManifest.find(b => b.fileName.includes("Scienze A")) || staticManifest.find(b => b.subjectFolder.toLowerCase().includes("scienze"));
+    }
+    if (sub.includes("matematica") || sub.includes("aritmetica") || name.includes("matematica")) {
+      return staticManifest.find(b => b.fileName.includes("Aritmetica_2") || b.fileName.includes("Aritmetica_1")) || staticManifest.find(b => b.subjectFolder.toLowerCase().includes("matematica"));
+    }
+    if (sub.includes("geometria") || name.includes("geometria")) {
+      return staticManifest.find(b => b.fileName.includes("Geometria_2") || b.fileName.includes("Geometria_1")) || staticManifest.find(b => b.subjectFolder.toLowerCase().includes("geometria"));
+    }
+    if (sub.includes("storia") || name.includes("storia")) {
+      return staticManifest.find(b => b.subjectFolder.toLowerCase().includes("storia"));
+    }
+    if (sub.includes("inglese") || name.includes("inglese")) {
+      return staticManifest.find(b => b.subjectFolder.toLowerCase().includes("inglese"));
+    }
+    if (sub.includes("francese") || name.includes("francese")) {
+      return staticManifest.find(b => b.subjectFolder.toLowerCase().includes("francese"));
+    }
+    if (sub.includes("arte") || name.includes("arte")) {
+      return staticManifest.find(b => b.subjectFolder.toLowerCase().includes("arte"));
+    }
+    if (sub.includes("tecnologia") || name.includes("tecnologia")) {
+      return staticManifest.find(b => b.subjectFolder.toLowerCase().includes("tecnologia"));
+    }
+    if (sub.includes("italiano") || sub.includes("grammatica") || name.includes("italiano")) {
+      return staticManifest.find(b => b.subjectFolder.toLowerCase().includes("grammatica") || b.subjectFolder.toLowerCase().includes("italiano"));
+    }
+    return staticManifest.find(b => {
+      const folder = b.subjectFolder.toLowerCase();
+      return sub.includes(folder) || folder.includes(sub);
+    }) || null;
+  }, [selectedTutor]);
   // Effetto Badge OS
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
@@ -1377,7 +1510,8 @@ export default function Chat({
             {[
               { id: 'tutte', label: 'Tutte' },
               { id: 'compiti', label: 'Compiti & Verifiche' },
-              { id: 'voti', label: 'Voti' }
+              { id: 'voti', label: 'Voti' },
+              { id: 'libreria', label: 'Libreria 📚' }
             ].map(filter => (
               <span 
                 key={filter.id}
@@ -1709,6 +1843,183 @@ export default function Chat({
                      </div>
                   );
                 })()}
+              </div>
+            ) : listFilter === "libreria" ? (
+              <div className={`flex flex-col gap-4 p-4 sm:p-5 pb-24 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-slate-50/50'}`}>
+                {/* Header sezione */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className={`font-bold text-[20px] tracking-tight flex items-center gap-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                      <span>📚</span> Libreria Scolastica
+                    </h3>
+                    <p className={`text-xs mt-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                      Tutti i 23 libri di testo in streaming leggero per smartphone
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${
+                    isDarkMode ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  }`}>
+                    {filteredBooks.length} {filteredBooks.length === 1 ? "libro" : "libri"}
+                  </span>
+                </div>
+
+                {/* Barra di ricerca libri */}
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                    🔍
+                  </span>
+                  <input
+                    type="text"
+                    value={librarySearch}
+                    onChange={(e) => setLibrarySearch(e.target.value)}
+                    placeholder="Cerca libro per titolo o materia..."
+                    className={`w-full pl-9 pr-8 py-2.5 rounded-xl text-sm transition-all outline-none border ${
+                      isDarkMode
+                        ? "bg-[#111B21] border-[#222E35] text-white placeholder-slate-500 focus:border-emerald-500"
+                        : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-emerald-500 shadow-xs"
+                    }`}
+                  />
+                  {librarySearch && (
+                    <button
+                      onClick={() => setLibrarySearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200 p-0.5"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtro per materie (chips orizzontali) */}
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 py-1">
+                  {[
+                    { id: "tutti", label: "Tutti (23)", emoji: "📚" },
+                    { id: "matematica", label: "Matematica & Geom.", emoji: "🧮" },
+                    { id: "scienze", label: "Scienze", emoji: "🔬" },
+                    { id: "grammatica", label: "Italiano", emoji: "📖" },
+                    { id: "inglese", label: "Inglese", emoji: "🇬🇧" },
+                    { id: "storia", label: "Storia", emoji: "🏛️" },
+                    { id: "geografia", label: "Geografia", emoji: "🌍" },
+                    { id: "francese", label: "Francese", emoji: "🥐" },
+                    { id: "tecnologia", label: "Tecnologia", emoji: "⚙️" },
+                    { id: "arte", label: "Arte", emoji: "🎨" }
+                  ].map(tab => {
+                    const isSelected = librarySubjectFilter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setLibrarySubjectFilter(tab.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
+                          isSelected
+                            ? (isDarkMode 
+                                ? "bg-emerald-500 text-slate-950 font-bold border-emerald-400 shadow-sm" 
+                                : "bg-emerald-600 text-white font-bold border-emerald-600 shadow-sm")
+                            : (isDarkMode
+                                ? "bg-[#202C33] text-[#8696A0] border-[#2E3C44] hover:bg-[#2A3942]"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100")
+                        }`}
+                      >
+                        <span>{tab.emoji}</span>
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Banner info streaming */}
+                <div className={`p-3 rounded-xl border flex items-center gap-3 text-xs ${
+                  isDarkMode
+                    ? "bg-blue-950/20 border-blue-800/30 text-blue-200"
+                    : "bg-blue-50/80 border-blue-200 text-blue-800"
+                }`}>
+                  <span className="text-lg shrink-0">⚡</span>
+                  <p className="leading-tight">
+                    I libri si aprono in <strong>anteprima streaming</strong> senza occupare la memoria del telefono. Puoi sfogliare, ingrandire e cercare le pagine istantaneamente.
+                  </p>
+                </div>
+
+                {/* Griglia / Lista dei libri */}
+                {filteredBooks.length === 0 ? (
+                  <div className={`p-8 text-center rounded-2xl border ${
+                    isDarkMode ? "bg-[#111B21] border-[#222E35] text-slate-400" : "bg-white border-slate-200 text-slate-500"
+                  }`}>
+                    <span className="text-3xl block mb-2">🔍</span>
+                    <p className="font-semibold text-sm">Nessun libro trovato</p>
+                    <p className="text-xs mt-1 opacity-75">Prova a cambiare parola chiave o seleziona "Tutti"</p>
+                    <button
+                      onClick={() => { setLibrarySearch(""); setLibrarySubjectFilter("tutti"); }}
+                      className="mt-3 px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 transition-all cursor-pointer"
+                    >
+                      Mostra tutti i libri
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {filteredBooks.map((book) => {
+                      const badge = getSubjectBadge(book.subjectFolder);
+                      const cleanTitle = getBookCleanTitle(book.fileName);
+
+                      return (
+                        <div
+                          key={book.driveFileId}
+                          className={`p-3.5 rounded-2xl border transition-all flex flex-col gap-2.5 ${
+                            isDarkMode
+                              ? "bg-[#111B21] border-[#202C33] hover:border-emerald-500/40"
+                              : "bg-white border-slate-200 hover:border-emerald-500/40 shadow-xs"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2.5 min-w-0">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border ${badge.bgLight}`}>
+                                {badge.emoji}
+                              </div>
+                              <div className="min-w-0">
+                                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border mb-1 ${badge.bgLight}`}>
+                                  {badge.label}
+                                </span>
+                                <h4 className={`font-bold text-sm leading-snug truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                                  {cleanTitle}
+                                </h4>
+                                <p className={`text-[11px] truncate mt-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                                  {book.fileName}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBookForViewer(book);
+                                setIsViewerLoading(true);
+                              }}
+                              className="flex-1 py-2 px-3 rounded-xl font-bold text-xs bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-[#111B21] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                            >
+                              <span>📖</span>
+                              <span>Apri e Sfoglia</span>
+                            </button>
+
+                            <a
+                              href={book.driveUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`py-2 px-3 rounded-xl font-semibold text-xs border flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+                                isDarkMode 
+                                  ? "bg-[#202C33] text-[#8696A0] border-[#2A3942] hover:text-white" 
+                                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                              }`}
+                              title="Apri su Google Drive"
+                            >
+                              <span>Drive</span>
+                              <span>↗</span>
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-4 p-5 pb-10">
@@ -2065,6 +2376,24 @@ export default function Chat({
             </div>
 
             <div className="flex items-center gap-1.5">
+              {tutorBook && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBookForViewer(tutorBook);
+                    setIsViewerLoading(true);
+                  }}
+                  className={`text-[13px] px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-[#202C33] text-emerald-400 hover:bg-[#2A3942]' 
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                  title={`Sfoglia il libro di testo di ${selectedTutor.name}`}
+                >
+                  <span>📖</span> <span className="hidden sm:inline">Libro</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setShowGradesModal(true)}
                 className={`text-[13px] px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${isDarkMode ? 'bg-[#202C33] text-[#8696A0] hover:bg-[#2A3942]' : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200'}`}
@@ -2272,12 +2601,23 @@ export default function Chat({
                   )}
 
                   {msg.bookPageInfo && (
-                    <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 select-none">
+                    <div 
+                      onClick={() => {
+                        const targetBook = tutorBook || staticManifest.find(b => b.fileName.includes("Greenway 2")) || staticManifest[0];
+                        if (targetBook) {
+                          setSelectedBookForViewer(targetBook);
+                          setIsViewerLoading(true);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 select-none cursor-pointer hover:bg-emerald-500/20 active:scale-[0.98] transition-all"
+                      title="Tocca per sfogliare il libro a questa pagina"
+                    >
                       <span>📖</span>
-                      <span>Libro Greenway 2: Pagina {msg.bookPageInfo.bookPage}</span>
+                      <span className="underline decoration-dotted">Libro: Pagina {msg.bookPageInfo.bookPage}</span>
                       {msg.bookPageInfo.topicName && (
                         <span className="opacity-80 truncate">• {msg.bookPageInfo.topicName}</span>
                       )}
+                      <span className="ml-auto text-[10px] opacity-75 font-normal">Sfoglia ↗</span>
                     </div>
                   )}
 
@@ -2533,6 +2873,88 @@ export default function Chat({
             }, 100);
           }}
         />
+      )}
+
+      {/* MODALE VISUALIZZATORE LIBRI DI TESTO STREAMING */}
+      {selectedBookForViewer && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          {/* Header del visualizzatore */}
+          <div className={`px-3 py-2.5 flex items-center justify-between border-b shadow-md ${
+            isDarkMode ? "bg-[#111B21] border-[#222E35] text-white" : "bg-white border-slate-200 text-slate-900"
+          }`}>
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSelectedBookForViewer(null)}
+                className={`p-2 rounded-xl transition-all active:scale-90 cursor-pointer ${
+                  isDarkMode ? "hover:bg-[#202C33] text-gray-200" : "hover:bg-slate-100 text-slate-700"
+                }`}
+                title="Chiudi visualizzatore"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                </svg>
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">{getSubjectBadge(selectedBookForViewer.subjectFolder).emoji}</span>
+                  <h3 className="font-bold text-sm truncate leading-tight">
+                    {getBookCleanTitle(selectedBookForViewer.fileName)}
+                  </h3>
+                </div>
+                <p className={`text-[11px] truncate ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                  {selectedBookForViewer.subjectFolder} • {selectedBookForViewer.fileName}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <a
+                href={selectedBookForViewer.driveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`px-3 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1 transition-all active:scale-95 ${
+                  isDarkMode 
+                    ? "bg-[#202C33] text-[#8696A0] border-[#2E3C44] hover:text-white" 
+                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                }`}
+                title="Apri nel visualizzatore esterno di Google Drive"
+              >
+                <span>Drive</span>
+                <span>↗</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setSelectedBookForViewer(null)}
+                className={`p-1.5 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? "bg-red-950/40 text-red-400 hover:bg-red-900/50" : "bg-red-50 text-red-600 hover:bg-red-100"
+                }`}
+                title="Chiudi"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Iframe con anteprima streaming di Google Drive */}
+          <div className="flex-1 w-full h-full relative bg-slate-900">
+            {isViewerLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/90 text-white z-10">
+                <div className="w-10 h-10 border-3 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs font-semibold text-emerald-400">Caricamento libro in streaming...</p>
+                <p className="text-[11px] text-slate-400 max-w-xs text-center">
+                  Lettore leggero progressivo • Nessun consumo di memoria sul telefono
+                </p>
+              </div>
+            )}
+            <iframe
+              src={`https://drive.google.com/file/d/${selectedBookForViewer.driveFileId}/preview`}
+              className="w-full h-full border-0"
+              allow="autoplay"
+              onLoad={() => setIsViewerLoading(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

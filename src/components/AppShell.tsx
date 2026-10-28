@@ -9,7 +9,7 @@ import { useTutors } from "@/hooks/useTutors";
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<"chat" | "tutors" | "profile" | "parent">("chat");
-  const [chatSubTab, setChatSubTab] = useState<"tutte" | "compiti" | "voti">("tutte");
+  const [chatSubTab, setChatSubTab] = useState<"tutte" | "compiti" | "voti" | "libreria">("tutte");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTutorManagerModalOpen, setIsTutorManagerModalOpen] = useState(false);
@@ -111,8 +111,8 @@ export default function AppShell() {
         )}
       </div>
 
-      {/* FAB Galleggiante per Nuovo Tutor (visibile solo nella scheda Chat quando non siamo dentro un messaggio E non siamo nei Compiti) */}
-      {activeTab === "chat" && !isChatOpen && chatSubTab !== "compiti" && (
+      {/* FAB Galleggiante per Nuovo Tutor (visibile solo nella scheda Chat quando non siamo dentro un messaggio E non siamo nei Compiti o Libreria) */}
+      {activeTab === "chat" && !isChatOpen && chatSubTab !== "compiti" && chatSubTab !== "libreria" && (
         <button
           onClick={() => setIsTutorManagerModalOpen(true)}
           className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 z-40 ${
