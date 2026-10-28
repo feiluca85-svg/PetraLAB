@@ -48,7 +48,7 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossOrigin="anonymous" />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="h-full w-full overflow-hidden flex flex-col fixed inset-0">
         <AuthProvider>{children}</AuthProvider>
         <PwaRegistration />
       </body>

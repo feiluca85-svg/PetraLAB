@@ -5,11 +5,12 @@ import Chat from "./Chat";
 import GamificationProfile from "./GamificationProfile";
 import TutorManager from "./TutorManager";
 import ParentDashboard from "./ParentDashboard";
+import Library from "./Library";
 import { useTutors } from "@/hooks/useTutors";
 
 export default function AppShell() {
-  const [activeTab, setActiveTab] = useState<"chat" | "tutors" | "profile" | "parent">("chat");
-  const [chatSubTab, setChatSubTab] = useState<"tutte" | "compiti" | "voti" | "libreria">("tutte");
+  const [activeTab, setActiveTab] = useState<"chat" | "tutors" | "library" | "parent">("chat");
+  const [chatSubTab, setChatSubTab] = useState<"tutte" | "compiti" | "voti">("tutte");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTutorManagerModalOpen, setIsTutorManagerModalOpen] = useState(false);
@@ -21,7 +22,7 @@ export default function AppShell() {
       const hash = window.location.hash;
       if (hash === "#parent") setActiveTab("parent");
       else if (hash === "#tutors") setActiveTab("tutors");
-      else if (hash === "#profile") setActiveTab("profile");
+      else if (hash === "#library") setActiveTab("library");
       else setActiveTab("chat");
     };
     // Sync initial state
@@ -31,7 +32,7 @@ export default function AppShell() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const changeTab = (tab: "chat" | "tutors" | "profile" | "parent") => {
+  const changeTab = (tab: "chat" | "tutors" | "library" | "parent") => {
     if (tab === "chat") {
       window.location.hash = "";
     } else {
@@ -74,14 +75,14 @@ export default function AppShell() {
   }
 
   return (
-    <div className={`flex flex-col h-[100dvh] w-full max-w-md mx-auto relative sm:border-x transition-colors ${
+    <div className={`flex flex-col h-full w-full max-w-md mx-auto relative sm:border-x transition-colors overflow-hidden ${
       isDarkMode 
         ? "bg-[#0B141A] border-[#202C33] text-[#E9EDEF]" 
         : "bg-white border-slate-200 text-slate-900"
     }`}>
       
       {/* Contenuto Principale a Schede */}
-      <div className="flex-1 overflow-hidden flex flex-col relative">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
         {activeTab === "chat" && (
           <Chat 
             tutors={tutors} 
@@ -98,8 +99,8 @@ export default function AppShell() {
           />
         )}
 
-        {activeTab === "profile" && (
-          <GamificationProfile 
+        {activeTab === "library" && (
+          <Library 
             isDarkMode={isDarkMode} 
           />
         )}
@@ -111,8 +112,8 @@ export default function AppShell() {
         )}
       </div>
 
-      {/* FAB Galleggiante per Nuovo Tutor (visibile solo nella scheda Chat quando non siamo dentro un messaggio E non siamo nei Compiti o Libreria) */}
-      {activeTab === "chat" && !isChatOpen && chatSubTab !== "compiti" && chatSubTab !== "libreria" && (
+      {/* FAB Galleggiante per Nuovo Tutor (visibile solo nella scheda Chat quando non siamo dentro un messaggio E non siamo nei Compiti) */}
+      {activeTab === "chat" && !isChatOpen && chatSubTab !== "compiti" && (
         <button
           onClick={() => setIsTutorManagerModalOpen(true)}
           className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 z-40 ${
@@ -143,7 +144,7 @@ export default function AppShell() {
       {/* BOTTOM NAVIGATION BAR MODERNA (Identica a WhatsApp 2024-2026)  */}
       {/* ============================================================== */}
       {!isChatOpen && (
-        <nav className={`flex items-center justify-around border-t pb-safe z-30 transition-colors ${
+        <nav className={`flex-shrink-0 flex items-center justify-around border-t pb-safe z-30 transition-colors ${
           isDarkMode 
             ? "bg-[#0B141A] border-[#202C33]" 
             : "bg-white border-slate-100 shadow-xs"
@@ -195,26 +196,26 @@ export default function AppShell() {
             </span>
           </button>
 
-          {/* 3. Tab Livello / Profilo */}
+          {/* 3. Tab Libreria (Spostata come icona fra Tutor e Genitore) */}
           <button 
-            onClick={() => changeTab("profile")}
+            onClick={() => changeTab("library")}
             className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
-              activeTab === "profile"
+              activeTab === "library"
                 ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
                 : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75V6Z" clipRule="evenodd" />
+                <path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z" />
               </svg>
             </div>
             <span className={`text-[11px] ${
-              activeTab === "profile" 
+              activeTab === "library" 
                 ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
-              Livello
+              Libreria
             </span>
           </button>
 

@@ -319,7 +319,7 @@ export default function Chat({
   isDarkMode?: boolean; 
   toggleTheme?: () => void; 
   onChatOpen?: (isOpen: boolean) => void;
-  onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti' | 'libreria') => void;
+  onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti') => void;
 }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -418,23 +418,20 @@ export default function Chat({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
 
-  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'|'libreria'>('tutte');
+  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'>('tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
 
-  // State per il visualizzatore e ricerca libri di testo
+  // State per il visualizzatore modale del libro aperto dalla chat
   const [selectedBookForViewer, setSelectedBookForViewer] = useState<typeof staticManifest[0] | null>(null);
-  const [librarySearch, setLibrarySearch] = useState("");
-  const [librarySubjectFilter, setLibrarySubjectFilter] = useState<string>("tutti");
   const [isViewerLoading, setIsViewerLoading] = useState(false);
 
   const tabScrollMap = useRef<Record<string, number>>({
     tutte: 0,
     compiti: -1,
-    voti: 0,
-    libreria: 0
+    voti: 0
   });
 
-  const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti'|'libreria') => {
+  const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti') => {
     if (listScrollRef.current) {
       tabScrollMap.current[listFilter] = listScrollRef.current.scrollTop;
     }
@@ -460,8 +457,8 @@ export default function Chat({
 
     const restoreTabPosition = () => {
       if (!container) return;
-      if (listFilter === 'tutte' || listFilter === 'voti' || listFilter === 'libreria') {
-        // "Tutte", "Voti" e "Libreria" partono sempre dall'inizio assoluto (0) a meno che l'utente non abbia già scorso in questa sessione
+      if (listFilter === 'tutte' || listFilter === 'voti') {
+        // "Tutte" e "Voti" partono sempre dall'inizio assoluto (0) a meno che l'utente non abbia già scorso in questa sessione
         container.scrollTop = tabScrollMap.current[listFilter] || 0;
       } else if (listFilter === 'compiti') {
         const saved = tabScrollMap.current[listFilter];
@@ -490,33 +487,6 @@ export default function Chat({
     restoreTabPosition();
     requestAnimationFrame(restoreTabPosition);
   }, [listFilter]);
-
-  // Libri filtrati per la tab Libreria
-  const filteredBooks = useMemo(() => {
-    return (staticManifest as Array<{
-      fileName: string;
-      relativePath: string;
-      subjectFolder: string;
-      driveFileId: string;
-      driveUrl: string;
-    }>).filter(book => {
-      const q = librarySearch.trim().toLowerCase();
-      const cleanTitle = getBookCleanTitle(book.fileName).toLowerCase();
-      const fileName = book.fileName.toLowerCase();
-      const subject = book.subjectFolder.toLowerCase();
-      const badge = getSubjectBadge(book.subjectFolder);
-
-      const matchesSearch = !q || fileName.includes(q) || cleanTitle.includes(q) || subject.includes(q);
-
-      let matchesSubject = true;
-      if (librarySubjectFilter !== "tutti") {
-        const filterVal = librarySubjectFilter.toLowerCase();
-        matchesSubject = subject.includes(filterVal) || badge.label.toLowerCase().includes(filterVal);
-      }
-
-      return matchesSearch && matchesSubject;
-    });
-  }, [librarySearch, librarySubjectFilter]);
 
   // Libro di testo primario associato al tutor attivo in chat
   const tutorBook = useMemo(() => {
@@ -1370,7 +1340,7 @@ export default function Chat({
 
   return (
     <div 
-      className={`flex flex-col h-full w-full overflow-hidden transition-all duration-200 select-none ${
+      className={`flex flex-col h-full w-full min-h-0 overflow-hidden transition-all duration-200 select-none ${
         isDragging ? "ring-4 ring-[#25D366]/30" : ""
       } ${isDarkMode ? 'bg-[#111B21] text-gray-200' : 'bg-white text-gray-900'}`}
       onDragOver={handleDragOver}
@@ -1381,9 +1351,9 @@ export default function Chat({
       {/* 1. SCHERMATA LISTA CHAT (Stile WhatsApp Home)                    */}
       {/* ============================================================== */}
       {!selectedTutor ? (
-        <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
+        <div className={`flex flex-col h-full min-h-0 overflow-hidden ${isDarkMode ? 'bg-[#111B21]' : 'bg-white'}`}>
           {/* Header WhatsApp 2024 Style */}
-          <div className={`${
+          <div className={`flex-shrink-0 ${
             isDarkMode ? 'bg-[#0B141A]' : 'bg-white'
           } px-4 pt-3 pb-2 flex justify-between items-center relative z-30 transition-colors`}>
             <div className="flex items-center gap-3">
@@ -1455,7 +1425,7 @@ export default function Chat({
           </div>
 
           {/* Search Bar (Ask Meta AI style) */}
-          <div className={`px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
+          <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
             <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
               isDarkMode 
                 ? 'bg-[#202C33] border-transparent focus-within:border-blue-500/60' 
@@ -1504,14 +1474,13 @@ export default function Chat({
           </div>
 
           {/* Filtri Stile WhatsApp 2024 */}
-          <div className={`flex gap-2 px-4 py-1 pb-3 overflow-x-auto no-scrollbar border-b ${
+          <div className={`flex-shrink-0 flex gap-2 px-4 py-1 pb-3 overflow-x-auto no-scrollbar border-b ${
             isDarkMode ? 'bg-[#0B141A] border-[#202C33]' : 'bg-white border-slate-100'
           }`}>
             {[
               { id: 'tutte', label: 'Tutte' },
               { id: 'compiti', label: 'Compiti & Verifiche' },
-              { id: 'voti', label: 'Voti' },
-              { id: 'libreria', label: 'Libreria 📚' }
+              { id: 'voti', label: 'Voti' }
             ].map(filter => (
               <span 
                 key={filter.id}
@@ -1531,7 +1500,7 @@ export default function Chat({
           <div 
             ref={listScrollRef} 
             onScroll={handleListScroll}
-            className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}
+            className={`flex-1 min-h-0 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}
           >
             {listFilter === "tutte" ? (
               <>
@@ -1843,183 +1812,6 @@ export default function Chat({
                      </div>
                   );
                 })()}
-              </div>
-            ) : listFilter === "libreria" ? (
-              <div className={`flex flex-col gap-4 p-4 sm:p-5 pb-24 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-slate-50/50'}`}>
-                {/* Header sezione */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className={`font-bold text-[20px] tracking-tight flex items-center gap-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-                      <span>📚</span> Libreria Scolastica
-                    </h3>
-                    <p className={`text-xs mt-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                      Tutti i 23 libri di testo in streaming leggero per smartphone
-                    </p>
-                  </div>
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${
-                    isDarkMode ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  }`}>
-                    {filteredBooks.length} {filteredBooks.length === 1 ? "libro" : "libri"}
-                  </span>
-                </div>
-
-                {/* Barra di ricerca libri */}
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                    🔍
-                  </span>
-                  <input
-                    type="text"
-                    value={librarySearch}
-                    onChange={(e) => setLibrarySearch(e.target.value)}
-                    placeholder="Cerca libro per titolo o materia..."
-                    className={`w-full pl-9 pr-8 py-2.5 rounded-xl text-sm transition-all outline-none border ${
-                      isDarkMode
-                        ? "bg-[#111B21] border-[#222E35] text-white placeholder-slate-500 focus:border-emerald-500"
-                        : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-emerald-500 shadow-xs"
-                    }`}
-                  />
-                  {librarySearch && (
-                    <button
-                      onClick={() => setLibrarySearch("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200 p-0.5"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Filtro per materie (chips orizzontali) */}
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 py-1">
-                  {[
-                    { id: "tutti", label: "Tutti (23)", emoji: "📚" },
-                    { id: "matematica", label: "Matematica & Geom.", emoji: "🧮" },
-                    { id: "scienze", label: "Scienze", emoji: "🔬" },
-                    { id: "grammatica", label: "Italiano", emoji: "📖" },
-                    { id: "inglese", label: "Inglese", emoji: "🇬🇧" },
-                    { id: "storia", label: "Storia", emoji: "🏛️" },
-                    { id: "geografia", label: "Geografia", emoji: "🌍" },
-                    { id: "francese", label: "Francese", emoji: "🥐" },
-                    { id: "tecnologia", label: "Tecnologia", emoji: "⚙️" },
-                    { id: "arte", label: "Arte", emoji: "🎨" }
-                  ].map(tab => {
-                    const isSelected = librarySubjectFilter === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setLibrarySubjectFilter(tab.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
-                          isSelected
-                            ? (isDarkMode 
-                                ? "bg-emerald-500 text-slate-950 font-bold border-emerald-400 shadow-sm" 
-                                : "bg-emerald-600 text-white font-bold border-emerald-600 shadow-sm")
-                            : (isDarkMode
-                                ? "bg-[#202C33] text-[#8696A0] border-[#2E3C44] hover:bg-[#2A3942]"
-                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100")
-                        }`}
-                      >
-                        <span>{tab.emoji}</span>
-                        <span>{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Banner info streaming */}
-                <div className={`p-3 rounded-xl border flex items-center gap-3 text-xs ${
-                  isDarkMode
-                    ? "bg-blue-950/20 border-blue-800/30 text-blue-200"
-                    : "bg-blue-50/80 border-blue-200 text-blue-800"
-                }`}>
-                  <span className="text-lg shrink-0">⚡</span>
-                  <p className="leading-tight">
-                    I libri si aprono in <strong>anteprima streaming</strong> senza occupare la memoria del telefono. Puoi sfogliare, ingrandire e cercare le pagine istantaneamente.
-                  </p>
-                </div>
-
-                {/* Griglia / Lista dei libri */}
-                {filteredBooks.length === 0 ? (
-                  <div className={`p-8 text-center rounded-2xl border ${
-                    isDarkMode ? "bg-[#111B21] border-[#222E35] text-slate-400" : "bg-white border-slate-200 text-slate-500"
-                  }`}>
-                    <span className="text-3xl block mb-2">🔍</span>
-                    <p className="font-semibold text-sm">Nessun libro trovato</p>
-                    <p className="text-xs mt-1 opacity-75">Prova a cambiare parola chiave o seleziona "Tutti"</p>
-                    <button
-                      onClick={() => { setLibrarySearch(""); setLibrarySubjectFilter("tutti"); }}
-                      className="mt-3 px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 transition-all cursor-pointer"
-                    >
-                      Mostra tutti i libri
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2.5">
-                    {filteredBooks.map((book) => {
-                      const badge = getSubjectBadge(book.subjectFolder);
-                      const cleanTitle = getBookCleanTitle(book.fileName);
-
-                      return (
-                        <div
-                          key={book.driveFileId}
-                          className={`p-3.5 rounded-2xl border transition-all flex flex-col gap-2.5 ${
-                            isDarkMode
-                              ? "bg-[#111B21] border-[#202C33] hover:border-emerald-500/40"
-                              : "bg-white border-slate-200 hover:border-emerald-500/40 shadow-xs"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-start gap-2.5 min-w-0">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border ${badge.bgLight}`}>
-                                {badge.emoji}
-                              </div>
-                              <div className="min-w-0">
-                                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border mb-1 ${badge.bgLight}`}>
-                                  {badge.label}
-                                </span>
-                                <h4 className={`font-bold text-sm leading-snug truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-                                  {cleanTitle}
-                                </h4>
-                                <p className={`text-[11px] truncate mt-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                                  {book.fileName}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedBookForViewer(book);
-                                setIsViewerLoading(true);
-                              }}
-                              className="flex-1 py-2 px-3 rounded-xl font-bold text-xs bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-[#111B21] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                            >
-                              <span>📖</span>
-                              <span>Apri e Sfoglia</span>
-                            </button>
-
-                            <a
-                              href={book.driveUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`py-2 px-3 rounded-xl font-semibold text-xs border flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
-                                isDarkMode 
-                                  ? "bg-[#202C33] text-[#8696A0] border-[#2A3942] hover:text-white" 
-                                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                              }`}
-                              title="Apri su Google Drive"
-                            >
-                              <span>Drive</span>
-                              <span>↗</span>
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             ) : (
               <div className="flex flex-col gap-4 p-5 pb-10">
@@ -2345,9 +2137,9 @@ export default function Chat({
         /* ============================================================== */
         /* 2. SCHERMATA CHAT SINGOLA (Stile Conversazione WhatsApp)         */
         /* ============================================================== */
-        <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#0B141A]' : 'bg-[#EFEAE2]'}`}>
+        <div className={`flex flex-col h-full min-h-0 overflow-hidden ${isDarkMode ? 'bg-[#0B141A]' : 'bg-[#EFEAE2]'}`}>
           {/* Header Singola Chat WhatsApp */}
-          <div className={`${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} px-3 py-2.5 flex items-center justify-between shadow-sm border-b ${isDarkMode ? 'border-[#202C33]' : 'border-slate-100'} z-20`}>
+          <div className={`flex-shrink-0 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} px-3 py-2.5 flex items-center justify-between shadow-sm border-b ${isDarkMode ? 'border-[#202C33]' : 'border-slate-100'} z-20`}>
             <div className="flex items-center gap-2">
               {/* Tasto Indietro Stile WhatsApp */}
               <button 
@@ -2547,7 +2339,7 @@ export default function Chat({
           {/* Area Messaggi Chat Stile WhatsApp */}
           <div 
             ref={chatMessagesContainerRef}
-            className={`flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 relative ${isDarkMode ? "bg-[#0B141A]" : "bg-[#EFEAE2]"}`}
+            className={`flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 relative ${isDarkMode ? "bg-[#0B141A]" : "bg-[#EFEAE2]"}`}
             style={{ 
               backgroundImage: isDarkMode ? "none" : "none", 
               backgroundSize: "16px 16px" 
@@ -2672,7 +2464,7 @@ export default function Chat({
           </div>
 
           {/* Barra Input Stile WhatsApp */}
-          <div className={`p-2 sm:p-3 pb-safe flex flex-col gap-2 z-20 ${
+          <div className={`flex-shrink-0 p-2 sm:p-3 pb-safe flex flex-col gap-2 z-20 ${
             isDarkMode ? 'bg-[#0B141A]' : 'bg-[#F0F2F5]'
           }`}>
             {selectedImage && (
