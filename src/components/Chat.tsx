@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import Link from "next/link";
 import { sendMessage } from "@/app/actions/chat";
 import { Content } from "@google/generative-ai";
@@ -115,6 +115,141 @@ const renderFormattedTaskText = (text: string) => {
     return part;
   });
 };
+
+/**
+ * Riconosce intelligentemente la materia e il miglior tutor per rispondere alla domanda dell'utente.
+ */
+export function detectBestTutorForQuery(query: string, allTutors: Tutor[], defaultTutorId?: string): Tutor {
+  if (!allTutors || allTutors.length === 0) return {} as Tutor;
+  const q = query.toLowerCase().trim();
+
+  // 1. Corrispondenza diretta per nome tutor o materia esatta
+  for (const t of allTutors) {
+    const tName = t.name.toLowerCase();
+    const tSub = t.subject.toLowerCase();
+    if (q.includes(tName)) return t;
+    const subWords = tSub.split(/[^a-z0-9]/).filter(w => w.length > 2);
+    if (subWords.some(w => q.includes(w))) return t;
+  }
+
+  // 2. Keyword score per materia della scuola media
+  const scores: Record<string, number> = {
+    matematica: 0,
+    geometria: 0,
+    scienze: 0,
+    italiano: 0,
+    grammatica: 0,
+    inglese: 0,
+    storia: 0,
+    geografia: 0,
+    francese: 0,
+    arte: 0,
+    tecnologia: 0
+  };
+
+  const keywords: Record<string, string[]> = {
+    matematica: [
+      "matematica", "aritmetica", "algebra", "numero", "numeri", "calcol", "frazion", 
+      "espression", "equazion", "potenz", "radice", "moltiplic", "division", "somma", 
+      "sottrazion", "percentual", "proporzion", "rapport", "grafic", "mcd", "mcm", 
+      "numeri relativi", "meno per meno", "più per meno", "risolvi", "quanto fa", "operazione"
+    ],
+    geometria: [
+      "geometria", "teorema", "pitagora", "euclide", "angolo", "angoli", "triangol", 
+      "quadrat", "rettangol", "cerchio", "perimetro", "area", "volume", "poligono", 
+      "trapezio", "rombo", "parallelogramma", "cateto", "ipotenusa", "corda", "raggio", 
+      "diametro", "circonferenza", "solidi", "prisma", "piramide", "cilindro", "cono"
+    ],
+    scienze: [
+      "scienz", "cellul", "dna", "rna", "corpo umano", "organo", "organi", "cuore", 
+      "cervello", "sangue", "polmoni", "stomaco", "scheletro", "muscoli", "nervi", 
+      "vulcan", "terremot", "pianet", "sole", "luna", "sistema solare", "stelle", 
+      "galassi", "universo", "atomo", "molecol", "chimic", "fisic", "element", 
+      "tavola periodic", "ecosistem", "animal", "piant", "fotosintesi", "atmosfer", 
+      "roccia", "mineral", "fossili", "evoluzione", "darwin", "materia", "solido", 
+      "liquido", "gas", "ebollizione", "densità", "forza di gravità", "energia"
+    ],
+    italiano: [
+      "italian", "grammatic", "verbo", "verbi", "coniugazion", "modo", "tempo", 
+      "indicativo", "congiuntivo", "condizionale", "gerundio", "participio", "infinito", 
+      "soggetto", "predicat", "complemento", "analisi logic", "analisi del periodo", 
+      "analisi grammatic", "aggettiv", "pronome", "nome", "avverbio", "preposizion", 
+      "congiunzion", "sintassi", "tema", "testo", "poesia", "parafrasi", "dante", 
+      "divina commedia", "inferno", "purgatorio", "paradiso", "narrativ", "antologia", 
+      "letteratur", "racconto", "ortografi", "accento", "apostrofo", "doppie", "sillabe", 
+      "plurale", "singolare", "maschile", "femminile", "sinonimo", "contrario", "figura retorica", "metafora"
+    ],
+    inglese: [
+      "ingles", "english", "traduci", "traduzion", "in inglese", "come si dice", 
+      "present simple", "past simple", "continuous", "future", "verb to be", 
+      "have got", "vocabulary", "listening", "reading", "grammar", "pronounc", 
+      "pronuncia", "sentence", "false friends", "irregular verbs", "verbi irregolari"
+    ],
+    storia: [
+      "stori", "guerra", "battaglia", "impero", "imperatore", "romani", "greci", 
+      "medioevo", "feudalesim", "crociate", "rinascimento", "scoperta dell'america", 
+      "rivoluzion", "francese", "industriale", "fascismo", "nazismo", "prima guerra", 
+      "seconda guerra", "trattato", "re ", "regina", "papa", "faraon", "egizi", 
+      "napoleone", "crisi", "costituzion", "alleanza", "secolo", "civiltà", "archeologi", 
+      "cleopatra", "cesare", "augusto", "carlo magno"
+    ],
+    geografia: [
+      "geograf", "capital", "stato", "stati", "nazion", "europa", "continente", 
+      "fiume", "fiumi", "monte", "monti", "catena montuos", "alpi", "appennini", 
+      "pianura", "lago", "laghi", "mare", "oceano", "clima", "abitanti", "popolazion", 
+      "confini", "cartina", "mappa", "atlante", "spagna", "francia", "germania", 
+      "regno unito", "italia", "regione", "settore primario", "secondario", "terziario", 
+      "greenway", "densità di popolazione"
+    ],
+    francese: [
+      "frances", "francais", "in francese", "parler", "bonjour", "verbes francais", "allez"
+    ],
+    arte: [
+      "arte", "disegno", "quadro", "pittore", "scultore", "colori", "prospettiva", 
+      "chiaroscuro", "giotto", "michelangelo", "leonardo", "sfidando le stelle"
+    ],
+    tecnologia: [
+      "tecnologi", "materiali", "legno", "metallo", "plastica", "circuito", 
+      "elettricità", "energia", "disegno tecnico", "proiezione ortogonale", "infinito tecnologico"
+    ]
+  };
+
+  for (const [subj, kwList] of Object.entries(keywords)) {
+    for (const kw of kwList) {
+      if (q.includes(kw)) {
+        scores[subj] += 1;
+      }
+    }
+  }
+
+  // Raggruppa affinità
+  scores.matematica += scores.geometria;
+  scores.italiano += scores.grammatica;
+
+  let bestSubj = "";
+  let highestScore = 0;
+  for (const [subj, score] of Object.entries(scores)) {
+    if (score > highestScore) {
+      highestScore = score;
+      bestSubj = subj;
+    }
+  }
+
+  if (bestSubj && highestScore > 0) {
+    const matched = allTutors.find(t => 
+      t.subject.toLowerCase().includes(bestSubj) || 
+      t.id.toLowerCase().includes(bestSubj)
+    );
+    if (matched) return matched;
+  }
+
+  if (defaultTutorId) {
+    const defTutor = allTutors.find(t => t.id === defaultTutorId);
+    if (defTutor) return defTutor;
+  }
+
+  return allTutors[0];
+}
 
 export default function Chat({ 
   tutors, 
@@ -718,15 +853,13 @@ export default function Chat({
     });
   };
 
-  const handleSend = async () => {
-    if (!selectedTutor || (!input.trim() && !selectedImage)) return;
+  const suggestedTutor = useMemo(() => {
+    return detectBestTutorForQuery(searchQuery, tutors, selectedTutor?.id);
+  }, [searchQuery, tutors, selectedTutor]);
 
-    const userText = input.trim();
-    setInput("");
-    const imgFile = selectedImage;
-    setSelectedImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    
+  const executeSendMessage = async (userText: string, tutorToUse: Tutor, imgFile?: File | null) => {
+    if (!tutorToUse || (!userText.trim() && !imgFile)) return;
+
     setIsLoading(true);
 
     let imagePayload = undefined;
@@ -751,11 +884,21 @@ export default function Chat({
       }
     }
 
-    const tutorId = selectedTutor.id;
+    const tutorId = tutorToUse.id;
     const nowTime = getCurrentTime();
     const nowDate = getCurrentDate();
     const nowTimestamp = Date.now();
-    const prevMsgs = currentMessages;
+    const prevMsgs = chatsByTutor[tutorId]?.messages && chatsByTutor[tutorId].messages.length > 0
+      ? chatsByTutor[tutorId].messages
+      : [
+          {
+            role: "model" as const,
+            text: tutorToUse.greeting,
+            time: nowTime,
+            date: nowDate,
+            timestamp: nowTimestamp
+          }
+        ];
 
     const newMessages: UIMessage[] = [
       ...prevMsgs, 
@@ -791,7 +934,7 @@ export default function Chat({
     const currentMem = subjectsMemory[tutorId];
     let response;
     try {
-      response = await sendMessage(userText, history, imagePayload, selectedTutor, currentMem, agendaItems);
+      response = await sendMessage(userText, history, imagePayload, tutorToUse, currentMem, agendaItems);
     } catch (e: any) {
       console.error("Critical chat error:", e);
       response = { success: false, error: "Si è verificato un errore critico di connessione con l'AI." };
@@ -903,6 +1046,24 @@ export default function Chat({
     }
     
     setIsLoading(false);
+  };
+
+  const handleSend = () => {
+    if (!selectedTutor || (!input.trim() && !selectedImage)) return;
+    const userText = input.trim();
+    const imgFile = selectedImage;
+    setInput("");
+    setSelectedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    executeSendMessage(userText, selectedTutor, imgFile);
+  };
+
+  const handleAskAIFromSearch = (queryText: string, specificTutor?: Tutor) => {
+    if (!queryText.trim()) return;
+    const targetTutor = specificTutor || suggestedTutor;
+    setSearchQuery("");
+    handleOpenChat(targetTutor);
+    executeSendMessage(queryText.trim(), targetTutor, null);
   };
 
   const currentTutorMemory = selectedTutor ? subjectsMemory[selectedTutor.id] : null;
@@ -1162,8 +1323,10 @@ export default function Chat({
 
           {/* Search Bar (Ask Meta AI style) */}
           <div className={`px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
-            <div className={`flex items-center gap-3 px-4 py-2.5 rounded-full transition-all ${
-              isDarkMode ? 'bg-[#202C33]' : 'bg-[#F0F2F5]'
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
+              isDarkMode 
+                ? 'bg-[#202C33] border-transparent focus-within:border-blue-500/60' 
+                : 'bg-[#F0F2F5] border-transparent focus-within:border-blue-500/60'
             }`}>
               <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
               <input 
@@ -1171,10 +1334,39 @@ export default function Chat({
                 placeholder="Chiedi all'IA o cerca tutor..." 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    e.preventDefault();
+                    handleAskAIFromSearch(searchQuery.trim());
+                  }
+                }}
                 className={`bg-transparent w-full outline-none font-medium text-[15px] placeholder-opacity-80 ${
                   isDarkMode ? 'text-white placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-500'
                 }`}
               />
+              {searchQuery.trim() && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
+                      isDarkMode ? 'text-gray-300 hover:bg-[#182229]' : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                    title="Cancella testo"
+                  >
+                    ✕
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAskAIFromSearch(searchQuery.trim())}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
+                    title="Invia domanda all'IA"
+                  >
+                    <span>Chiedi</span>
+                    <span>✨</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1208,7 +1400,110 @@ export default function Chat({
             className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'} ${listFilter === 'tutte' ? 'divide-y' : ''} ${isDarkMode ? 'divide-[#222E35]' : 'divide-slate-100'}`}
           >
             {listFilter === "tutte" ? (
-              filteredTutors.map((tutor) => {
+              <>
+                {/* Banner rapido "Chiedi all'IA" se l'utente ha scritto del testo nella casella */}
+                {searchQuery.trim() && filteredTutors.length > 0 && (
+                  <div
+                    onClick={() => handleAskAIFromSearch(searchQuery.trim(), suggestedTutor)}
+                    className={`mx-4 my-2.5 p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 shadow-xs hover:scale-[1.01] active:scale-[0.99] ${
+                      isDarkMode
+                        ? "bg-gradient-to-r from-blue-950/40 via-indigo-950/40 to-purple-950/40 border-blue-500/30 text-white"
+                        : "bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-blue-200 text-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 flex items-center justify-center text-white text-lg shrink-0 shadow-sm">
+                        ✨
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm">Chiedi all'IA</span>
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                            con {suggestedTutor.name}
+                          </span>
+                        </div>
+                        <p className="text-xs opacity-75 truncate max-w-xs mt-0.5">
+                          "{searchQuery}"
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 font-bold text-xs text-blue-600 dark:text-blue-400 shrink-0">
+                      <span>Invia</span>
+                      <span>🚀</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Se nessun tutor corrisponde al nome MA l'utente ha fatto una domanda */}
+                {searchQuery.trim() && filteredTutors.length === 0 ? (
+                  <div className="p-6 flex flex-col items-center justify-center text-center my-auto">
+                    <div className={`w-full max-w-sm p-6 rounded-3xl border shadow-md flex flex-col items-center gap-3.5 transition-all ${
+                      isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-white border-slate-200"
+                    }`}>
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl shadow-lg animate-pulse">
+                        ✨
+                      </div>
+                      <div>
+                        <h3 className={`font-bold text-lg ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                          Fai questa domanda all'IA
+                        </h3>
+                        <p className="text-sm italic opacity-80 mt-1 line-clamp-3 max-w-xs">
+                          "{searchQuery}"
+                        </p>
+                      </div>
+
+                      <div className={`w-full p-3 rounded-2xl flex items-center justify-between gap-3 text-xs ${
+                        isDarkMode ? "bg-[#111B21] border border-[#222E35]" : "bg-slate-50 border border-slate-200"
+                      }`}>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-2xl">{suggestedTutor.avatar?.startsWith('/') ? '🧑‍🏫' : suggestedTutor.avatar}</span>
+                          <div className="text-left">
+                            <div className="font-bold">{suggestedTutor.name}</div>
+                            <div className="opacity-70 text-[11px]">{suggestedTutor.subject}</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          Consigliato
+                        </span>
+                      </div>
+
+                      {/* Oppure scegli un altro tutor */}
+                      <div className="w-full">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5 opacity-60 text-left">
+                          Oppure invia a:
+                        </label>
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                          {tutors.map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => handleAskAIFromSearch(searchQuery.trim(), t)}
+                              className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
+                                t.id === suggestedTutor.id
+                                  ? "bg-blue-500/20 border-blue-500 text-blue-500 font-bold"
+                                  : isDarkMode
+                                  ? "bg-[#202C33] border-[#2A3942] text-gray-300 hover:border-gray-500"
+                                  : "bg-white border-slate-200 text-slate-700 hover:border-blue-300"
+                              }`}
+                            >
+                              {t.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAskAIFromSearch(searchQuery.trim(), suggestedTutor)}
+                        className="w-full py-3.5 px-6 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-95 active:scale-98 shadow-md flex items-center justify-center gap-2 transition-all mt-1"
+                      >
+                        <span>Chiedi a {suggestedTutor.name}</span>
+                        <span>🚀</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  filteredTutors.map((tutor) => {
                 const tutorChat = chatsByTutor[tutor.id];
                 const mem = subjectsMemory[tutor.id];
                 const lastMsg = tutorChat?.messages && tutorChat.messages.length > 0 
@@ -1290,7 +1585,8 @@ export default function Chat({
                     </div>
                   </div>
                 );
-              })
+              }))}
+              </>
             ) : listFilter === "voti" ? (
               <div className={`flex flex-col gap-5 p-4 sm:p-6 pb-24 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
                 <div className="flex items-center justify-between mb-2">
