@@ -130,6 +130,8 @@ export default function AppShell() {
         {activeTab === "library" && (
           <Library 
             isDarkMode={isDarkMode} 
+            toggleTheme={toggleTheme}
+            onOpenParent={openParent}
           />
         )}
       </div>

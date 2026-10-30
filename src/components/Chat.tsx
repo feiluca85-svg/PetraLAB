@@ -1464,12 +1464,26 @@ export default function Chat({
           <div className={`flex-shrink-0 ${
             isDarkMode ? 'bg-[#0B141A]' : 'bg-white'
           } px-4 pt-3 pb-2 flex justify-between items-center relative z-30 transition-colors`}>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <h1 className={`text-[24px] font-bold tracking-tight ${
                 isDarkMode ? 'text-white' : 'text-[#25D366]'
               }`}>
                 PetraLAB
               </h1>
+              {listFilter === "compiti" && (
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                  isDarkMode ? 'bg-[#202C33] text-emerald-400 border border-[#2E3C44]' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  Compiti
+                </span>
+              )}
+              {listFilter === "voti" && (
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                  isDarkMode ? 'bg-[#202C33] text-emerald-400 border border-[#2E3C44]' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  Voti
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1555,54 +1569,56 @@ export default function Chat({
             </div>
           </div>
 
-          {/* Search Bar (Ask Meta AI style) */}
-          <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
-            <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
-              isDarkMode 
-                ? 'bg-[#202C33] border-transparent focus-within:border-blue-500/60' 
-                : 'bg-[#F0F2F5] border-transparent focus-within:border-blue-500/60'
-            }`}>
-              <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
-              <input 
-                type="text" 
-                placeholder="Chiedi all'IA o cerca tutor..." 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && searchQuery.trim()) {
-                    e.preventDefault();
-                    handleAskAIFromSearch(searchQuery.trim());
-                  }
-                }}
-                className={`bg-transparent w-full outline-none font-medium text-[15px] placeholder-opacity-80 ${
-                  isDarkMode ? 'text-white placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-500'
-                }`}
-              />
-              {searchQuery.trim() && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
-                      isDarkMode ? 'text-gray-300 hover:bg-[#182229]' : 'text-slate-600 hover:bg-slate-200'
-                    }`}
-                    title="Cancella testo"
-                  >
-                    ✕
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAskAIFromSearch(searchQuery.trim())}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
-                    title="Invia domanda all'IA"
-                  >
-                    <span>Chiedi</span>
-                    <span>✨</span>
-                  </button>
-                </div>
-              )}
+          {/* Search Bar (visibile solo nella tab Chat con i tutor) */}
+          {listFilter === "tutte" && (
+            <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
+              <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
+                isDarkMode 
+                  ? 'bg-[#202C33] border-transparent focus-within:border-blue-500/60' 
+                  : 'bg-[#F0F2F5] border-transparent focus-within:border-blue-500/60'
+              }`}>
+                <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
+                <input 
+                  type="text" 
+                  placeholder="Chiedi all'IA o cerca tutor..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      e.preventDefault();
+                      handleAskAIFromSearch(searchQuery.trim());
+                    }
+                  }}
+                  className={`bg-transparent w-full outline-none font-medium text-[15px] placeholder-opacity-80 ${
+                    isDarkMode ? 'text-white placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-500'
+                  }`}
+                />
+                {searchQuery.trim() && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
+                        isDarkMode ? 'text-gray-300 hover:bg-[#182229]' : 'text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title="Cancella testo"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAskAIFromSearch(searchQuery.trim())}
+                      className="px-3.5 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
+                      title="Invia domanda all'IA"
+                    >
+                      <span>Chiedi</span>
+                      <span>✨</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Lista delle Chat (Tutor per Materia) */}
           <div 

@@ -74,7 +74,16 @@ export function getSubjectBadge(folder: string) {
   }
 }
 
-export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
+export default function Library({ 
+  isDarkMode, 
+  toggleTheme, 
+  onOpenParent 
+}: { 
+  isDarkMode?: boolean; 
+  toggleTheme?: () => void; 
+  onOpenParent?: () => void; 
+}) {
+  const [showMenu, setShowMenu] = useState(false);
   const [selectedBookForViewer, setSelectedBookForViewer] = useState<BookManifestItem | null>(null);
   const [initialBookPage, setInitialBookPage] = useState<string>("");
   const [cardPageInputs, setCardPageInputs] = useState<Record<string, string>>({});
@@ -105,60 +114,136 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
     <div className={`flex flex-col h-full w-full min-h-0 overflow-hidden select-none ${
       isDarkMode ? "bg-[#0B141A] text-[#E9EDEF]" : "bg-white text-slate-900"
     }`}>
-      {/* Header Libreria */}
-      <div className={`flex-shrink-0 px-4 pt-3 pb-2 flex justify-between items-center border-b z-20 ${
+      {/* Header WhatsApp Style coerente con PetraLAB */}
+      <div className={`flex-shrink-0 px-4 pt-3 pb-2 flex justify-between items-center relative z-30 transition-colors border-b ${
         isDarkMode ? "bg-[#0B141A] border-[#202C33]" : "bg-white border-slate-100"
       }`}>
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white text-lg shadow-sm">
-            📚
-          </div>
-          <div>
-            <h1 className={`text-[19px] font-bold tracking-tight leading-tight ${
-              isDarkMode ? "text-white" : "text-slate-900"
-            }`}>
-              Libreria Scolastica
-            </h1>
-            <p className={`text-[11px] ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
-              {staticManifest.length} libri di testo in streaming
-            </p>
-          </div>
+          <h1 className={`text-[24px] font-bold tracking-tight ${
+            isDarkMode ? "text-white" : "text-[#25D366]"
+          }`}>
+            PetraLAB
+          </h1>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+            isDarkMode 
+              ? "bg-[#202C33] text-emerald-400 border border-[#2E3C44]" 
+              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          }`}>
+            Libreria
+          </span>
         </div>
 
-        <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${
-          isDarkMode 
-            ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40" 
-            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-        }`}>
-          {filteredBooks.length} {filteredBooks.length === 1 ? "libro" : "libri"}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Menu a 3 Puntini */}
+          <div className="relative">
+            <button 
+              type="button"
+              onClick={() => setShowMenu(prev => !prev)}
+              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                isDarkMode ? "text-gray-300 hover:bg-[#202C33]" : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Menu opzioni"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+              </svg>
+            </button>
+            {showMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className={`absolute right-0 top-full mt-2 w-60 rounded-2xl shadow-2xl border overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                  isDarkMode ? "bg-[#111B21] border-[#222E35]" : "bg-white border-slate-100"
+                }`}>
+                  <div className="py-2">
+                    <div className={`px-4 py-2 border-b text-[12px] flex justify-between items-center ${
+                      isDarkMode ? "border-[#222E35] text-[#8696A0]" : "border-slate-100 text-slate-400"
+                    }`}>
+                      <span>PetraLAB App</span>
+                      <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v2.0.0</span>
+                    </div>
+
+                    {/* Area Genitori */}
+                    <button 
+                      type="button"
+                      onClick={() => { setShowMenu(false); onOpenParent?.(); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                        isDarkMode ? "hover:bg-[#202C33] text-gray-200" : "hover:bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      <span className="text-xl">🛡️</span>
+                      <div className="flex flex-col">
+                        <span>Area Genitori</span>
+                        <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                          Sicurezza, PIN e compiti
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Tasto Tema Chiaro / Scuro */}
+                    {toggleTheme && (
+                      <button 
+                        type="button"
+                        onClick={() => { setShowMenu(false); toggleTheme(); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                          isDarkMode ? "hover:bg-[#202C33] text-gray-200" : "hover:bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        <span className="text-xl">{isDarkMode ? "☀️" : "🌙"}</span>
+                        <div className="flex flex-col">
+                          <span>{isDarkMode ? "Tema Chiaro" : "Tema Scuro"}</span>
+                          <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                            {isDarkMode ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
+                          </span>
+                        </div>
+                      </button>
+                    )}
+
+                    <button 
+                      type="button"
+                      onClick={() => { setShowMenu(false); window.location.reload(); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors text-left border-t cursor-pointer ${
+                        isDarkMode ? "border-[#222E35] hover:bg-[#202C33] text-[#8696A0]" : "border-slate-100 hover:bg-slate-50 text-slate-500"
+                      }`}
+                    >
+                      <span className="text-base">🔄</span>
+                      <span>Ricarica App</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Barra di ricerca */}
-      <div className={`flex-shrink-0 px-4 py-2 border-b ${
-        isDarkMode ? "bg-[#0B141A] border-[#202C33]" : "bg-white border-slate-100"
-      }`}>
-        <div className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all ${
+      {/* Barra di ricerca lineare e coerente (pill shape) */}
+      <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? "bg-[#0B141A]" : "bg-white"}`}>
+        <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
           isDarkMode 
-            ? "bg-[#111B21] border-[#222E35] focus-within:border-emerald-500" 
-            : "bg-[#F0F2F5] border-transparent focus-within:border-emerald-500 shadow-xs"
+            ? "bg-[#202C33] border-transparent focus-within:border-emerald-500/60" 
+            : "bg-[#F0F2F5] border-transparent focus-within:border-emerald-500/60"
         }`}>
-          <span className="text-sm text-slate-400">🔍</span>
+          <span className="text-slate-400 shrink-0 text-sm">🔍</span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cerca libro per titolo o materia..."
-            className={`w-full bg-transparent outline-none text-sm font-medium ${
-              isDarkMode ? "text-white placeholder-[#8696A0]" : "text-slate-800 placeholder-slate-400"
+            placeholder="Cerca per materia o titolo libro..."
+            className={`w-full bg-transparent outline-none font-medium text-[15px] placeholder-opacity-80 ${
+              isDarkMode ? "text-white placeholder-[#8696A0]" : "text-slate-800 placeholder-slate-500"
             }`}
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery("")}
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 ${
-                isDarkMode ? "text-gray-300" : "text-slate-600"
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
+                isDarkMode ? "text-gray-300 hover:bg-[#182229]" : "text-slate-600 hover:bg-slate-200"
               }`}
+              title="Cancella testo"
             >
               ✕
             </button>
@@ -209,18 +294,6 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
       <div className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-3 ${
         isDarkMode ? "bg-[#0B141A]" : "bg-slate-50/50"
       }`}>
-        {/* Banner streaming leggero */}
-        <div className={`p-3 rounded-2xl border flex items-center gap-3 text-xs ${
-          isDarkMode
-            ? "bg-blue-950/20 border-blue-800/30 text-blue-200"
-            : "bg-blue-50/80 border-blue-200 text-blue-800"
-        }`}>
-          <span className="text-xl shrink-0">🤏</span>
-          <p className="leading-tight">
-            <strong>Lettore Galleria Foto</strong>: apri qualsiasi libro, vai direttamente alla <strong>pagina scritta sul libro</strong> e ingrandisci con <strong>2 dita</strong> o <strong>doppio tocco</strong>.
-          </p>
-        </div>
-
         {filteredBooks.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border ${
             isDarkMode ? "bg-[#111B21] border-[#222E35] text-slate-400" : "bg-white border-slate-200 text-slate-500"
@@ -236,7 +309,7 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5 pb-6">
+          <div className="flex flex-col gap-3 pb-8">
             {filteredBooks.map((book) => {
               const badge = getSubjectBadge(book.subjectFolder);
               const cleanTitle = getBookCleanTitle(book.fileName);
@@ -248,18 +321,19 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
               return (
                 <div
                   key={book.driveFileId}
-                  className={`p-3.5 rounded-2xl border transition-all flex flex-col gap-2.5 ${
+                  className={`p-3.5 rounded-2xl border transition-all flex flex-col gap-3 ${
                     isDarkMode
                       ? "bg-[#111B21] border-[#202C33] hover:border-emerald-500/40"
                       : "bg-white border-slate-200 hover:border-emerald-500/40 shadow-xs"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border ${badge.bgLight}`}>
+                  {/* Riga Superiore: Icona materia + Info Libro + Tasto Drive */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0 border shadow-xs ${badge.bgLight}`}>
                         {badge.emoji}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border ${badge.bgLight}`}>
                             {badge.label}
@@ -272,7 +346,7 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
                             </span>
                           )}
                         </div>
-                        <h4 className={`font-bold text-sm leading-snug truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                        <h4 className={`font-bold text-[15px] leading-snug truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
                           {cleanTitle}
                         </h4>
                         <p className={`text-[11px] truncate mt-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
@@ -280,23 +354,30 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
                         </p>
                       </div>
                     </div>
+
+                    <a
+                      href={book.driveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all active:scale-95 shrink-0 ${
+                        isDarkMode 
+                          ? "bg-[#202C33] text-[#8696A0] border-[#2A3942] hover:text-white" 
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                      }`}
+                      title="Apri PDF originale su Google Drive"
+                    >
+                      <span className="text-sm font-bold">↗</span>
+                    </a>
                   </div>
 
-                  <div className="flex items-center gap-1.5 pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-800">
-                    {/* Casella rapida: Vai a pagina del libro */}
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        setInitialBookPage(pageJumpVal.trim());
-                        setSelectedBookForViewer(book);
-                      }}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border w-[135px] shrink-0 ${
-                        isDarkMode
-                          ? "bg-[#0B141A] border-[#222E35] focus-within:border-emerald-500"
-                          : "bg-slate-50 border-slate-200 focus-within:border-emerald-500"
-                      }`}
-                    >
-                      <span className="text-[10px] font-bold text-emerald-500 shrink-0">Pag.</span>
+                  {/* Riga Azioni Lineare e Pulita: Casella Pagina e Pulsante Apri */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-800">
+                    <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border w-[115px] shrink-0 transition-all ${
+                      isDarkMode
+                        ? "bg-[#0B141A] border-[#222E35] focus-within:border-[#25D366]"
+                        : "bg-[#F0F2F5] border-slate-200 focus-within:border-[#25D366]"
+                    }`}>
+                      <span className="text-[11px] font-bold text-emerald-500 shrink-0">Pag.</span>
                       <input
                         type="text"
                         value={pageJumpVal}
@@ -306,12 +387,19 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
                             [book.driveFileId]: e.target.value,
                           }))
                         }
-                        placeholder={secList.length > 1 ? `es. ${secList[0]}10` : "es. 45"}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            setInitialBookPage(pageJumpVal.trim());
+                            setSelectedBookForViewer(book);
+                          }
+                        }}
+                        placeholder={secList.length > 1 ? `${secList[0]}10` : "1"}
                         className={`w-full min-w-0 bg-transparent text-xs font-bold outline-none ${
                           isDarkMode ? "text-white placeholder-[#8696A0]/60" : "text-slate-900 placeholder-slate-400"
                         }`}
                       />
-                    </form>
+                    </div>
 
                     <button
                       type="button"
@@ -319,25 +407,13 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
                         setInitialBookPage(pageJumpVal.trim());
                         setSelectedBookForViewer(book);
                       }}
-                      className="flex-1 py-2 px-3 rounded-xl font-bold text-xs bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-[#111B21] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                      className="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-[#111B21] flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
                     >
-                      <span>📖</span>
-                      <span>{pageJumpVal.trim() ? `Vai a pag. ${pageJumpVal.trim()}` : "Apri e Sfoglia"}</span>
+                      <span className="text-sm">📖</span>
+                      <span className="truncate">
+                        {pageJumpVal.trim() ? `Vai a pag. ${pageJumpVal.trim()}` : "Apri libro"}
+                      </span>
                     </button>
-
-                    <a
-                      href={book.driveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`py-2 px-2.5 rounded-xl font-semibold text-xs border flex items-center justify-center gap-1 transition-all active:scale-[0.98] shrink-0 ${
-                        isDarkMode 
-                          ? "bg-[#202C33] text-[#8696A0] border-[#2A3942] hover:text-white" 
-                          : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                      }`}
-                      title="Apri su Google Drive"
-                    >
-                      <span>↗</span>
-                    </a>
                   </div>
                 </div>
               );
