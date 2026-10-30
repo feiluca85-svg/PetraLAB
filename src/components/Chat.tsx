@@ -1473,19 +1473,6 @@ export default function Chat({
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Tasto Tema */}
-              {toggleTheme && (
-                <button
-                  onClick={toggleTheme}
-                  className={`p-1.5 rounded-full transition-colors ${
-                    isDarkMode ? 'text-gray-300' : 'text-slate-600'
-                  }`}
-                  title="Cambia tema chiaro/scuro"
-                >
-                  {isDarkMode ? '☀️' : '🌙'}
-                </button>
-              )}
-
               {/* Menu a 3 Puntini */}
               <div className="relative">
                 <button 
@@ -1533,21 +1520,23 @@ export default function Chat({
                           </div>
                         </button>
 
-                        {/* Scegli Sfondo */}
-                        <button 
-                          onClick={() => { setShowHomeMenu(false); setShowWallpaperModal(true); }}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
-                            isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <span className="text-xl">🎨</span>
-                          <div className="flex flex-col">
-                            <span>Scegli Sfondo</span>
-                            <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
-                              Personalizza sfondo chat
-                            </span>
-                          </div>
-                        </button>
+                        {/* Tasto Tema Chiaro / Scuro (Sole / Luna spostato dentro ai 3 pallini) */}
+                        {toggleTheme && (
+                          <button 
+                            onClick={() => { setShowHomeMenu(false); toggleTheme(); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                              isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <span className="text-xl">{isDarkMode ? '☀️' : '🌙'}</span>
+                            <div className="flex flex-col">
+                              <span>{isDarkMode ? 'Tema Chiaro' : 'Tema Scuro'}</span>
+                              <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                                {isDarkMode ? 'Passa alla modalità chiara' : 'Passa alla modalità scura'}
+                              </span>
+                            </div>
+                          </button>
+                        )}
 
                         <button 
                           onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
@@ -1613,29 +1602,6 @@ export default function Chat({
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Filtri Stile WhatsApp 2024 */}
-          <div className={`flex-shrink-0 flex gap-2 px-4 py-1 pb-3 overflow-x-auto no-scrollbar border-b ${
-            isDarkMode ? 'bg-[#0B141A] border-[#202C33]' : 'bg-white border-slate-100'
-          }`}>
-            {[
-              { id: 'tutte', label: 'Tutte' },
-              { id: 'compiti', label: 'Compiti & Verifiche' },
-              { id: 'voti', label: 'Voti' }
-            ].map(filter => (
-              <span 
-                key={filter.id}
-                onClick={() => handleTabChange(filter.id as any)}
-                className={`font-semibold px-4 py-1.5 rounded-full cursor-pointer transition-all text-[14px] shrink-0 ${
-                  listFilter === filter.id 
-                    ? (isDarkMode ? 'bg-[#0A291A] text-[#25D366]' : 'bg-[#E7FCEB] text-[#118B44]') 
-                    : (isDarkMode ? 'bg-[#202C33] text-[#8696A0]' : 'bg-[#F0F2F5] text-slate-600')
-                }`}
-              >
-                {filter.label}
-              </span>
-            ))}
           </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
@@ -2392,16 +2358,18 @@ export default function Chat({
                         <span>Velocità Voce: {voiceSpeed === 1.0 ? 'Normale' : voiceSpeed === 1.2 ? 'Veloce' : 'Lenta'}</span>
                       </button>
 
-                      {/* Scegli Sfondo */}
-                      <button 
-                        onClick={() => { setShowChatMenu(false); setShowWallpaperModal(true); }}
-                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left cursor-pointer ${
-                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <span>🎨</span>
-                        <span>Scegli Sfondo</span>
-                      </button>
+                      {/* Tema Chiaro/Scuro */}
+                      {toggleTheme && (
+                        <button 
+                          onClick={() => { setShowChatMenu(false); toggleTheme(); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left cursor-pointer ${
+                            isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{isDarkMode ? '☀️' : '🌙'}</span>
+                          <span>{isDarkMode ? 'Tema Chiaro' : 'Tema Scuro'}</span>
+                        </button>
+                      )}
 
                       {/* Area Genitori */}
                       <button 
