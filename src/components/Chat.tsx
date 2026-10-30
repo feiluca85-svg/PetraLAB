@@ -309,18 +309,106 @@ export function detectBestTutorForQuery(query: string, allTutors: Tutor[], defau
   return allTutors[0];
 }
 
+export const WALLPAPERS = [
+  {
+    id: "classic_doodle",
+    name: "Doodle WhatsApp",
+    emoji: "💬",
+    description: "Sfondo originale stile WhatsApp"
+  },
+  {
+    id: "emerald",
+    name: "Verde Smeraldo",
+    emoji: "🌿",
+    description: "Tonalità rilassante smeraldo"
+  },
+  {
+    id: "midnight",
+    name: "Blu Notte",
+    emoji: "🌌",
+    description: "Sfondo scuro ad alto contrasto"
+  },
+  {
+    id: "vintage_sand",
+    name: "Sabbia & Pergamena",
+    emoji: "📜",
+    description: "Tonalità calda cartacea"
+  },
+  {
+    id: "lavender",
+    name: "Lilla & Lavanda",
+    emoji: "🌸",
+    description: "Atmosfera calma e creativa"
+  },
+  {
+    id: "minimal",
+    name: "Tinta Unita Minimal",
+    emoji: "🖤",
+    description: "Senza pattern, pulito e moderno"
+  }
+];
+
+export function getChatWallpaperStyle(wallpaperId: string, isDarkMode?: boolean) {
+  switch (wallpaperId) {
+    case "classic_doodle":
+      return {
+        backgroundColor: isDarkMode ? "#0B141A" : "#EFEAE2",
+        backgroundImage: `radial-gradient(circle at 50% 50%, ${isDarkMode ? 'rgba(37, 211, 102, 0.04)' : 'rgba(17, 139, 68, 0.04)'} 0%, transparent 80%), radial-gradient(${isDarkMode ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)'} 1px, transparent 1px)`,
+        backgroundSize: "24px 24px"
+      };
+    case "emerald":
+      return {
+        backgroundColor: isDarkMode ? "#071E15" : "#E8F5E9",
+        backgroundImage: `radial-gradient(${isDarkMode ? 'rgba(37, 211, 102, 0.08)' : 'rgba(37, 211, 102, 0.12)'} 1.5px, transparent 1.5px)`,
+        backgroundSize: "20px 20px"
+      };
+    case "midnight":
+      return {
+        backgroundColor: isDarkMode ? "#0B132B" : "#E0F2FE",
+        backgroundImage: `radial-gradient(${isDarkMode ? 'rgba(96, 165, 250, 0.07)' : 'rgba(2, 132, 199, 0.08)'} 1px, transparent 1px)`,
+        backgroundSize: "18px 18px"
+      };
+    case "vintage_sand":
+      return {
+        backgroundColor: isDarkMode ? "#1C1917" : "#F5EFE6",
+        backgroundImage: `radial-gradient(${isDarkMode ? 'rgba(217, 119, 6, 0.06)' : 'rgba(180, 83, 9, 0.07)'} 1px, transparent 1px)`,
+        backgroundSize: "20px 20px"
+      };
+    case "lavender":
+      return {
+        backgroundColor: isDarkMode ? "#1B1429" : "#F3E8FF",
+        backgroundImage: `radial-gradient(${isDarkMode ? 'rgba(192, 132, 252, 0.07)' : 'rgba(147, 51, 234, 0.08)'} 1.5px, transparent 1.5px)`,
+        backgroundSize: "22px 22px"
+      };
+    case "minimal":
+      return {
+        backgroundColor: isDarkMode ? "#05080A" : "#F8FAFC",
+        backgroundImage: "none"
+      };
+    default:
+      return {
+        backgroundColor: isDarkMode ? "#0B141A" : "#EFEAE2",
+        backgroundImage: "none"
+      };
+  }
+}
+
 export default function Chat({ 
   tutors, 
   isDarkMode, 
   toggleTheme, 
   onChatOpen,
-  onSubTabChange
+  onSubTabChange,
+  activeSubTab,
+  onOpenParent
 }: { 
   tutors: Tutor[]; 
   isDarkMode?: boolean; 
   toggleTheme?: () => void; 
   onChatOpen?: (isOpen: boolean) => void;
   onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti') => void;
+  activeSubTab?: 'tutte' | 'compiti' | 'voti';
+  onOpenParent?: () => void;
 }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -419,8 +507,27 @@ export default function Chat({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
 
-  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'>('tutte');
+  const [listFilter, setListFilter] = useState<'tutte'|'compiti'|'voti'>(activeSubTab || 'tutte');
   const [agendaItems, setAgendaItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeSubTab && activeSubTab !== listFilter) {
+      setListFilter(activeSubTab);
+    }
+  }, [activeSubTab]);
+
+  const [chatWallpaper, setChatWallpaper] = useState<string>("classic_doodle");
+  const [showWallpaperModal, setShowWallpaperModal] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("petralab_chat_wallpaper");
+    if (saved) setChatWallpaper(saved);
+  }, []);
+
+  const handleSelectWallpaper = (id: string) => {
+    setChatWallpaper(id);
+    localStorage.setItem("petralab_chat_wallpaper", id);
+  };
 
   // State per il visualizzatore modale del libro aperto dalla chat
   const [selectedBookForViewer, setSelectedBookForViewer] = useState<typeof staticManifest[0] | null>(null);
@@ -1365,15 +1472,7 @@ export default function Chat({
               </h1>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Badge Streak Fiamma */}
-              <div className={`flex items-center gap-1 font-bold text-[13px] px-2.5 py-1 rounded-full ${
-                isDarkMode ? 'bg-[#182229] text-orange-400' : 'bg-orange-50 text-orange-500'
-              }`}>
-                <span>🔥</span>
-                <span>{stats.streak}</span>
-              </div>
-
+            <div className="flex items-center gap-2">
               {/* Tasto Tema */}
               {toggleTheme && (
                 <button
@@ -1381,6 +1480,7 @@ export default function Chat({
                   className={`p-1.5 rounded-full transition-colors ${
                     isDarkMode ? 'text-gray-300' : 'text-slate-600'
                   }`}
+                  title="Cambia tema chiaro/scuro"
                 >
                   {isDarkMode ? '☀️' : '🌙'}
                 </button>
@@ -1390,36 +1490,77 @@ export default function Chat({
               <div className="relative">
                 <button 
                   onClick={() => setShowHomeMenu(prev => !prev)}
-                  className={`p-1 rounded-full transition-colors ${
-                    isDarkMode ? 'text-gray-300' : 'text-slate-600'
+                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                    isDarkMode ? 'text-gray-300 hover:bg-[#202C33]' : 'text-slate-600 hover:bg-slate-100'
                   }`}
+                  title="Menu opzioni"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                   </svg>
                 </button>
-                {/* Menu a tendina (rimane uguale ma ricolorato in CSS) */}
+                {/* Menu a tendina */}
                 {showHomeMenu && (
-                  <div className={`absolute right-0 top-full mt-2 w-56 rounded-2xl shadow-xl border overflow-hidden z-50 ${
-                    isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-100'
-                  }`}>
-                    <div className="py-2">
-                      <div className={`px-4 py-2 border-b text-[13px] flex justify-between items-center ${
-                        isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
-                      }`}>
-                        <span>Versione App</span>
-                        <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v2.0.0</span>
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowHomeMenu(false)}
+                    />
+                    <div className={`absolute right-0 top-full mt-2 w-60 rounded-2xl shadow-2xl border overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                      isDarkMode ? 'bg-[#111B21] border-[#222E35]' : 'bg-white border-slate-100'
+                    }`}>
+                      <div className="py-2">
+                        <div className={`px-4 py-2 border-b text-[12px] flex justify-between items-center ${
+                          isDarkMode ? 'border-[#222E35] text-[#8696A0]' : 'border-slate-100 text-slate-400'
+                        }`}>
+                          <span>PetraLAB App</span>
+                          <span className="font-mono font-bold text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full">v2.0.0</span>
+                        </div>
+
+                        {/* Sezione Genitori */}
+                        <button 
+                          onClick={() => { setShowHomeMenu(false); onOpenParent?.(); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                            isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="text-xl">🛡️</span>
+                          <div className="flex flex-col">
+                            <span>Area Genitori</span>
+                            <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                              Sicurezza, PIN e compiti
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Scegli Sfondo */}
+                        <button 
+                          onClick={() => { setShowHomeMenu(false); setShowWallpaperModal(true); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                            isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="text-xl">🎨</span>
+                          <div className="flex flex-col">
+                            <span>Scegli Sfondo</span>
+                            <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                              Personalizza sfondo chat
+                            </span>
+                          </div>
+                        </button>
+
+                        <button 
+                          onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors text-left border-t cursor-pointer ${
+                            isDarkMode ? 'border-[#222E35] hover:bg-[#202C33] text-[#8696A0]' : 'border-slate-100 hover:bg-slate-50 text-slate-500'
+                          }`}
+                        >
+                          <span className="text-base">🔄</span>
+                          <span>Ricarica App</span>
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => { setShowHomeMenu(false); window.location.reload(); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-[15px] transition-colors text-left ${
-                          isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <span className="text-xl">🔄</span> Ricarica App
-                      </button>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
@@ -2250,16 +2391,28 @@ export default function Chat({
                         <span>{voiceSpeed === 1.0 ? '🐇' : voiceSpeed === 1.2 ? '🚀' : '🐢'}</span>
                         <span>Velocità Voce: {voiceSpeed === 1.0 ? 'Normale' : voiceSpeed === 1.2 ? 'Veloce' : 'Lenta'}</span>
                       </button>
-                      <Link 
-                        href="/admin" 
-                        onClick={() => setShowChatMenu(false)}
-                        className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+
+                      {/* Scegli Sfondo */}
+                      <button 
+                        onClick={() => { setShowChatMenu(false); setShowWallpaperModal(true); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left cursor-pointer ${
                           isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
                         }`}
                       >
-                        <span>⚙️</span>
-                        <span>Pannello Genitore</span>
-                      </Link>
+                        <span>🎨</span>
+                        <span>Scegli Sfondo</span>
+                      </button>
+
+                      {/* Area Genitori */}
+                      <button 
+                        onClick={() => { setShowChatMenu(false); onOpenParent?.(); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left cursor-pointer ${
+                          isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>🛡️</span>
+                        <span>Area Genitori</span>
+                      </button>
                     </div>
                   </>
                 )}
@@ -2340,11 +2493,8 @@ export default function Chat({
           {/* Area Messaggi Chat Stile WhatsApp */}
           <div 
             ref={chatMessagesContainerRef}
-            className={`flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 relative ${isDarkMode ? "bg-[#0B141A]" : "bg-[#EFEAE2]"}`}
-            style={{ 
-              backgroundImage: isDarkMode ? "none" : "none", 
-              backgroundSize: "16px 16px" 
-            }}
+            className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 relative transition-colors duration-200"
+            style={getChatWallpaperStyle(chatWallpaper, Boolean(isDarkMode))}
           >
             {currentMessages.map((msg, idx) => {
               const prevMsg = idx > 0 ? currentMessages[idx - 1] : null;
@@ -2675,6 +2825,84 @@ export default function Chat({
           isDarkMode={Boolean(isDarkMode)}
           onClose={() => setSelectedBookForViewer(null)}
         />
+      )}
+
+      {/* MODALE SCELTA SFONDO CHAT */}
+      {showWallpaperModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className={`w-full max-w-sm rounded-3xl p-5 shadow-2xl border ${
+            isDarkMode ? "bg-[#111B21] border-[#2A3942] text-white" : "bg-white border-slate-200 text-slate-900"
+          }`}>
+            <div className="flex items-center justify-between mb-3 border-b pb-3 border-slate-200 dark:border-[#222E35]">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl">🎨</span>
+                <div>
+                  <h3 className="font-bold text-base leading-tight">Sfondo Chat</h3>
+                  <p className={`text-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                    Personalizza l&apos;aspetto delle conversazioni
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWallpaperModal(false)}
+                className={`p-1.5 rounded-full text-sm font-bold cursor-pointer ${
+                  isDarkMode ? "hover:bg-[#202C33] text-gray-400" : "hover:bg-slate-100 text-slate-500"
+                }`}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 my-3 max-h-[340px] overflow-y-auto no-scrollbar py-1">
+              {WALLPAPERS.map((wp) => {
+                const isSelected = chatWallpaper === wp.id;
+                return (
+                  <button
+                    key={wp.id}
+                    type="button"
+                    onClick={() => handleSelectWallpaper(wp.id)}
+                    className={`p-3 rounded-2xl border text-left flex flex-col gap-2 transition-all cursor-pointer relative ${
+                      isSelected
+                        ? "border-[#25D366] ring-2 ring-[#25D366]/30 shadow-md"
+                        : isDarkMode
+                          ? "border-[#222E35] bg-[#0B141A] hover:border-slate-600"
+                          : "border-slate-200 bg-slate-50 hover:border-slate-400"
+                    }`}
+                  >
+                    <div 
+                      className="w-full h-14 rounded-xl border border-black/10 flex items-center justify-center text-xl shadow-xs"
+                      style={getChatWallpaperStyle(wp.id, Boolean(isDarkMode))}
+                    >
+                      {wp.emoji}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs truncate">{wp.name}</span>
+                        {isSelected && <span className="text-[#25D366] text-xs font-black">✓</span>}
+                      </div>
+                      <p className={`text-[10px] leading-tight truncate mt-0.5 ${
+                        isDarkMode ? "text-[#8696A0]" : "text-slate-500"
+                      }`}>
+                        {wp.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowWallpaperModal(false)}
+                className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-[#111B21] font-bold text-xs active:scale-98 transition-all cursor-pointer"
+              >
+                Applica Sfondo
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

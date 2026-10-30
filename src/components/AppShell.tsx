@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Chat from "./Chat";
-import GamificationProfile from "./GamificationProfile";
 import TutorManager from "./TutorManager";
 import ParentDashboard from "./ParentDashboard";
 import Library from "./Library";
 import { useTutors } from "@/hooks/useTutors";
 
 export default function AppShell() {
-  const [activeTab, setActiveTab] = useState<"chat" | "tutors" | "library" | "parent">("chat");
-  const [chatSubTab, setChatSubTab] = useState<"tutte" | "compiti" | "voti">("tutte");
+  const [activeTab, setActiveTab] = useState<"chat" | "compiti" | "library">("chat");
+  const [isParentOpen, setIsParentOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTutorManagerModalOpen, setIsTutorManagerModalOpen] = useState(false);
@@ -20,24 +19,46 @@ export default function AppShell() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
-      if (hash === "#parent") setActiveTab("parent");
-      else if (hash === "#tutors") setActiveTab("tutors");
-      else if (hash === "#library") setActiveTab("library");
-      else setActiveTab("chat");
+      if (hash === "#parent") {
+        setIsParentOpen(true);
+      } else if (hash === "#compiti") {
+        setActiveTab("compiti");
+        setIsParentOpen(false);
+      } else if (hash === "#library") {
+        setActiveTab("library");
+        setIsParentOpen(false);
+      } else if (hash === "#tutors") {
+        setIsTutorManagerModalOpen(true);
+        setIsParentOpen(false);
+      } else {
+        setActiveTab("chat");
+        setIsParentOpen(false);
+      }
     };
-    // Sync initial state
     handleHashChange();
     
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const changeTab = (tab: "chat" | "tutors" | "library" | "parent") => {
+  const changeTab = (tab: "chat" | "compiti" | "library") => {
+    setActiveTab(tab);
+    setIsParentOpen(false);
     if (tab === "chat") {
       window.location.hash = "";
     } else {
       window.location.hash = tab;
     }
+  };
+
+  const openParent = () => {
+    setIsParentOpen(true);
+    window.location.hash = "parent";
+  };
+
+  const closeParent = () => {
+    setIsParentOpen(false);
+    window.location.hash = activeTab === "chat" ? "" : activeTab;
   };
 
   useEffect(() => {
@@ -83,19 +104,21 @@ export default function AppShell() {
       
       {/* Contenuto Principale a Schede */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-        {activeTab === "chat" && (
+        {(activeTab === "chat" || activeTab === "compiti") && (
           <Chat 
             tutors={tutors} 
             isDarkMode={isDarkMode} 
             toggleTheme={toggleTheme} 
             onChatOpen={setIsChatOpen} 
-            onSubTabChange={(sub) => setChatSubTab(sub)}
-          />
-        )}
-
-        {activeTab === "tutors" && (
-          <TutorManager 
-            isDarkMode={isDarkMode} 
+            activeSubTab={activeTab === "compiti" ? "compiti" : "tutte"}
+            onSubTabChange={(sub) => {
+              if (sub === "compiti") {
+                setActiveTab("compiti");
+              } else if (sub === "tutte") {
+                setActiveTab("chat");
+              }
+            }}
+            onOpenParent={openParent}
           />
         )}
 
@@ -104,19 +127,23 @@ export default function AppShell() {
             isDarkMode={isDarkMode} 
           />
         )}
-
-        {activeTab === "parent" && (
-          <ParentDashboard 
-            isDarkMode={isDarkMode} 
-          />
-        )}
       </div>
 
-      {/* FAB Galleggiante per Nuovo Tutor (visibile solo nella scheda Chat quando non siamo dentro un messaggio E non siamo nei Compiti) */}
-      {activeTab === "chat" && !isChatOpen && chatSubTab !== "compiti" && (
+      {/* Sezione Genitori aperta a tutto schermo dai 3 pallini in alto a destra */}
+      {isParentOpen && (
+        <div className="absolute inset-0 z-50 flex flex-col overflow-hidden animate-in fade-in duration-150">
+          <ParentDashboard 
+            isDarkMode={isDarkMode} 
+            onClose={closeParent}
+          />
+        </div>
+      )}
+
+      {/* FAB Galleggiante per Nuovo Tutor (visibile solo nella scheda Chat quando non siamo dentro un messaggio) */}
+      {activeTab === "chat" && !isChatOpen && !isParentOpen && (
         <button
           onClick={() => setIsTutorManagerModalOpen(true)}
-          className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 z-40 ${
+          className={`absolute bottom-20 right-4 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 z-40 cursor-pointer ${
             isDarkMode 
               ? "bg-[#25D366] text-[#111B21] shadow-emerald-950/50" 
               : "bg-[#25D366] text-white shadow-emerald-700/30"
@@ -141,9 +168,10 @@ export default function AppShell() {
       )}
 
       {/* ============================================================== */}
-      {/* BOTTOM NAVIGATION BAR MODERNA (Identica a WhatsApp 2024-2026)  */}
+      {/* BOTTOM NAVIGATION BAR MODERNA (Stile WhatsApp 2024-2026)        */}
+      {/* 3 Icone: Chat, Compiti, Libreria                                */}
       {/* ============================================================== */}
-      {!isChatOpen && (
+      {!isChatOpen && !isParentOpen && (
         <nav className={`flex-shrink-0 flex items-center justify-around border-t pb-safe z-30 transition-colors ${
           isDarkMode 
             ? "bg-[#0B141A] border-[#202C33]" 
@@ -151,8 +179,9 @@ export default function AppShell() {
         }`}>
           {/* 1. Tab Chat */}
           <button 
+            type="button"
             onClick={() => changeTab("chat")}
-            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95 cursor-pointer"
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
               activeTab === "chat"
@@ -172,34 +201,35 @@ export default function AppShell() {
             </span>
           </button>
 
-          {/* 2. Tab Tutor */}
+          {/* 2. Tab Compiti (Sostituisce Tutor con icona compatibile) */}
           <button 
-            onClick={() => changeTab("tutors")}
-            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
+            type="button"
+            onClick={() => changeTab("compiti")}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95 cursor-pointer"
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
-              activeTab === "tutors"
+              activeTab === "compiti"
                 ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
                 : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path d="M11.7 2.805a.75.75 0 0 1 .6 0A60.65 60.65 0 0 1 22.83 8.72a.75.75 0 0 1-.231 1.337 49.948 49.948 0 0 0-9.902 3.912l-.003.002c-.114.06-.24.09-.367.09a.755.755 0 0 1-.367-.09l-.003-.001a49.946 49.946 0 0 0-9.902-3.913.75.75 0 0 1-.231-1.337A60.653 60.653 0 0 1 11.7 2.805Z" />
-                <path d="M13.06 15.473a48.45 48.45 0 0 1 7.666-3.282c.134 1.414.22 2.843.255 4.284a.75.75 0 0 1-.46.723c-2.484 1.054-5.184 1.636-8.021 1.636-2.837 0-5.537-.582-8.021-1.636a.75.75 0 0 1-.46-.723c.035-1.441.121-2.87.255-4.284a48.45 48.45 0 0 1 7.666 3.282.75.75 0 0 0 1.12 0Z" />
+                <path fillRule="evenodd" d="M10.5 3A2.25 2.25 0 0 0 8.25 5.25 2.25 2.25 0 0 0 6 7.5v12a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 19.5v-12a2.25 2.25 0 0 0-2.25-2.25 2.25 2.25 0 0 0-2.25-2.25h-3Zm-1.5 2.25c0-.414.336-.75.75-.75h3c.414 0 .75.336.75.75v.75h-4.5v-.75ZM15.53 11.03a.75.75 0 0 0-1.06-1.06l-4.72 4.72-1.72-1.72a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l5.25-5.25Z" clipRule="evenodd" />
               </svg>
             </div>
             <span className={`text-[11px] ${
-              activeTab === "tutors" 
+              activeTab === "compiti" 
                 ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
-              Tutor
+              Compiti
             </span>
           </button>
 
-          {/* 3. Tab Libreria (Spostata come icona fra Tutor e Genitore) */}
+          {/* 3. Tab Libreria (Rimane dove è) */}
           <button 
+            type="button"
             onClick={() => changeTab("library")}
-            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95 cursor-pointer"
           >
             <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
               activeTab === "library"
@@ -216,29 +246,6 @@ export default function AppShell() {
                 : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
             }`}>
               Libreria
-            </span>
-          </button>
-
-          {/* 4. Tab Genitore (Sicurezza & Accessi) */}
-          <button 
-            onClick={() => changeTab("parent")}
-            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95"
-          >
-            <div className={`px-5 py-1.5 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
-              activeTab === "parent"
-                ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
-                : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
-            }`}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className={`text-[11px] ${
-              activeTab === "parent" 
-                ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
-                : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
-            }`}>
-              Genitore
             </span>
           </button>
         </nav>
