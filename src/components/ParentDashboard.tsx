@@ -286,16 +286,25 @@ export default function ParentDashboard({
         
         // Process Agenda Items
         let addedTaskItems: any[] = [];
+        let updatedExistingCount = 0;
+        const baseAgenda = [...agendaItems];
+
+        const stripSubPrefix = (str: string) =>
+          (str || "")
+            .replace(/^(aritmetica|geometria|algebra|grammatica|antologia|letteratura|epica|storia|geografia|scienze|inglese|francese|arte|tecnologia|musica)\s*:\s*/i, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
+
         if (res.items && res.items.length > 0) {
           const itemsToAdd = res.items.filter((newItem: any) => {
             const normNewSub = (newItem.subject || "").toLowerCase().trim();
             const normNewDate = (newItem.dueDate || "").trim();
-            const normNewDesc = (newItem.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normNewDesc = stripSubPrefix(newItem.description || "");
 
-            const isDuplicate = agendaItems.some((ex: any) => {
+            const dupIndex = baseAgenda.findIndex((ex: any) => {
               const normExSub = (ex.subject || "").toLowerCase().trim();
               const normExDate = (ex.dueDate || "").trim();
-              const normExDesc = (ex.description || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+              const normExDesc = stripSubPrefix(ex.description || "");
 
               // Materie diverse -> NON sono duplicati (es. Inglese vs Scienze vs Arte)
               if (normNewSub && normExSub && !normNewSub.includes(normExSub) && !normExSub.includes(normNewSub)) {
@@ -307,25 +316,41 @@ export default function ParentDashboard({
                 return false;
               }
 
-              // Se coincidono sia materia che data: controlla se la descrizione è identica o quasi
+              // Se coincidono sia materia che data:
               if (normExDesc === normNewDesc && normNewDesc.length > 5) return true;
-              if (normExDesc.length > 30 && normNewDesc.length > 30 && (normExDesc.includes(normNewDesc) || normNewDesc.includes(normExDesc))) {
-                return true;
+              if (normExDesc.length > 20 && normNewDesc.length > 20) {
+                if (normExDesc.includes(normNewDesc) || normNewDesc.includes(normExDesc)) return true;
+                // Se i primi 25 caratteri (senza prefisso "ARITMETICA:" ecc.) coincidono
+                if (normExDesc.slice(0, 25) === normNewDesc.slice(0, 25)) return true;
               }
 
               return false;
             });
-            return !isDuplicate;
+
+            if (dupIndex !== -1) {
+              // Se il nuovo testo è più lungo/completo rispetto a quello già salvato, aggiorniamo la descrizione esistente
+              const existingDesc = baseAgenda[dupIndex].description || "";
+              const incomingDesc = newItem.description || "";
+              if (incomingDesc.length > existingDesc.length) {
+                baseAgenda[dupIndex] = {
+                  ...baseAgenda[dupIndex],
+                  description: incomingDesc
+                };
+                updatedExistingCount++;
+              }
+              return false;
+            }
+            return true;
           });
           
-          if (itemsToAdd.length > 0) {
+          if (itemsToAdd.length > 0 || updatedExistingCount > 0) {
             addedTaskItems = itemsToAdd.map((it: any, idx: number) => ({
               ...it,
               id: it.id && it.id !== "id_random123" && it.id !== "id_1" ? it.id : `nuvola_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
               isCompleted: Boolean(it.isCompleted)
             }));
-            updatePayload.agendaItems = [...agendaItems, ...addedTaskItems];
-            tasksAdded = addedTaskItems.length;
+            updatePayload.agendaItems = [...baseAgenda, ...addedTaskItems];
+            tasksAdded = addedTaskItems.length + updatedExistingCount;
           }
         }
         
