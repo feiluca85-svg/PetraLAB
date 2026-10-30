@@ -2,6 +2,33 @@ import fs from "fs";
 import path from "path";
 import { execFileSync } from "child_process";
 import bookIndexData from "@/data/geografia_libro_index.json";
+import booksPageIndexRaw from "@/data/books_page_index.json";
+
+const booksPageIndex = booksPageIndexRaw as unknown as Record<
+  string,
+  {
+    fileName: string;
+    relativePath: string;
+    defaultOffset: number;
+    sections?: Record<string, number>;
+  }
+>;
+
+function getIndexedBookOffset(pdfPath: string, sectionLetter?: string): number {
+  const baseName = path.basename(pdfPath).toLowerCase();
+  for (const entry of Object.values(booksPageIndex)) {
+    if (entry.fileName.toLowerCase() === baseName) {
+      if (sectionLetter && entry.sections && entry.sections[sectionLetter.toUpperCase()] !== undefined) {
+        return entry.sections[sectionLetter.toUpperCase()];
+      }
+      return entry.defaultOffset || 0;
+    }
+  }
+  if (baseName.includes("greenway") && !baseName.includes("atlante")) {
+    return bookIndexData.defaultOffset || 13;
+  }
+  return 0;
+}
 
 export interface BookMatchResult {
   bookPage: number;
@@ -42,10 +69,7 @@ export function resolveTutorBookPath(
   if (selectedBookFile) {
     const full = path.isAbsolute(selectedBookFile) ? selectedBookFile : path.join(process.cwd(), selectedBookFile);
     if (fs.existsSync(full)) {
-      let offset = tutor.bookOffset !== undefined ? tutor.bookOffset : 0;
-      if (selectedBookFile.toLowerCase().includes("greenway") && !selectedBookFile.toLowerCase().includes("atlante")) {
-        offset = bookIndexData.defaultOffset || 13;
-      }
+      const offset = tutor.bookOffset ? tutor.bookOffset : getIndexedBookOffset(full);
       return { pdfPath: full, offset };
     }
   }
@@ -72,11 +96,7 @@ export function resolveTutorBookPath(
       if (matched) {
         const full = path.isAbsolute(matched) ? matched : path.join(process.cwd(), matched);
         if (fs.existsSync(full)) {
-          let offset = 0;
-          if (matched.toLowerCase().includes("greenway") && !matched.toLowerCase().includes("atlante")) {
-            offset = bookIndexData.defaultOffset || 13;
-          }
-          return { pdfPath: full, offset };
+          return { pdfPath: full, offset: getIndexedBookOffset(full) };
         }
       }
     }
@@ -85,11 +105,7 @@ export function resolveTutorBookPath(
     for (const f of candidateFiles) {
       const full = path.isAbsolute(f) ? f : path.join(process.cwd(), f);
       if (fs.existsSync(full)) {
-        let offset = 0;
-        if (f.toLowerCase().includes("greenway") && !f.toLowerCase().includes("atlante")) {
-          offset = bookIndexData.defaultOffset || 13;
-        }
-        return { pdfPath: full, offset };
+        return { pdfPath: full, offset: getIndexedBookOffset(full) };
       }
     }
   }
@@ -113,10 +129,10 @@ export function resolveTutorBookPath(
         const main = pdfs.find(p => !p.toLowerCase().includes("atlante") && !p.toLowerCase().includes("civica") && !p.toLowerCase().includes("culture"));
         if (main) chosen = main;
 
-        const defaultOffset = folderName === "Geografia" ? (bookIndexData.defaultOffset || 13) : 0;
+        const fullChosen = path.join(folderPath, chosen);
         return {
-          pdfPath: path.join(folderPath, chosen),
-          offset: defaultOffset
+          pdfPath: fullChosen,
+          offset: getIndexedBookOffset(fullChosen)
         };
       }
     }

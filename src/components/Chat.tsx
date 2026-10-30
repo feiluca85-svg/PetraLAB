@@ -16,6 +16,7 @@ import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import StudyPlanner from "@/components/StudyPlanner";
 import InteractiveStudyTools from "@/components/InteractiveStudyTools";
+import BookViewerModal from "@/components/BookViewerModal";
 import staticManifest from "@/data/books_manifest.json";
 
 type UIMessage = {
@@ -2669,84 +2670,11 @@ export default function Chat({
 
       {/* MODALE VISUALIZZATORE LIBRI DI TESTO STREAMING */}
       {selectedBookForViewer && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          {/* Header del visualizzatore */}
-          <div className={`px-3 py-2.5 flex items-center justify-between border-b shadow-md ${
-            isDarkMode ? "bg-[#111B21] border-[#222E35] text-white" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                type="button"
-                onClick={() => setSelectedBookForViewer(null)}
-                className={`p-2 rounded-xl transition-all active:scale-90 cursor-pointer ${
-                  isDarkMode ? "hover:bg-[#202C33] text-gray-200" : "hover:bg-slate-100 text-slate-700"
-                }`}
-                title="Chiudi visualizzatore"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                </svg>
-              </button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base">{getSubjectBadge(selectedBookForViewer.subjectFolder).emoji}</span>
-                  <h3 className="font-bold text-sm truncate leading-tight">
-                    {getBookCleanTitle(selectedBookForViewer.fileName)}
-                  </h3>
-                </div>
-                <p className={`text-[11px] truncate ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                  {selectedBookForViewer.subjectFolder} • {selectedBookForViewer.fileName}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <a
-                href={selectedBookForViewer.driveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`px-3 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1 transition-all active:scale-95 ${
-                  isDarkMode 
-                    ? "bg-[#202C33] text-[#8696A0] border-[#2E3C44] hover:text-white" 
-                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                }`}
-                title="Apri nel visualizzatore esterno di Google Drive"
-              >
-                <span>Drive</span>
-                <span>↗</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => setSelectedBookForViewer(null)}
-                className={`p-1.5 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? "bg-red-950/40 text-red-400 hover:bg-red-900/50" : "bg-red-50 text-red-600 hover:bg-red-100"
-                }`}
-                title="Chiudi"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Iframe con anteprima streaming di Google Drive */}
-          <div className="flex-1 w-full h-full relative bg-slate-900">
-            {isViewerLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/90 text-white z-10">
-                <div className="w-10 h-10 border-3 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs font-semibold text-emerald-400">Caricamento libro in streaming...</p>
-                <p className="text-[11px] text-slate-400 max-w-xs text-center">
-                  Lettore leggero progressivo • Nessun consumo di memoria sul telefono
-                </p>
-              </div>
-            )}
-            <iframe
-              src={`https://drive.google.com/file/d/${selectedBookForViewer.driveFileId}/preview`}
-              className="w-full h-full border-0"
-              allow="autoplay"
-              onLoad={() => setIsViewerLoading(false)}
-            />
-          </div>
-        </div>
+        <BookViewerModal
+          book={selectedBookForViewer}
+          isDarkMode={Boolean(isDarkMode)}
+          onClose={() => setSelectedBookForViewer(null)}
+        />
       )}
     </div>
   );

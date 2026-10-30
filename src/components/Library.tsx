@@ -2,6 +2,13 @@
 
 import { useState, useMemo } from "react";
 import staticManifest from "@/data/books_manifest.json";
+import booksPageIndexRaw from "@/data/books_page_index.json";
+import BookViewerModal from "@/components/BookViewerModal";
+
+const booksPageIndex = booksPageIndexRaw as unknown as Record<
+  string,
+  { totalPages: number; defaultOffset: number; sections?: Record<string, number> }
+>;
 
 export interface BookManifestItem {
   fileName: string;
@@ -69,9 +76,10 @@ export function getSubjectBadge(folder: string) {
 
 export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
   const [selectedBookForViewer, setSelectedBookForViewer] = useState<BookManifestItem | null>(null);
+  const [initialBookPage, setInitialBookPage] = useState<string>("");
+  const [cardPageInputs, setCardPageInputs] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("tutti");
-  const [isViewerLoading, setIsViewerLoading] = useState(false);
 
   const filteredBooks = useMemo(() => {
     return (staticManifest as BookManifestItem[]).filter((book) => {
@@ -207,9 +215,9 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
             ? "bg-blue-950/20 border-blue-800/30 text-blue-200"
             : "bg-blue-50/80 border-blue-200 text-blue-800"
         }`}>
-          <span className="text-xl shrink-0">⚡</span>
+          <span className="text-xl shrink-0">🤏</span>
           <p className="leading-tight">
-            I libri si aprono in <strong>streaming progressivo</strong>: non consumano memoria sul telefono e si caricano istantaneamente.
+            <strong>Lettore Galleria Foto</strong>: apri qualsiasi libro, vai direttamente alla <strong>pagina scritta sul libro</strong> e ingrandisci con <strong>2 dita</strong> o <strong>doppio tocco</strong>.
           </p>
         </div>
 
@@ -232,6 +240,10 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
             {filteredBooks.map((book) => {
               const badge = getSubjectBadge(book.subjectFolder);
               const cleanTitle = getBookCleanTitle(book.fileName);
+              const meta = booksPageIndex[book.driveFileId];
+              const totalPages = meta?.totalPages;
+              const secList = meta?.sections ? Object.keys(meta.sections) : [];
+              const pageJumpVal = cardPageInputs[book.driveFileId] || "";
 
               return (
                 <div
@@ -248,9 +260,18 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
                         {badge.emoji}
                       </div>
                       <div className="min-w-0">
-                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border mb-1 ${badge.bgLight}`}>
-                          {badge.label}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border ${badge.bgLight}`}>
+                            {badge.label}
+                          </span>
+                          {totalPages && (
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                              isDarkMode ? "bg-[#202C33] text-[#8696A0]" : "bg-slate-100 text-slate-600"
+                            }`}>
+                              {totalPages} pag.{secList.length > 1 ? ` • Sez. ${secList.join("/")}` : ""}
+                            </span>
+                          )}
+                        </div>
                         <h4 className={`font-bold text-sm leading-snug truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
                           {cleanTitle}
                         </h4>
@@ -261,31 +282,60 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5 pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-800">
+                    {/* Casella rapida: Vai a pagina del libro */}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        setInitialBookPage(pageJumpVal.trim());
+                        setSelectedBookForViewer(book);
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border w-[135px] shrink-0 ${
+                        isDarkMode
+                          ? "bg-[#0B141A] border-[#222E35] focus-within:border-emerald-500"
+                          : "bg-slate-50 border-slate-200 focus-within:border-emerald-500"
+                      }`}
+                    >
+                      <span className="text-[10px] font-bold text-emerald-500 shrink-0">Pag.</span>
+                      <input
+                        type="text"
+                        value={pageJumpVal}
+                        onChange={(e) =>
+                          setCardPageInputs((prev) => ({
+                            ...prev,
+                            [book.driveFileId]: e.target.value,
+                          }))
+                        }
+                        placeholder={secList.length > 1 ? `es. ${secList[0]}10` : "es. 45"}
+                        className={`w-full min-w-0 bg-transparent text-xs font-bold outline-none ${
+                          isDarkMode ? "text-white placeholder-[#8696A0]/60" : "text-slate-900 placeholder-slate-400"
+                        }`}
+                      />
+                    </form>
+
                     <button
                       type="button"
                       onClick={() => {
+                        setInitialBookPage(pageJumpVal.trim());
                         setSelectedBookForViewer(book);
-                        setIsViewerLoading(true);
                       }}
                       className="flex-1 py-2 px-3 rounded-xl font-bold text-xs bg-[#25D366] hover:bg-[#20ba59] active:scale-[0.98] text-[#111B21] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                     >
                       <span>📖</span>
-                      <span>Apri e Sfoglia</span>
+                      <span>{pageJumpVal.trim() ? `Vai a pag. ${pageJumpVal.trim()}` : "Apri e Sfoglia"}</span>
                     </button>
 
                     <a
                       href={book.driveUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`py-2 px-3 rounded-xl font-semibold text-xs border flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
+                      className={`py-2 px-2.5 rounded-xl font-semibold text-xs border flex items-center justify-center gap-1 transition-all active:scale-[0.98] shrink-0 ${
                         isDarkMode 
                           ? "bg-[#202C33] text-[#8696A0] border-[#2A3942] hover:text-white" 
                           : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
                       }`}
                       title="Apri su Google Drive"
                     >
-                      <span>Drive</span>
                       <span>↗</span>
                     </a>
                   </div>
@@ -296,84 +346,17 @@ export default function Library({ isDarkMode }: { isDarkMode?: boolean }) {
         )}
       </div>
 
-      {/* MODALE VISUALIZZATORE STREAMING FULLSCREEN */}
+      {/* MODALE VISUALIZZATORE LIBRO CON PINCH-TO-ZOOM E SALTO PAGINA LIBRO */}
       {selectedBookForViewer && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className={`px-3 py-2.5 flex items-center justify-between border-b shadow-md ${
-            isDarkMode ? "bg-[#111B21] border-[#222E35] text-white" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                type="button"
-                onClick={() => setSelectedBookForViewer(null)}
-                className={`p-2 rounded-xl transition-all active:scale-90 cursor-pointer ${
-                  isDarkMode ? "hover:bg-[#202C33] text-gray-200" : "hover:bg-slate-100 text-slate-700"
-                }`}
-                title="Chiudi visualizzatore"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                </svg>
-              </button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base">{getSubjectBadge(selectedBookForViewer.subjectFolder).emoji}</span>
-                  <h3 className="font-bold text-sm truncate leading-tight">
-                    {getBookCleanTitle(selectedBookForViewer.fileName)}
-                  </h3>
-                </div>
-                <p className={`text-[11px] truncate ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                  {selectedBookForViewer.subjectFolder} • {selectedBookForViewer.fileName}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <a
-                href={selectedBookForViewer.driveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`px-3 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1 transition-all active:scale-95 ${
-                  isDarkMode 
-                    ? "bg-[#202C33] text-[#8696A0] border-[#2E3C44] hover:text-white" 
-                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                }`}
-                title="Apri nel visualizzatore esterno di Google Drive"
-              >
-                <span>Drive</span>
-                <span>↗</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => setSelectedBookForViewer(null)}
-                className={`p-1.5 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? "bg-red-950/40 text-red-400 hover:bg-red-900/50" : "bg-red-50 text-red-600 hover:bg-red-100"
-                }`}
-                title="Chiudi"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 w-full h-full relative bg-slate-900">
-            {isViewerLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/90 text-white z-10">
-                <div className="w-10 h-10 border-3 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs font-semibold text-emerald-400">Caricamento libro in streaming...</p>
-                <p className="text-[11px] text-slate-400 max-w-xs text-center">
-                  Lettore leggero progressivo • Nessun consumo di memoria sul telefono
-                </p>
-              </div>
-            )}
-            <iframe
-              src={`https://drive.google.com/file/d/${selectedBookForViewer.driveFileId}/preview`}
-              className="w-full h-full border-0"
-              allow="autoplay"
-              onLoad={() => setIsViewerLoading(false)}
-            />
-          </div>
-        </div>
+        <BookViewerModal
+          book={selectedBookForViewer}
+          isDarkMode={isDarkMode}
+          initialBookPage={initialBookPage}
+          onClose={() => {
+            setSelectedBookForViewer(null);
+            setInitialBookPage("");
+          }}
+        />
       )}
     </div>
   );
