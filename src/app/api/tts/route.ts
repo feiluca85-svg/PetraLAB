@@ -1,8 +1,4 @@
-// Disabilita bufferutil per prevenire errori di bundling webpack su Vercel/Serverless
-process.env.WS_NO_BUFFER_UTIL = "true";
-
 import { NextRequest, NextResponse } from "next/server";
-import { EdgeTTS } from "node-edge-tts";
 import { resolveTutorVoice } from "@/lib/tutors";
 
 export const runtime = "nodejs";
@@ -119,6 +115,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Prova primaria: Microsoft Edge Neural TTS
     try {
+      const { EdgeTTS } = await import("node-edge-tts");
       const tts = new EdgeTTS({
         voice: targetVoice,
         rate: rate || "default",

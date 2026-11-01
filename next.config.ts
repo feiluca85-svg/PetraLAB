@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["node-edge-tts", "ws", "bufferutil", "utf-8-validate"],
+  env: {
+    WS_NO_BUFFER_UTIL: "true",
+  },
+  serverExternalPackages: ["node-edge-tts", "ws"],
 };
 
 export default nextConfig;
