@@ -110,9 +110,19 @@ export default function TutorManager({
       };
       await audio.play();
     } catch (e) {
-      console.error(e);
-      stopPreviewAudio();
-      alert("Impossibile riprodurre l'anteprima della voce neurale.");
+      console.warn("Fallback to client speech synthesis for preview:", e);
+      setIsPreviewLoading(false);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        setIsPreviewPlaying(true);
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(previewText);
+        utterance.lang = formData.voiceLang || "it-IT";
+        utterance.onend = () => setIsPreviewPlaying(false);
+        utterance.onerror = () => setIsPreviewPlaying(false);
+        window.speechSynthesis.speak(utterance);
+      } else {
+        stopPreviewAudio();
+      }
     }
   };
 

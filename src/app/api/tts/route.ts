@@ -1,10 +1,16 @@
+// Disabilita bufferutil per prevenire errori di bundling webpack su Vercel/Serverless
+process.env.WS_NO_BUFFER_UTIL = "true";
+
 import { NextRequest, NextResponse } from "next/server";
 import { EdgeTTS } from "node-edge-tts";
 import { resolveTutorVoice } from "@/lib/tutors";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // Cache in memoria per audio già generati (chiave: hash/stringa voce+testo)
 const audioCache = new Map<string, { buffer: Buffer; timestamp: number }>();
-const MAX_CACHE_SIZE = 60;
+const MAX_CACHE_SIZE = 80;
 
 function cleanTextForSpeech(text: string, isEnglish: boolean = false): string {
   let clean = text;
@@ -52,6 +58,26 @@ function cleanTextForSpeech(text: string, isEnglish: boolean = false): string {
   return clean;
 }
 
+// Fallback server-side su Google Translate TTS (funziona ovunque senza credenziali)
+async function fetchGoogleTTSFallback(text: string, lang: string = "it"): Promise<Buffer> {
+  const shortText = text.slice(0, 200);
+  const langCode = lang.startsWith("en") ? "en" : lang.startsWith("fr") ? "fr" : "it";
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(shortText)}&tl=${langCode}&client=tw-ob`;
+  
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Google TTS fallback error ${res.status}`);
+  }
+
+  const arrayBuf = await res.arrayBuffer();
+  return Buffer.from(arrayBuf);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -89,25 +115,39 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Sintesi con Microsoft Edge TTS
-    const tts = new EdgeTTS({
-      voice: targetVoice,
-      rate: rate || "default",
-      outputFormat: "audio-24khz-48kbitrate-mono-mp3",
-    });
+    let audioBuffer: Buffer | null = null;
 
-    const chunks: Buffer[] = [];
-    for await (const chunk of tts.streamAudio(clean)) {
-      if (Buffer.isBuffer(chunk)) {
-        chunks.push(chunk);
+    // 1. Prova primaria: Microsoft Edge Neural TTS
+    try {
+      const tts = new EdgeTTS({
+        voice: targetVoice,
+        rate: rate || "default",
+        outputFormat: "audio-24khz-48kbitrate-mono-mp3",
+      });
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of tts.streamAudio(clean)) {
+        if (Buffer.isBuffer(chunk)) {
+          chunks.push(chunk);
+        }
+      }
+
+      if (chunks.length > 0) {
+        audioBuffer = Buffer.concat(chunks);
+      }
+    } catch (edgeErr: any) {
+      console.warn("EdgeTTS error in serverless, invoking fallback:", edgeErr?.message);
+    }
+
+    // 2. Prova secondaria: Google TTS Fallback (se EdgeTTS fallisce su serverless)
+    if (!audioBuffer) {
+      try {
+        audioBuffer = await fetchGoogleTTSFallback(clean, lang || "it");
+      } catch (fallbackErr: any) {
+        console.error("All TTS engines failed:", fallbackErr?.message);
+        throw fallbackErr;
       }
     }
-
-    if (chunks.length === 0) {
-      throw new Error("Nessun frammento audio generato");
-    }
-
-    const audioBuffer = Buffer.concat(chunks);
 
     // Salva in cache con gestione dimensione massima
     if (audioCache.size >= MAX_CACHE_SIZE) {
@@ -124,7 +164,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("Errore sintesi TTS neurale:", error);
+    console.error("Errore sintesi TTS:", error);
     return NextResponse.json(
       { error: error?.message || "Errore durante la sintesi vocale" },
       { status: 500 }
