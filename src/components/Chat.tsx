@@ -433,6 +433,9 @@ export default function Chat({
   // Voice states
   const [isListening, setIsListening] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [isLoadingAudioId, setIsLoadingAudioId] = useState<string | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
   // Interactive study tools state (Flashcard & Quiz)
   const [studyToolType, setStudyToolType] = useState<"flashcard" | "quiz" | null>(null);
@@ -907,73 +910,158 @@ export default function Chat({
     }
   };
 
-  const speakText = (text: string) => {
-    if (!("speechSynthesis" in window)) return;
-    
-    window.speechSynthesis.cancel();
-    
-    // Pulisci e converti formule matematiche e simboli LaTeX in linguaggio parlato naturale
+  const stopAudio = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setPlayingAudioId(null);
+    setIsLoadingAudioId(null);
+  };
+
+  // Ferma la riproduzione vocale quando si cambia chat/tutor
+  useEffect(() => {
+    stopAudio();
+  }, [selectedTutor]);
+
+  const cleanTextForAudio = (text: string): string => {
     let cleanText = text;
-    // Rimuovi commenti nascosti come <!-- TRACK: ... -->
     cleanText = cleanText.replace(/<!--[\s\S]*?-->/g, '');
-    // Converti frazioni \frac{a}{b} -> "a fratto b"
+    cleanText = cleanText.replace(/```[\s\S]*?```/g, '');
     cleanText = cleanText.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1 fratto $2');
-    // Rimuovi tag \text{...} lasciando solo il testo
     cleanText = cleanText.replace(/\\text\{([^}]+)\}/g, '$1');
-    // Converti radici quadrate \sqrt{x} -> "radice quadrata di x"
     cleanText = cleanText.replace(/\\sqrt\{([^}]+)\}/g, 'radice quadrata di $1');
-    // Converti potenze semplici come x^2 -> "x alla seconda", x^3 -> "x alla terza"
     cleanText = cleanText.replace(/\^2\b/g, ' alla seconda');
     cleanText = cleanText.replace(/\^3\b/g, ' alla terza');
     cleanText = cleanText.replace(/\^([0-9]+)/g, ' alla $1');
-    // Converti simboli matematici comuni in parole pronunciabili
     cleanText = cleanText.replace(/\\times|\\cdot|\s\*\s/g, ' per ');
     cleanText = cleanText.replace(/\\div|\s\/\s/g, ' diviso ');
     cleanText = cleanText.replace(/\s\+\s/g, ' più ');
     cleanText = cleanText.replace(/\s\-\s/g, ' meno ');
     cleanText = cleanText.replace(/\s=\s/g, ' uguale a ');
     cleanText = cleanText.replace(/\s\+-\s|\\pm/g, ' più o meno ');
-    // Rimuovi simboli LaTeX residui (\pi, \le, \ge, backslash, ecc.)
     cleanText = cleanText.replace(/\\pi/g, 'pi greco');
     cleanText = cleanText.replace(/\\([a-zA-Z]+)/g, '');
-    // Rimuovi caratteri di formattazione markdown e LaTeX ($$, $, *, #, _, `, {, })
-    cleanText = cleanText.replace(/[\$\*\#\_`\{\}\\]/g, ' ');
-    // Riduci spazi multipli
-    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+    cleanText = cleanText.replace(/[\$\*\#\_`\{\}\[\]\\]/g, ' ');
+    return cleanText.replace(/\s+/g, ' ').trim();
+  };
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+  const fallbackSpeechSynthesis = (cleanText: string, messageId?: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      if (messageId) {
+        setIsLoadingAudioId(null);
+        setPlayingAudioId(null);
+      }
+      return;
+    }
     
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = selectedTutor?.voiceLang || "it-IT";
     utterance.rate = voiceSpeed;
     
-    if (selectedTutor?.voiceURI) {
-      const voices = window.speechSynthesis.getVoices();
-      const exactVoice = voices.find(v => v.voiceURI === selectedTutor.voiceURI);
-      if (exactVoice) utterance.voice = exactVoice;
-    }
-    
     const voices = window.speechSynthesis.getVoices();
-    
     if (voices.length > 0) {
       const langVoices = voices.filter(v => v.lang.startsWith(utterance.lang.substring(0, 2)));
       let chosenVoice = null;
-      
       if (selectedTutor?.gender === "female") {
-        chosenVoice = langVoices.find(v => (v.name.includes("Premium") || v.name.includes("Alice") || v.name.includes("Elsa") || v.name.includes("Samantha") || v.name.includes("Google")) && !v.name.includes("Male"));
+        chosenVoice = langVoices.find(v => (v.name.includes("Premium") || v.name.includes("Alice") || v.name.includes("Elsa") || v.name.includes("Google")) && !v.name.includes("Male"));
       } else if (selectedTutor?.gender === "male") {
         chosenVoice = langVoices.find(v => (v.name.includes("Luca") || v.name.includes("Giorgio") || v.name.includes("Arthur") || v.name.includes("Daniel") || v.name.includes("Male")));
       }
-      
       if (!chosenVoice) {
         chosenVoice = langVoices.find(v => v.name.includes("Premium") || v.name.includes("Enhanced") || v.name.includes("Google")) || langVoices[0];
       }
-      
-      if (chosenVoice) {
-        utterance.voice = chosenVoice;
-      }
+      if (chosenVoice) utterance.voice = chosenVoice;
     }
-    
+
+    if (messageId) {
+      setIsLoadingAudioId(null);
+      setPlayingAudioId(messageId);
+    }
+
+    utterance.onend = () => {
+      if (messageId) setPlayingAudioId(null);
+    };
+    utterance.onerror = () => {
+      if (messageId) setPlayingAudioId(null);
+    };
+
     window.speechSynthesis.speak(utterance);
+  };
+
+  const speakText = async (text: string, messageId?: string) => {
+    // Se lo stesso messaggio sta già parlando o caricando, fermalo (toggle)
+    if (messageId && (playingAudioId === messageId || isLoadingAudioId === messageId)) {
+      stopAudio();
+      return;
+    }
+
+    stopAudio();
+
+    const cleanText = cleanTextForAudio(text);
+    if (!cleanText) return;
+
+    if (messageId) {
+      setIsLoadingAudioId(messageId);
+    }
+
+    // Calcola il rate Edge TTS in base allo slider
+    let edgeRate = "default";
+    if (voiceSpeed < 1.0) edgeRate = "-15%";
+    else if (voiceSpeed > 1.0) edgeRate = "+15%";
+
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: cleanText,
+          voice: selectedTutor?.edgeVoice,
+          tutorId: selectedTutor?.id,
+          gender: selectedTutor?.gender,
+          lang: selectedTutor?.voiceLang,
+          rate: edgeRate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Edge TTS API status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      audioPlayerRef.current = audio;
+
+      if (messageId) {
+        setIsLoadingAudioId(null);
+        setPlayingAudioId(messageId);
+      }
+
+      audio.onended = () => {
+        if (messageId) setPlayingAudioId(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        if (messageId) setPlayingAudioId(null);
+        setIsLoadingAudioId(null);
+        URL.revokeObjectURL(audioUrl);
+        fallbackSpeechSynthesis(cleanText, messageId);
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.warn("Edge TTS non disponibile, fallback a sintesi vocale locale:", err);
+      if (messageId) {
+        setIsLoadingAudioId(null);
+      }
+      fallbackSpeechSynthesis(cleanText, messageId);
+    }
   };
 
   // Drag & drop
@@ -1239,7 +1327,7 @@ export default function Chat({
       }, { merge: true }).catch(console.error);
       
       if (wasVoiceInputRef.current) {
-        speakText(response.text);
+        speakText(response.text, `msg_${replyTimestamp}`);
         wasVoiceInputRef.current = false;
       }
     } else {
@@ -2566,16 +2654,38 @@ export default function Chat({
                       <span className="text-[#53bdeb] font-bold text-xs">✓✓</span>
                     )}
 
-                    {/* Tasto Lettura Vocale per i messaggi del tutor */}
-                    {msg.role === "model" && (
-                      <button
-                        onClick={() => speakText(msg.text)}
-                        className={`ml-1 p-0.5 transition-colors ${isDarkMode ? 'text-[#8696A0] hover:text-[#25D366]' : 'text-slate-400 hover:text-[#118B44]'}`}
-                        title="Ascolta audio"
-                      >
-                        🔊
-                      </button>
-                    )}
+                    {/* Tasto Lettura Vocale Neurale per i messaggi del tutor */}
+                    {msg.role === "model" && (() => {
+                      const msgId = `msg_${msg.timestamp || idx}_${idx}`;
+                      const isPlaying = playingAudioId === msgId;
+                      const isLoadingAudio = isLoadingAudioId === msgId;
+                      return (
+                        <button
+                          onClick={() => speakText(msg.text, msgId)}
+                          className={`ml-1.5 px-1.5 py-0.5 rounded-full transition-all flex items-center gap-1 ${
+                            isPlaying
+                              ? 'bg-[#25D366] text-white shadow-xs animate-pulse font-bold'
+                              : isLoadingAudio
+                              ? 'bg-[#25D366]/20 text-[#25D366]'
+                              : isDarkMode
+                              ? 'text-[#8696A0] hover:text-[#25D366] hover:bg-white/5'
+                              : 'text-slate-400 hover:text-[#118B44] hover:bg-black/5'
+                          }`}
+                          title={isPlaying ? "Ferma voce" : "Ascolta voce neurale del tutor"}
+                        >
+                          {isLoadingAudio ? (
+                            <span className="text-[11px] animate-spin inline-block">⏳</span>
+                          ) : isPlaying ? (
+                            <span className="text-[10px] flex items-center gap-1">
+                              <span>⏹️</span>
+                              <span className="text-[9px]">Stop</span>
+                            </span>
+                          ) : (
+                            <span className="text-[12px]">🔊</span>
+                          )}
+                        </button>
+                      );
+                    })()}
                     </div>
                   </div>
                 </div>

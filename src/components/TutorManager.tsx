@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tutor } from "@/lib/tutors";
 import { useTutors } from "@/hooks/useTutors";
 import { db } from "@/lib/firebase";
@@ -46,6 +46,75 @@ export default function TutorManager({
   const [availableBooks, setAvailableBooks] = useState<Array<{ fileName: string; relativePath: string; subjectFolder: string }>>([]);
 
   const [formData, setFormData] = useState<Partial<Tutor>>({});
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopPreviewAudio = () => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    setIsPreviewPlaying(false);
+    setIsPreviewLoading(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopPreviewAudio();
+    };
+  }, []);
+
+  const handlePreviewVoice = async () => {
+    if (previewAudioRef.current) {
+      stopPreviewAudio();
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    const tutorName = formData.name?.trim() || "il tuo tutor";
+    const previewText = formData.voiceLang?.startsWith("en")
+      ? `Hello! I am ${tutorName}. Let's study together!`
+      : formData.voiceLang?.startsWith("fr")
+      ? `Bonjour! Je suis ${tutorName}. Étudions ensemble!`
+      : `Ciao! Sono ${tutorName}. Questa è la mia voce per studiare insieme.`;
+
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: previewText,
+          voice: formData.edgeVoice || undefined,
+          gender: formData.gender || "male",
+          lang: formData.voiceLang || "it-IT",
+        })
+      });
+      if (!res.ok) throw new Error("Errore generazione anteprima");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      previewAudioRef.current = audio;
+      setIsPreviewLoading(false);
+      setIsPreviewPlaying(true);
+      audio.onended = () => {
+        setIsPreviewPlaying(false);
+        previewAudioRef.current = null;
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setIsPreviewPlaying(false);
+        setIsPreviewLoading(false);
+        previewAudioRef.current = null;
+        URL.revokeObjectURL(url);
+      };
+      await audio.play();
+    } catch (e) {
+      console.error(e);
+      stopPreviewAudio();
+      alert("Impossibile riprodurre l'anteprima della voce neurale.");
+    }
+  };
 
   useEffect(() => {
     fetch("/api/books")
@@ -102,6 +171,7 @@ export default function TutorManager({
         gender: formData.gender || "male",
         voiceLang: formData.voiceLang || "it-IT",
         voiceURI: formData.voiceURI || null,
+        edgeVoice: formData.edgeVoice || null,
         bookFile: (formData.bookFiles && formData.bookFiles.length > 0) ? formData.bookFiles[0] : (formData.bookFile || null),
         bookFiles: formData.bookFiles || (formData.bookFile ? [formData.bookFile] : []),
         bookOffset: formData.bookOffset !== undefined ? Number(formData.bookOffset) : 0,
@@ -362,6 +432,61 @@ export default function TutorManager({
                     Scegli la lingua per la pronuncia corretta.
                   </p>
                 </div>
+
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
+                      Voce Neurale AI (HD Naturale)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handlePreviewVoice}
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all ${
+                        isPreviewPlaying
+                          ? 'bg-rose-500 text-white animate-pulse'
+                          : isDarkMode
+                          ? 'bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30'
+                          : 'bg-emerald-100 text-[#118B44] hover:bg-emerald-200'
+                      }`}
+                    >
+                      {isPreviewLoading ? (
+                        <span>⏳ Generazione...</span>
+                      ) : isPreviewPlaying ? (
+                        <span>⏹️ Ferma Anteprima</span>
+                      ) : (
+                        <span>🔊 Ascolta Anteprima</span>
+                      )}
+                    </button>
+                  </div>
+                  <select 
+                    value={formData.edgeVoice || ""} 
+                    onChange={(e) => setFormData({...formData, edgeVoice: e.target.value || undefined})}
+                    className={`w-full rounded-[20px] px-3 py-2 text-[13px] border outline-none font-medium transition-colors ${
+                      isDarkMode 
+                        ? 'bg-[#182229] border-[#2A3942] text-white focus:border-[#25D366]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#25D366]'
+                    }`}
+                  >
+                    <option value="">✨ Automatica (in base al Tutor e Genere)</option>
+                    <optgroup label="Voci Italiane HD">
+                      <option value="it-IT-DiegoNeural">Diego (Maschile, vivace ed energico)</option>
+                      <option value="it-IT-ElsaNeural">Elsa (Femminile, chiara e accogliente)</option>
+                      <option value="it-IT-GiuseppeNeural">Giuseppe (Maschile, saggio ed elegante)</option>
+                      <option value="it-IT-IsabellaNeural">Isabella (Femminile, espressiva e regale)</option>
+                    </optgroup>
+                    <optgroup label="Voci Inglesi HD">
+                      <option value="en-GB-RyanNeural">Ryan (Inglese British, maschile)</option>
+                      <option value="en-GB-SoniaNeural">Sonia (Inglese British, femminile)</option>
+                    </optgroup>
+                    <optgroup label="Voci Francesi HD">
+                      <option value="fr-FR-HenriNeural">Henri (Francese, maschile)</option>
+                      <option value="fr-FR-DeniseNeural">Denise (Francese, femminile)</option>
+                    </optgroup>
+                  </select>
+                  <p className={`mt-1 text-[10px] leading-tight ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                    Voce umana generata in alta fedeltà. Nessun timbro robotico del telefono.
+                  </p>
+                </div>
               </div>
 
               {/* Selezione Multipla Libri di Testo Associati */}
@@ -549,7 +674,7 @@ export default function TutorManager({
                       )}
                     </div>
                     <p className={`text-xs mt-1 truncate ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
-                      {tutor.gender === 'male' ? '👨 Voce Maschile' : '👩 Voce Femminile'} • {tutor.voiceLang || 'it-IT'}
+                      {tutor.gender === 'male' ? '👨 Voce Maschile' : '👩 Voce Femminile'} • {tutor.edgeVoice ? `🎙️ ${tutor.edgeVoice.replace("Neural", "")}` : "🎙️ AI Neurale"} • {tutor.voiceLang || 'it-IT'}
                     </p>
                     <p className={`text-[11px] mt-0.5 italic truncate ${isDarkMode ? 'text-gray-400' : 'text-slate-400'}`}>
                       &ldquo;{tutor.greeting}&rdquo;
