@@ -12,6 +12,14 @@ const EMOJI_CATEGORIES = [
     emojis: Array.from({length: 25}, (_, i) => `/avatars/cartoon_${i}.png`)
   },
   {
+    label: "Docenti & Professionisti 💼",
+    emojis: Array.from({length: 24}, (_, i) => `/avatars/business_${i}.png`)
+  },
+  {
+    label: "Ritratti Pop Minimal 🌈",
+    emojis: Array.from({length: 16}, (_, i) => `/avatars/flat_${i}.png`)
+  },
+  {
     label: "Avatar 3D ✨",
     emojis: Array.from({length: 40}, (_, i) => `/avatars/avatar_${i}.png`)
   },
