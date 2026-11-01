@@ -20,12 +20,52 @@ export type Tutor = {
   voiceLang: string;
   voiceURI?: string;
   edgeVoice?: string;
+  voiceSpeed?: number; // Velocità personalizzata del tutor (es. 0.85, 1.0, 1.15)
   prompt: string;
   greeting: string;
   bookFile?: string; // Percorso legacy singolo
   bookFiles?: string[]; // Percorsi multipli PDF (es. ["libri/Scienze/Scienze A.pdf", "libri/Scienze/Scienze B.pdf"])
   bookOffset?: number; // Offset pagine (pagina libro -> pagina PDF)
 };
+
+export type VoiceOption = {
+  id: string;
+  name: string;
+  gender: "male" | "female";
+  lang: string;
+  description: string;
+  flag: string;
+  category: "Italiano" | "Inglese" | "Francese" | "Spagnolo" | "Tedesco";
+};
+
+export const AVAILABLE_VOICES: VoiceOption[] = [
+  // Italiano
+  { id: "it-IT-ElsaNeural", name: "Elsa", gender: "female", lang: "it-IT", description: "Femminile • Chiara, rassicurante e accogliente", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-IsabellaNeural", name: "Isabella", gender: "female", lang: "it-IT", description: "Femminile • Calda, espressiva e narrativa", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-DiegoNeural", name: "Diego", gender: "male", lang: "it-IT", description: "Maschile • Vivace, energico e amichevole", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-GiuseppeNeural", name: "Giuseppe", gender: "male", lang: "it-IT", description: "Maschile • Saggio, profondo ed elegante", flag: "🇮🇹", category: "Italiano" },
+
+  // Inglese
+  { id: "en-GB-RyanNeural", name: "Ryan (UK)", gender: "male", lang: "en-GB", description: "Maschile • Accento British naturale e brillante", flag: "🇬🇧", category: "Inglese" },
+  { id: "en-GB-SoniaNeural", name: "Sonia (UK)", gender: "female", lang: "en-GB", description: "Femminile • Accento British elegante e dolce", flag: "🇬🇧", category: "Inglese" },
+  { id: "en-US-JennyNeural", name: "Jenny (USA)", gender: "female", lang: "en-US", description: "Femminile • Americana, amichevole e solare", flag: "🇺🇸", category: "Inglese" },
+  { id: "en-US-GuyNeural", name: "Guy (USA)", gender: "male", lang: "en-US", description: "Maschile • Americano, colloquiale e rilassato", flag: "🇺🇸", category: "Inglese" },
+  { id: "en-US-AriaNeural", name: "Aria (USA)", gender: "female", lang: "en-US", description: "Femminile • Coinvolgente e dinamica", flag: "🇺🇸", category: "Inglese" },
+  { id: "en-US-AnaNeural", name: "Ana (USA)", gender: "female", lang: "en-US", description: "Femminile • Voce giovane da ragazza", flag: "🇺🇸", category: "Inglese" },
+
+  // Francese
+  { id: "fr-FR-DeniseNeural", name: "Denise", gender: "female", lang: "fr-FR", description: "Femminile • Francese classico e accogliente", flag: "🇫🇷", category: "Francese" },
+  { id: "fr-FR-HenriNeural", name: "Henri", gender: "male", lang: "fr-FR", description: "Maschile • Francese distinto e chiaro", flag: "🇫🇷", category: "Francese" },
+  { id: "fr-FR-EloiseNeural", name: "Eloise", gender: "female", lang: "fr-FR", description: "Femminile • Francese giovane ed espressiva", flag: "🇫🇷", category: "Francese" },
+
+  // Spagnolo
+  { id: "es-ES-ElviraNeural", name: "Elvira", gender: "female", lang: "es-ES", description: "Femminile • Spagnolo castigliano solare", flag: "🇪🇸", category: "Spagnolo" },
+  { id: "es-ES-AlvaroNeural", name: "Alvaro", gender: "male", lang: "es-ES", description: "Maschile • Spagnolo castigliano energico", flag: "🇪🇸", category: "Spagnolo" },
+
+  // Tedesco
+  { id: "de-DE-KatjaNeural", name: "Katja", gender: "female", lang: "de-DE", description: "Femminile • Tedesco chiaro e didattico", flag: "🇩🇪", category: "Tedesco" },
+  { id: "de-DE-ConradNeural", name: "Conrad", gender: "male", lang: "de-DE", description: "Maschile • Tedesco calmo e preciso", flag: "🇩🇪", category: "Tedesco" },
+];
 
 export function resolveTutorVoice(tutor?: Partial<Tutor> | null): string {
   if (tutor?.edgeVoice) return tutor.edgeVoice;

@@ -74,6 +74,21 @@ async function fetchGoogleTTSFallback(text: string, lang: string = "it"): Promis
   return Buffer.from(arrayBuf);
 }
 
+function formatEdgeRate(rateInput?: any): string {
+  if (!rateInput) return "default";
+  if (typeof rateInput === "string") {
+    if (rateInput === "default" || rateInput.endsWith("%")) return rateInput;
+    const num = parseFloat(rateInput);
+    if (!isNaN(num)) rateInput = num;
+  }
+  if (typeof rateInput === "number") {
+    if (rateInput === 1.0) return "default";
+    const percent = Math.round((rateInput - 1.0) * 100);
+    return percent >= 0 ? `+${percent}%` : `${percent}%`;
+  }
+  return "default";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -97,7 +112,8 @@ export async function POST(req: NextRequest) {
       voiceLang: lang,
     });
 
-    const cacheKey = `${targetVoice}:${rate || "default"}:${clean}`;
+    const targetRate = formatEdgeRate(rate);
+    const cacheKey = `${targetVoice}:${targetRate}:${clean}`;
 
     // Controllo cache
     const cached = audioCache.get(cacheKey);
@@ -118,7 +134,7 @@ export async function POST(req: NextRequest) {
       const { EdgeTTS } = await import("node-edge-tts");
       const tts = new EdgeTTS({
         voice: targetVoice,
-        rate: rate || "default",
+        rate: targetRate,
         outputFormat: "audio-24khz-48kbitrate-mono-mp3",
       });
 

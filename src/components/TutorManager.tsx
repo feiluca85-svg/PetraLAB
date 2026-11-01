@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Tutor } from "@/lib/tutors";
+import { Tutor, AVAILABLE_VOICES } from "@/lib/tutors";
 import { useTutors } from "@/hooks/useTutors";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
@@ -88,6 +88,7 @@ export default function TutorManager({
           voice: formData.edgeVoice || undefined,
           gender: formData.gender || "male",
           lang: formData.voiceLang || "it-IT",
+          rate: formData.voiceSpeed || 1.0,
         })
       });
       if (!res.ok) throw new Error("Errore generazione anteprima");
@@ -117,6 +118,7 @@ export default function TutorManager({
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(previewText);
         utterance.lang = formData.voiceLang || "it-IT";
+        utterance.rate = formData.voiceSpeed || 1.0;
         utterance.onend = () => setIsPreviewPlaying(false);
         utterance.onerror = () => setIsPreviewPlaying(false);
         window.speechSynthesis.speak(utterance);
@@ -160,6 +162,7 @@ export default function TutorManager({
       avatar: "🦉",
       gender: "male",
       voiceLang: "it-IT",
+      voiceSpeed: 1.0,
       prompt: "Sei un tutor socratico amichevole per ragazzi delle scuole medie. Non dare mai la soluzione diretta, ma fai domande mirate per sbloccare il ragionamento.",
       greeting: "Ciao! Come posso aiutarti oggi?"
     });
@@ -182,6 +185,7 @@ export default function TutorManager({
         voiceLang: formData.voiceLang || "it-IT",
         voiceURI: formData.voiceURI || null,
         edgeVoice: formData.edgeVoice || null,
+        voiceSpeed: formData.voiceSpeed !== undefined ? Number(formData.voiceSpeed) : 1.0,
         bookFile: (formData.bookFiles && formData.bookFiles.length > 0) ? formData.bookFiles[0] : (formData.bookFile || null),
         bookFiles: formData.bookFiles || (formData.bookFile ? [formData.bookFile] : []),
         bookOffset: formData.bookOffset !== undefined ? Number(formData.bookOffset) : 0,
@@ -478,23 +482,55 @@ export default function TutorManager({
                     }`}
                   >
                     <option value="">✨ Automatica (in base al Tutor e Genere)</option>
-                    <optgroup label="Voci Italiane HD">
-                      <option value="it-IT-DiegoNeural">Diego (Maschile, vivace ed energico)</option>
-                      <option value="it-IT-ElsaNeural">Elsa (Femminile, chiara e accogliente)</option>
-                      <option value="it-IT-GiuseppeNeural">Giuseppe (Maschile, saggio ed elegante)</option>
-                      <option value="it-IT-IsabellaNeural">Isabella (Femminile, espressiva e regale)</option>
-                    </optgroup>
-                    <optgroup label="Voci Inglesi HD">
-                      <option value="en-GB-RyanNeural">Ryan (Inglese British, maschile)</option>
-                      <option value="en-GB-SoniaNeural">Sonia (Inglese British, femminile)</option>
-                    </optgroup>
-                    <optgroup label="Voci Francesi HD">
-                      <option value="fr-FR-HenriNeural">Henri (Francese, maschile)</option>
-                      <option value="fr-FR-DeniseNeural">Denise (Francese, femminile)</option>
-                    </optgroup>
+                    {(["Italiano", "Inglese", "Francese", "Spagnolo", "Tedesco"] as const).map(cat => {
+                      const catVoices = AVAILABLE_VOICES.filter(v => v.category === cat);
+                      if (catVoices.length === 0) return null;
+                      return (
+                        <optgroup key={cat} label={`Voci ${cat} HD`}>
+                          {catVoices.map(v => (
+                            <option key={v.id} value={v.id}>
+                              {v.flag} {v.name} ({v.description})
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
                   </select>
                   <p className={`mt-1 text-[10px] leading-tight ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
                     Voce umana generata in alta fedeltà. Nessun timbro robotico del telefono.
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
+                      Velocità di Lettura del Tutor: <span className="text-[#25D366] font-extrabold">{formData.voiceSpeed || 1.0}x</span>
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { value: 0.85, label: "0.85x", desc: "🐢 Calma" },
+                      { value: 1.0, label: "1.0x", desc: "⚡ Normale" },
+                      { value: 1.15, label: "1.15x", desc: "🐇 Vivace" },
+                      { value: 1.3, label: "1.3x", desc: "🚀 Veloce" },
+                    ].map(speed => (
+                      <button
+                        key={speed.value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, voiceSpeed: speed.value })}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold border flex flex-col items-center justify-center transition-all ${
+                          (formData.voiceSpeed || 1.0) === speed.value
+                            ? (isDarkMode ? 'bg-[#25D366]/20 border-[#25D366] text-[#25D366]' : 'bg-emerald-50 border-[#25D366] text-[#118B44]')
+                            : (isDarkMode ? 'bg-[#0B141A] border-[#2A3942] text-gray-400 hover:border-gray-500' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300')
+                        }`}
+                      >
+                        <span>{speed.label}</span>
+                        <span className="text-[10px] font-normal opacity-80">{speed.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className={`mt-1 text-[10px] leading-tight ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
+                    Regola il ritmo con cui questo tutor parla ed esprime i concetti.
                   </p>
                 </div>
               </div>

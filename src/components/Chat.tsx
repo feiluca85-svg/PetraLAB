@@ -454,6 +454,9 @@ export default function Chat({
   // Quando selezioniamo un tutor, aggiungiamo uno stato alla history
   const handleSelectTutor = (tutor: Tutor) => {
     setSelectedTutor(tutor);
+    if (tutor.voiceSpeed) {
+      setVoiceSpeed(tutor.voiceSpeed);
+    }
     window.location.hash = "chat";
   };
 
@@ -465,7 +468,7 @@ export default function Chat({
 
   const toggleVoiceSpeed = () => {
     setVoiceSpeed(prev => {
-      const next = prev === 1.0 ? 0.8 : prev === 0.8 ? 1.2 : 1.0;
+      const next = prev === 1.0 ? 1.15 : prev === 1.15 ? 1.3 : prev === 1.3 ? 0.85 : 1.0;
       localStorage.setItem("petralab_voice_speed", next.toString());
       return next;
     });
@@ -1009,11 +1012,6 @@ export default function Chat({
       setIsLoadingAudioId(messageId);
     }
 
-    // Calcola il rate Edge TTS in base allo slider
-    let edgeRate = "default";
-    if (voiceSpeed < 1.0) edgeRate = "-15%";
-    else if (voiceSpeed > 1.0) edgeRate = "+15%";
-
     try {
       const response = await fetch("/api/tts", {
         method: "POST",
@@ -1024,7 +1022,7 @@ export default function Chat({
           tutorId: selectedTutor?.id,
           gender: selectedTutor?.gender,
           lang: selectedTutor?.voiceLang,
-          rate: edgeRate,
+          rate: voiceSpeed,
         }),
       });
 
@@ -2406,6 +2404,22 @@ export default function Chat({
                 📝 <span className="hidden sm:inline">Voti</span> ({currentTutorMemory?.grades?.length || 0})
               </button>
 
+              {/* Tasto rapido velocità voce */}
+              <button
+                onClick={toggleVoiceSpeed}
+                className={`text-[12px] px-2.5 py-1.5 rounded-full font-bold flex items-center gap-1 transition-all active:scale-95 select-none ${
+                  voiceSpeed !== 1.0
+                    ? 'bg-[#25D366] text-white shadow-xs'
+                    : isDarkMode
+                    ? 'bg-[#202C33] text-[#8696A0] hover:bg-[#2A3942]'
+                    : 'bg-[#F0F2F5] text-slate-600 hover:bg-slate-200'
+                }`}
+                title="Tocca per cambiare velocità di lettura vocale"
+              >
+                <span>{voiceSpeed <= 0.85 ? '🐢' : voiceSpeed >= 1.25 ? '🚀' : '⚡'}</span>
+                <span>{voiceSpeed}x</span>
+              </button>
+
               <div className="relative">
                 <button 
                   onClick={() => setShowChatMenu(prev => !prev)}
@@ -2458,8 +2472,8 @@ export default function Chat({
                           isDarkMode ? 'hover:bg-[#111B21]' : 'hover:bg-slate-50'
                         }`}
                       >
-                        <span>{voiceSpeed === 1.0 ? '🐇' : voiceSpeed === 1.2 ? '🚀' : '🐢'}</span>
-                        <span>Velocità Voce: {voiceSpeed === 1.0 ? 'Normale' : voiceSpeed === 1.2 ? 'Veloce' : 'Lenta'}</span>
+                        <span>{voiceSpeed <= 0.85 ? '🐢' : voiceSpeed >= 1.25 ? '🚀' : '⚡'}</span>
+                        <span>Velocità Voce: {voiceSpeed}x</span>
                       </button>
 
                       {/* Tema Chiaro/Scuro */}
