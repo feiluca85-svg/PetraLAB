@@ -436,11 +436,9 @@ export default function TutorManager({
                     }`}
                   >
                     <option value="it-IT">🇮🇹 Italiano</option>
-                    <option value="en-US">🇬🇧 Inglese (Americano)</option>
                     <option value="en-GB">🇬🇧 Inglese (Britannico)</option>
+                    <option value="en-US">🇺🇸 Inglese (Americano)</option>
                     <option value="fr-FR">🇫🇷 Francese</option>
-                    <option value="es-ES">🇪🇸 Spagnolo</option>
-                    <option value="de-DE">🇩🇪 Tedesco</option>
                   </select>
                   <p className={`mt-1 text-[10px] leading-tight ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
                     Scegli la lingua per la pronuncia corretta.
@@ -482,7 +480,7 @@ export default function TutorManager({
                     }`}
                   >
                     <option value="">✨ Automatica (in base al Tutor e Genere)</option>
-                    {(["Italiano", "Inglese", "Francese", "Spagnolo", "Tedesco"] as const).map(cat => {
+                    {(["Italiano", "Inglese", "Francese"] as const).map(cat => {
                       const catVoices = AVAILABLE_VOICES.filter(v => v.category === cat);
                       if (catVoices.length === 0) return null;
                       return (
@@ -720,7 +718,7 @@ export default function TutorManager({
                       )}
                     </div>
                     <p className={`text-xs mt-1 truncate ${isDarkMode ? 'text-[#8696A0]' : 'text-slate-500'}`}>
-                      {tutor.gender === 'male' ? '👨 Voce Maschile' : '👩 Voce Femminile'} • {tutor.edgeVoice ? `🎙️ ${tutor.edgeVoice.replace("Neural", "")}` : "🎙️ AI Neurale"} • {tutor.voiceLang || 'it-IT'}
+                      {tutor.gender === 'male' ? '👨 Voce Maschile' : '👩 Voce Femminile'} • {tutor.edgeVoice ? `🎙️ ${AVAILABLE_VOICES.find(v => v.id === tutor.edgeVoice)?.name || tutor.edgeVoice.replace("Neural", "")}` : "🎙️ AI Neurale"} • {tutor.voiceSpeed ? `⚡ ${tutor.voiceSpeed}x` : '⚡ 1.0x'} • {tutor.voiceLang || 'it-IT'}
                     </p>
                     <p className={`text-[11px] mt-0.5 italic truncate ${isDarkMode ? 'text-gray-400' : 'text-slate-400'}`}>
                       &ldquo;{tutor.greeting}&rdquo;

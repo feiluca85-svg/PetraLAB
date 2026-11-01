@@ -35,36 +35,36 @@ export type VoiceOption = {
   lang: string;
   description: string;
   flag: string;
-  category: "Italiano" | "Inglese" | "Francese" | "Spagnolo" | "Tedesco";
+  category: "Italiano" | "Inglese" | "Francese";
 };
 
 export const AVAILABLE_VOICES: VoiceOption[] = [
-  // Italiano
-  { id: "it-IT-ElsaNeural", name: "Elsa", gender: "female", lang: "it-IT", description: "Femminile • Chiara, rassicurante e accogliente", flag: "🇮🇹", category: "Italiano" },
-  { id: "it-IT-IsabellaNeural", name: "Isabella", gender: "female", lang: "it-IT", description: "Femminile • Calda, espressiva e narrativa", flag: "🇮🇹", category: "Italiano" },
-  { id: "it-IT-DiegoNeural", name: "Diego", gender: "male", lang: "it-IT", description: "Maschile • Vivace, energico e amichevole", flag: "🇮🇹", category: "Italiano" },
-  { id: "it-IT-GiuseppeNeural", name: "Giuseppe", gender: "male", lang: "it-IT", description: "Maschile • Saggio, profondo ed elegante", flag: "🇮🇹", category: "Italiano" },
+  // Italiano - Voci Femminili
+  { id: "it-IT-ElsaNeural", name: "Elsa (Chiara & Didattica)", gender: "female", lang: "it-IT", description: "Femminile • Timbro naturale, ideale per spiegazioni e compiti", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-ElsaNeural:+14Hz", name: "Sofia (Giovane & Vivace)", gender: "female", lang: "it-IT", description: "Femminile • Timbro brillante da compagna di classe", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-ElsaNeural:-8Hz", name: "Laura (Calma & Dolce)", gender: "female", lang: "it-IT", description: "Femminile • Timbro rassicurante e rilassante", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-IsabellaNeural", name: "Isabella (Espressiva & Calda)", gender: "female", lang: "it-IT", description: "Femminile • Timbro empatico, ottimo per storia e racconti", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-IsabellaNeural:+10Hz", name: "Camilla (Solare & Allegra)", gender: "female", lang: "it-IT", description: "Femminile • Timbro entusiasta e dinamico", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-IsabellaNeural:-10Hz", name: "Beatrice (Narratrice)", gender: "female", lang: "it-IT", description: "Femminile • Timbro profondo e avvincente", flag: "🇮🇹", category: "Italiano" },
+
+  // Italiano - Voci Maschili
+  { id: "it-IT-DiegoNeural", name: "Diego (Vivace & Amichevole)", gender: "male", lang: "it-IT", description: "Maschile • Timbro brillante, perfetto per matematica e quiz", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-DiegoNeural:+12Hz", name: "Leo (Giovane & Sprint)", gender: "male", lang: "it-IT", description: "Maschile • Timbro fresco da fratello maggiore", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-DiegoNeural:-10Hz", name: "Marco (Energico & Pieno)", gender: "male", lang: "it-IT", description: "Maschile • Timbro caldo e deciso", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-GiuseppeNeural", name: "Giuseppe (Saggio & Elegante)", gender: "male", lang: "it-IT", description: "Maschile • Timbro autorevole, riflessivo e colto", flag: "🇮🇹", category: "Italiano" },
+  { id: "it-IT-GiuseppeNeural:-12Hz", name: "Maestro Leonardo (Profondo)", gender: "male", lang: "it-IT", description: "Maschile • Timbro solenne da maestro d'altri tempi", flag: "🇮🇹", category: "Italiano" },
 
   // Inglese
   { id: "en-GB-RyanNeural", name: "Ryan (UK)", gender: "male", lang: "en-GB", description: "Maschile • Accento British naturale e brillante", flag: "🇬🇧", category: "Inglese" },
   { id: "en-GB-SoniaNeural", name: "Sonia (UK)", gender: "female", lang: "en-GB", description: "Femminile • Accento British elegante e dolce", flag: "🇬🇧", category: "Inglese" },
   { id: "en-US-JennyNeural", name: "Jenny (USA)", gender: "female", lang: "en-US", description: "Femminile • Americana, amichevole e solare", flag: "🇺🇸", category: "Inglese" },
   { id: "en-US-GuyNeural", name: "Guy (USA)", gender: "male", lang: "en-US", description: "Maschile • Americano, colloquiale e rilassato", flag: "🇺🇸", category: "Inglese" },
-  { id: "en-US-AriaNeural", name: "Aria (USA)", gender: "female", lang: "en-US", description: "Femminile • Coinvolgente e dinamica", flag: "🇺🇸", category: "Inglese" },
-  { id: "en-US-AnaNeural", name: "Ana (USA)", gender: "female", lang: "en-US", description: "Femminile • Voce giovane da ragazza", flag: "🇺🇸", category: "Inglese" },
+  { id: "en-US-AnaNeural", name: "Ana (USA)", gender: "female", lang: "en-US", description: "Femminile • Voce giovane da compagna di studi", flag: "🇺🇸", category: "Inglese" },
 
   // Francese
   { id: "fr-FR-DeniseNeural", name: "Denise", gender: "female", lang: "fr-FR", description: "Femminile • Francese classico e accogliente", flag: "🇫🇷", category: "Francese" },
   { id: "fr-FR-HenriNeural", name: "Henri", gender: "male", lang: "fr-FR", description: "Maschile • Francese distinto e chiaro", flag: "🇫🇷", category: "Francese" },
   { id: "fr-FR-EloiseNeural", name: "Eloise", gender: "female", lang: "fr-FR", description: "Femminile • Francese giovane ed espressiva", flag: "🇫🇷", category: "Francese" },
-
-  // Spagnolo
-  { id: "es-ES-ElviraNeural", name: "Elvira", gender: "female", lang: "es-ES", description: "Femminile • Spagnolo castigliano solare", flag: "🇪🇸", category: "Spagnolo" },
-  { id: "es-ES-AlvaroNeural", name: "Alvaro", gender: "male", lang: "es-ES", description: "Maschile • Spagnolo castigliano energico", flag: "🇪🇸", category: "Spagnolo" },
-
-  // Tedesco
-  { id: "de-DE-KatjaNeural", name: "Katja", gender: "female", lang: "de-DE", description: "Femminile • Tedesco chiaro e didattico", flag: "🇩🇪", category: "Tedesco" },
-  { id: "de-DE-ConradNeural", name: "Conrad", gender: "male", lang: "de-DE", description: "Maschile • Tedesco calmo e preciso", flag: "🇩🇪", category: "Tedesco" },
 ];
 
 export function resolveTutorVoice(tutor?: Partial<Tutor> | null): string {
@@ -186,22 +186,6 @@ export const TUTORS: Tutor[] = [
       "libri/Storia/Salto nel Tempo 2.pdf"
     ],
     bookOffset: 0
-  },
-  {
-    id: "tutor_1792604512739",
-    subject: "Geografia 🌍",
-    name: "Magellano",
-    avatar: "/avatars/avatar_13.png",
-    gender: "male",
-    voiceLang: "it-IT",
-    edgeVoice: "it-IT-DiegoNeural",
-    prompt: "Sei Ferdinando Magellano, capitano di vascello ed esploratore avventuroso, solare, energico e simpaticissimo! Parli con lo spirito del lupo di mare che non vede l'ora di spiegare le vele ('All'arrembaggio della conoscenza!', 'Molla gli ormeggi!'). Hai sul tuo banco il libro di testo 'Greenway 2' e l'Atlante. Tratti ogni nazione europea, catena montuosa o capitale come una tappa di una circumnavigazione emozionante. Sei dolcissimo e incoraggiante, festeggi i ragionamenti corretti con entusiasmo contagioso ('Per tutti i venti dell'Atlantico, centro perfetto!'). Non dare mai la risposta pronta: falla viaggiare con gli occhi sulla cartina con domande stimolanti.",
-    greeting: "Molla gli ormeggi, esploratrice! 🧭 È il tuo capitano Magellano che ti parla! Il vento è a favore e la nave è pronta. Dimmi subito: come vanno le cose a scuola e i voti di geografia? Hai già aperto il libro 'Greenway 2'? In quale Stato o pagina facciamo rotta oggi?",
-    bookFiles: [
-      "libri/Geografia/Greenway 2.pdf",
-      "libri/Geografia/Greenway Atlante 2.pdf"
-    ],
-    bookOffset: 13
   }
 ];
 

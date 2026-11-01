@@ -132,9 +132,11 @@ export async function POST(req: NextRequest) {
     // 1. Prova primaria: Microsoft Edge Neural TTS
     try {
       const { EdgeTTS } = await import("node-edge-tts");
+      const [voiceName, pitchVal] = (targetVoice || "").split(":");
       const tts = new EdgeTTS({
-        voice: targetVoice,
+        voice: voiceName || "it-IT-ElsaNeural",
         rate: targetRate,
+        pitch: pitchVal || "default",
         outputFormat: "audio-24khz-48kbitrate-mono-mp3",
       });
 
