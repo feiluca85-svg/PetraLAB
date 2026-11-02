@@ -13,6 +13,7 @@ export default function AppShell() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTutorManagerModalOpen, setIsTutorManagerModalOpen] = useState(false);
+  const [pendingAIQuery, setPendingAIQuery] = useState<string>("");
   
   const { tutors, loading } = useTutors();
 
@@ -77,6 +78,13 @@ export default function AppShell() {
     }
   }, []);
 
+  useEffect(() => {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", isDarkMode ? "#0B141A" : "#ffffff");
+    }
+  }, [isDarkMode]);
+
   const toggleTheme = () => {
     setIsDarkMode((prev) => {
       const newTheme = !prev;
@@ -124,6 +132,8 @@ export default function AppShell() {
               }
             }}
             onOpenParent={openParent}
+            initialQuery={pendingAIQuery}
+            onClearInitialQuery={() => setPendingAIQuery("")}
           />
         )}
 
@@ -132,6 +142,10 @@ export default function AppShell() {
             isDarkMode={isDarkMode} 
             toggleTheme={toggleTheme}
             onOpenParent={openParent}
+            onAskAI={(query) => {
+              setPendingAIQuery(query);
+              changeTab("chat");
+            }}
           />
         )}
       </div>
@@ -178,11 +192,14 @@ export default function AppShell() {
       {/* BOTTOM NAVIGATION BAR (Chat, Compiti, Voti, Libreria)          */}
       {/* ============================================================== */}
       {!isChatOpen && !isParentOpen && (
-        <nav className={`flex-shrink-0 flex items-center justify-around border-t pb-safe z-30 transition-colors ${
-          isDarkMode 
-            ? "bg-[#0B141A] border-[#202C33]" 
-            : "bg-white border-slate-100 shadow-xs"
-        }`}>
+        <nav 
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)" }}
+          className={`flex-shrink-0 flex items-center justify-around border-t z-30 transition-colors ${
+            isDarkMode 
+              ? "bg-[#0B141A] border-[#202C33]" 
+              : "bg-white border-slate-100 shadow-xs"
+          }`}
+        >
           {/* 1. Tab Chat */}
           <button 
             type="button"

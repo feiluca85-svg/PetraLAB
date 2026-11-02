@@ -2,7 +2,7 @@ import AppShell from "@/components/AppShell";
 
 export default function Home() {
   return (
-    <main className="h-full w-full bg-slate-50 overflow-hidden font-sans flex flex-col">
+    <main className="h-full w-full bg-white dark:bg-[#0B141A] overflow-hidden font-sans flex flex-col">
       <AppShell />
     </main>
   );

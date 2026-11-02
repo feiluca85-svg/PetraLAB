@@ -77,11 +77,13 @@ export function getSubjectBadge(folder: string) {
 export default function Library({ 
   isDarkMode, 
   toggleTheme, 
-  onOpenParent 
+  onOpenParent,
+  onAskAI
 }: { 
   isDarkMode?: boolean; 
   toggleTheme?: () => void; 
   onOpenParent?: () => void; 
+  onAskAI?: (query: string) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedBookForViewer, setSelectedBookForViewer] = useState<BookManifestItem | null>(null);
@@ -115,8 +117,8 @@ export default function Library({
       isDarkMode ? "bg-[#0B141A] text-[#E9EDEF]" : "bg-white text-slate-900"
     }`}>
       {/* Header WhatsApp Style coerente con PetraLAB */}
-      <div className={`flex-shrink-0 px-4 pt-3 pb-2 flex justify-between items-center relative z-30 transition-colors border-b ${
-        isDarkMode ? "bg-[#0B141A] border-[#202C33]" : "bg-white border-slate-100"
+      <div className={`flex-shrink-0 px-4 pt-3 pb-2 flex justify-between items-center relative z-30 transition-colors ${
+        isDarkMode ? "bg-[#0B141A]" : "bg-white"
       }`}>
         <div className="flex items-center gap-2.5">
           <h1 className={`text-[24px] font-bold tracking-tight ${
@@ -124,13 +126,6 @@ export default function Library({
           }`}>
             PetraLAB
           </h1>
-          <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-            isDarkMode 
-              ? "bg-[#202C33] text-emerald-400 border border-[#2E3C44]" 
-              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-          }`}>
-            Libreria
-          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -219,34 +214,53 @@ export default function Library({
         </div>
       </div>
 
-      {/* Barra di ricerca lineare e coerente (pill shape) */}
+      {/* Barra di ricerca lineare e coerente (identica alla Chat, Compiti, Voti) */}
       <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? "bg-[#0B141A]" : "bg-white"}`}>
         <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
           isDarkMode 
-            ? "bg-[#202C33] border-transparent focus-within:border-emerald-500/60" 
-            : "bg-[#F0F2F5] border-transparent focus-within:border-emerald-500/60"
+            ? "bg-[#202C33] border-transparent focus-within:border-blue-500/60" 
+            : "bg-[#F0F2F5] border-transparent focus-within:border-blue-500/60"
         }`}>
-          <span className="text-slate-400 shrink-0 text-sm">🔍</span>
+          <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cerca per materia o titolo libro..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchQuery.trim() && onAskAI) {
+                e.preventDefault();
+                onAskAI(searchQuery.trim());
+              }
+            }}
+            placeholder="Chiedi all'IA o cerca tutor o libro..."
             className={`w-full bg-transparent outline-none font-medium text-[15px] placeholder-opacity-80 ${
               isDarkMode ? "text-white placeholder-[#8696A0]" : "text-slate-800 placeholder-slate-500"
             }`}
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
-                isDarkMode ? "text-gray-300 hover:bg-[#182229]" : "text-slate-600 hover:bg-slate-200"
-              }`}
-              title="Cancella testo"
-            >
-              ✕
-            </button>
+          {searchQuery.trim() && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
+                  isDarkMode ? "text-gray-300 hover:bg-[#182229]" : "text-slate-600 hover:bg-slate-200"
+                }`}
+                title="Cancella testo"
+              >
+                ✕
+              </button>
+              {onAskAI && (
+                <button
+                  type="button"
+                  onClick={() => onAskAI(searchQuery.trim())}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
+                  title="Invia domanda all'IA"
+                >
+                  <span>Chiedi</span>
+                  <span>✨</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

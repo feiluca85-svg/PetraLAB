@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import Link from "next/link";
-import { sendMessage } from "@/app/actions/chat";
+import { sendMessage, parseNuvolaScreenshot } from "@/app/actions/chat";
 import { Content } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -400,7 +400,9 @@ export default function Chat({
   onChatOpen,
   onSubTabChange,
   activeSubTab,
-  onOpenParent
+  onOpenParent,
+  initialQuery,
+  onClearInitialQuery
 }: { 
   tutors: Tutor[]; 
   isDarkMode?: boolean; 
@@ -409,6 +411,8 @@ export default function Chat({
   onSubTabChange?: (tab: 'tutte' | 'compiti' | 'voti') => void;
   activeSubTab?: 'tutte' | 'compiti' | 'voti';
   onOpenParent?: () => void;
+  initialQuery?: string;
+  onClearInitialQuery?: () => void;
 }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -422,6 +426,181 @@ export default function Chat({
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showHomeMenu, setShowHomeMenu] = useState(false);
+
+  // Modali Aggiungi Compiti e Aggiungi Voti
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [taskInputMode, setTaskInputMode] = useState<"scan" | "manual">("scan");
+  const [isScanningTasks, setIsScanningTasks] = useState(false);
+  const [scanTaskError, setScanTaskError] = useState("");
+  const [scanTaskSuccess, setScanTaskSuccess] = useState("");
+  const taskFileInputRef = useRef<HTMLInputElement>(null);
+  const [taskSubject, setTaskSubject] = useState("");
+  const [taskType, setTaskType] = useState<"Compito" | "Verifica">("Compito");
+  const [taskDesc, setTaskDesc] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState(() => {
+    const tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    return `${tom.getFullYear()}-${String(tom.getMonth()+1).padStart(2,'0')}-${String(tom.getDate()).padStart(2,'0')}`;
+  });
+
+  const [showAddGradeModal, setShowAddGradeModal] = useState(false);
+  const [gradeInputMode, setGradeInputMode] = useState<"manual" | "scan">("manual");
+  const [isScanningGrades, setIsScanningGrades] = useState(false);
+  const [scanGradeError, setScanGradeError] = useState("");
+  const [scanGradeSuccess, setScanGradeSuccess] = useState("");
+  const gradeFileInputRef = useRef<HTMLInputElement>(null);
+  const [gradeSubject, setGradeSubject] = useState("");
+  const [gradeValue, setGradeValue] = useState("");
+  const [gradeTopic, setGradeTopic] = useState("");
+  const [gradeDate, setGradeDate] = useState(() => {
+    return new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+  });
+
+  // Helpers per caricamento e parsing file
+  const fileToSimpleBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result as string;
+        const base64 = res.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleScanTaskFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsScanningTasks(true);
+    setScanTaskError("");
+    setScanTaskSuccess("");
+    try {
+      const base64 = await fileToSimpleBase64(file);
+      const res = await parseNuvolaScreenshot(base64, file.type || "image/jpeg");
+      const foundTasks = res.items || (res as any).agendaItems;
+      if (foundTasks && foundTasks.length > 0) {
+        const newTasks = foundTasks.map((item: any, i: number) => ({
+          id: `task_${Date.now()}_${i}`,
+          subject: item.subject || "Studio",
+          task: item.task || "Compito da svolgere",
+          dueDate: item.dueDate || getCurrentDate(),
+          isCompleted: false,
+          type: item.type === "Verifica" ? "Verifica" : "Compito",
+          source: "scanner"
+        }));
+        const updated = [...newTasks, ...agendaItems];
+        setAgendaItems(updated);
+        await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+        setScanTaskSuccess(`Aggiunti ${newTasks.length} nuovi compiti con successo!`);
+        setTimeout(() => {
+          setShowAddTaskModal(false);
+          setScanTaskSuccess("");
+        }, 1200);
+      } else {
+        setScanTaskError("Nessun compito rilevato dall'immagine. Prova a inserirlo manualmente.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setScanTaskError(err?.message || "Errore durante la scansione.");
+    } finally {
+      setIsScanningTasks(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleManualAddTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskSubject.trim() || !taskDesc.trim()) return;
+    const newTask = {
+      id: `task_${Date.now()}`,
+      subject: taskSubject.trim(),
+      task: taskDesc.trim(),
+      dueDate: taskDueDate || getCurrentDate(),
+      isCompleted: false,
+      type: taskType,
+      source: "manual"
+    };
+    const updated = [newTask, ...agendaItems];
+    setAgendaItems(updated);
+    await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+    setTaskDesc("");
+    setShowAddTaskModal(false);
+  };
+
+  const handleScanGradeFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsScanningGrades(true);
+    setScanGradeError("");
+    setScanGradeSuccess("");
+    try {
+      const base64 = await fileToSimpleBase64(file);
+      const res = await parseNuvolaScreenshot(base64, file.type || "image/jpeg");
+      if (res.gradesItems && res.gradesItems.length > 0) {
+        const userRef = doc(db, "petralab_users", "studente_demo");
+        const newMemory = { ...subjectsMemory };
+        res.gradesItems.forEach((g: any, i: number) => {
+          const subKey = g.subject ? g.subject.toLowerCase().trim() : "generico";
+          const currentMem = newMemory[subKey] || { grades: [], notes: [] };
+          const gradeObj = {
+            id: `grade_${Date.now()}_${i}`,
+            date: g.date || getCurrentDate(),
+            grade: g.grade || "7",
+            topic: g.topic || "Verifica",
+            originalSubject: g.subject || "Materia"
+          };
+          newMemory[subKey] = {
+            ...currentMem,
+            grades: [gradeObj, ...(currentMem.grades || [])]
+          };
+        });
+        setSubjectsMemory(newMemory);
+        await setDoc(userRef, { subjectsMemory: newMemory }, { merge: true });
+        setScanGradeSuccess(`Aggiunti ${res.gradesItems.length} voti con successo!`);
+        setTimeout(() => {
+          setShowAddGradeModal(false);
+          setScanGradeSuccess("");
+        }, 1200);
+      } else {
+        setScanGradeError("Nessun voto rilevato dall'immagine. Inseriscilo manualmente.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setScanGradeError(err?.message || "Errore scansione voti.");
+    } finally {
+      setIsScanningGrades(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleManualAddGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gradeSubject.trim() || !gradeValue.trim()) return;
+    const subKey = gradeSubject.toLowerCase().trim();
+    const userRef = doc(db, "petralab_users", "studente_demo");
+    const currentMem = subjectsMemory[subKey] || { grades: [], notes: [] };
+    const gradeObj = {
+      id: `grade_${Date.now()}`,
+      date: gradeDate || getCurrentDate(),
+      grade: gradeValue.trim(),
+      topic: gradeTopic.trim() || "Valutazione",
+      originalSubject: gradeSubject.trim()
+    };
+    const updatedMemory = {
+      ...subjectsMemory,
+      [subKey]: {
+        ...currentMem,
+        grades: [gradeObj, ...(currentMem.grades || [])]
+      }
+    };
+    setSubjectsMemory(updatedMemory);
+    await setDoc(userRef, { subjectsMemory: updatedMemory }, { merge: true });
+    setGradeValue("");
+    setGradeTopic("");
+    setShowAddGradeModal(false);
+  };
 
   const [showChatMenu, setShowChatMenu] = useState(false);
 
@@ -544,6 +723,13 @@ export default function Chat({
     compiti: -1,
     voti: 0
   });
+
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      setSearchQuery(initialQuery);
+      if (onClearInitialQuery) onClearInitialQuery();
+    }
+  }, [initialQuery]);
 
   const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti') => {
     if (listScrollRef.current) {
@@ -1556,20 +1742,6 @@ export default function Chat({
               }`}>
                 PetraLAB
               </h1>
-              {listFilter === "compiti" && (
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                  isDarkMode ? 'bg-[#202C33] text-emerald-400 border border-[#2E3C44]' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                }`}>
-                  Compiti
-                </span>
-              )}
-              {listFilter === "voti" && (
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                  isDarkMode ? 'bg-[#202C33] text-emerald-400 border border-[#2E3C44]' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                }`}>
-                  Voti
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1655,56 +1827,54 @@ export default function Chat({
             </div>
           </div>
 
-          {/* Search Bar (visibile solo nella tab Chat con i tutor) */}
-          {listFilter === "tutte" && (
-            <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
-              <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
-                isDarkMode 
-                  ? 'bg-[#202C33] border-transparent focus-within:border-blue-500/60' 
-                  : 'bg-[#F0F2F5] border-transparent focus-within:border-blue-500/60'
-              }`}>
-                <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
-                <input 
-                  type="text" 
-                  placeholder="Chiedi all'IA o cerca tutor..." 
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      e.preventDefault();
-                      handleAskAIFromSearch(searchQuery.trim());
-                    }
-                  }}
-                  className={`bg-transparent w-full outline-none font-medium text-[15px] placeholder-opacity-80 ${
-                    isDarkMode ? 'text-white placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-500'
-                  }`}
-                />
-                {searchQuery.trim() && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery("")}
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
-                        isDarkMode ? 'text-gray-300 hover:bg-[#182229]' : 'text-slate-600 hover:bg-slate-200'
-                      }`}
-                      title="Cancella testo"
-                    >
-                      ✕
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAskAIFromSearch(searchQuery.trim())}
-                      className="px-3.5 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
-                      title="Invia domanda all'IA"
-                    >
-                      <span>Chiedi</span>
-                      <span>✨</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Search Bar (visibile su tutte le tab Chat, Compiti, Voti) */}
+          <div className={`flex-shrink-0 px-4 py-1 pb-3 ${isDarkMode ? 'bg-[#0B141A]' : 'bg-white'}`}>
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full transition-all border ${
+              isDarkMode 
+                ? 'bg-[#202C33] border-transparent focus-within:border-blue-500/60' 
+                : 'bg-[#F0F2F5] border-transparent focus-within:border-blue-500/60'
+            }`}>
+              <div className="w-5 h-5 rounded-full border-[2px] border-blue-500 border-t-purple-500 border-r-pink-500 flex-shrink-0 animate-spin-slow"></div>
+              <input 
+                type="text" 
+                placeholder="Chiedi all'IA o cerca tutor..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    e.preventDefault();
+                    handleAskAIFromSearch(searchQuery.trim());
+                  }
+                }}
+                className={`bg-transparent w-full outline-none font-medium text-[15px] placeholder-opacity-80 ${
+                  isDarkMode ? 'text-white placeholder-[#8696A0]' : 'text-slate-800 placeholder-slate-500'
+                }`}
+              />
+              {searchQuery.trim() && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-60 hover:opacity-100 transition-opacity ${
+                      isDarkMode ? 'text-gray-300 hover:bg-[#182229]' : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                    title="Cancella testo"
+                  >
+                    ✕
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAskAIFromSearch(searchQuery.trim())}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
+                    title="Invia domanda all'IA"
+                  >
+                    <span>Chiedi</span>
+                    <span>✨</span>
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Lista delle Chat (Tutor per Materia) */}
           <div 
@@ -2326,19 +2496,54 @@ export default function Chat({
             )}
           </div>
 
-          {/* PULSANTE GALLEGGIANTE "START" A PORTATA DI POLLICE (Nella scheda Compiti) */}
+          {/* PULSANTI GALLEGGIANTI SCHEDA COMPITI: START STUDIO A SINISTRA, + (CARICA COMPITI) A DESTRA */}
           {listFilter === "compiti" && (
+            <>
+              {/* Tasto START STUDIO (in basso a sinistra) */}
+              <div className="absolute bottom-6 left-4 z-30">
+                <button
+                  type="button"
+                  onClick={() => setShowPlannerModal(true)}
+                  className="px-4 py-3 rounded-full font-black text-xs sm:text-sm text-white flex items-center gap-1.5 shadow-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all border-2 border-white/30"
+                  style={{
+                    boxShadow: "0 8px 25px -4px rgba(16, 185, 129, 0.6)"
+                  }}
+                >
+                  <span className="text-lg">▶️</span>
+                  <span className="tracking-wide">START STUDIO</span>
+                </button>
+              </div>
+
+              {/* Tasto + Carica Compiti (in basso a destra) */}
+              <div className="absolute bottom-6 right-4 z-30">
+                <button
+                  type="button"
+                  onClick={() => setShowAddTaskModal(true)}
+                  className="w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer bg-[#25D366] text-white hover:bg-[#20ba59] shadow-emerald-700/30"
+                  aria-label="Aggiungi Compito"
+                  title="Aggiungi compito o fai foto"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-7 h-7">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* PULSANTE GALLEGGIANTE SCHEDA VOTI: + (CARICA VOTI) A DESTRA */}
+          {listFilter === "voti" && (
             <div className="absolute bottom-6 right-4 z-30">
               <button
                 type="button"
-                onClick={() => setShowPlannerModal(true)}
-                className="px-5 py-3.5 rounded-full font-black text-sm text-white flex items-center gap-2 shadow-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all animate-bounce hover:animate-none border-2 border-white/30"
-                style={{
-                  boxShadow: "0 8px 25px -4px rgba(16, 185, 129, 0.6)"
-                }}
+                onClick={() => setShowAddGradeModal(true)}
+                className="w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer bg-[#25D366] text-white hover:bg-[#20ba59] shadow-emerald-700/30"
+                aria-label="Aggiungi Voto"
+                title="Aggiungi voto o carica foto"
               >
-                <span className="text-xl">▶️</span>
-                <span className="tracking-wide">START STUDIO</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-7 h-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
               </button>
             </div>
           )}
@@ -3009,6 +3214,354 @@ export default function Chat({
                 Applica Sfondo
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE: CARICA / AGGIUNGI COMPITI O VERIFICHE */}
+      {showAddTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className={`w-full max-w-md rounded-3xl p-5 shadow-2xl border flex flex-col gap-4 max-h-[90vh] overflow-y-auto ${
+            isDarkMode ? "bg-[#111B21] border-[#222E35] text-white" : "bg-white border-slate-200 text-slate-800"
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-inherit">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📝</span>
+                <h3 className="font-bold text-base">Aggiungi Compito o Verifica</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddTaskModal(false)}
+                className="p-1 rounded-full opacity-60 hover:opacity-100 transition-opacity"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Switch Tab Scansione Foto vs Manuale */}
+            <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 dark:bg-[#202C33] text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setTaskInputMode("scan")}
+                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  taskInputMode === "scan"
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                <span>📸</span>
+                <span>Foto Registro / Diario</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaskInputMode("manual")}
+                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  taskInputMode === "manual"
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                <span>✏️</span>
+                <span>Inserisci a Mano</span>
+              </button>
+            </div>
+
+            {taskInputMode === "scan" ? (
+              <div className="flex flex-col gap-3 py-2">
+                <p className={`text-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                  Carica una foto del diario o uno screenshot del registro elettronico: l'IA riconoscerà automaticamente compiti, verifiche e scadenze!
+                </p>
+
+                <input
+                  ref={taskFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScanTaskFile}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  disabled={isScanningTasks}
+                  onClick={() => taskFileInputRef.current?.click()}
+                  className={`w-full py-6 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${
+                    isDarkMode
+                      ? "border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-300"
+                      : "border-emerald-400 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800"
+                  }`}
+                >
+                  {isScanningTasks ? (
+                    <>
+                      <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="font-bold text-xs mt-1">Analisi IA con Gemini in corso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl">📷</span>
+                      <span className="font-bold text-sm">Scatta Foto o Scegli Screenshot</span>
+                      <span className="text-[11px] opacity-75">JPG, PNG, WebP supportati</span>
+                    </>
+                  )}
+                </button>
+
+                {scanTaskSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold text-center">
+                    {scanTaskSuccess}
+                  </div>
+                )}
+                {scanTaskError && (
+                  <div className="p-3 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-bold text-center">
+                    {scanTaskError}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleManualAddTask} className="flex flex-col gap-3 py-1">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                    Materia
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Es: Matematica, Scienze, Storia..."
+                    value={taskSubject}
+                    onChange={(e) => setTaskSubject(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none ${
+                      isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                      Tipo
+                    </label>
+                    <select
+                      value={taskType}
+                      onChange={(e) => setTaskType(e.target.value as "Compito" | "Verifica")}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none ${
+                        isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                      }`}
+                    >
+                      <option value="Compito">Compito</option>
+                      <option value="Verifica">Verifica</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                      Per quando
+                    </label>
+                    <input
+                      type="date"
+                      value={taskDueDate}
+                      onChange={(e) => setTaskDueDate(e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none ${
+                        isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                    Descrizione Compito / Argomento
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Es: Esercizi pag. 142 n. 3, 4, 5..."
+                    value={taskDesc}
+                    onChange={(e) => setTaskDesc(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none resize-none ${
+                      isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-[#111B21] font-bold text-sm shadow-md active:scale-98 transition-all cursor-pointer mt-1"
+                >
+                  Salva nel Diario Compiti
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODALE: CARICA / AGGIUNGI VOTI */}
+      {showAddGradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className={`w-full max-w-md rounded-3xl p-5 shadow-2xl border flex flex-col gap-4 max-h-[90vh] overflow-y-auto ${
+            isDarkMode ? "bg-[#111B21] border-[#222E35] text-white" : "bg-white border-slate-200 text-slate-800"
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-inherit">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📊</span>
+                <h3 className="font-bold text-base">Registra Voto</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddGradeModal(false)}
+                className="p-1 rounded-full opacity-60 hover:opacity-100 transition-opacity"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Switch Tab Manuale vs Foto */}
+            <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 dark:bg-[#202C33] text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setGradeInputMode("manual")}
+                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  gradeInputMode === "manual"
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                <span>✏️</span>
+                <span>Inserisci Voto</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGradeInputMode("scan")}
+                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  gradeInputMode === "scan"
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                <span>📸</span>
+                <span>Foto Voti Registro</span>
+              </button>
+            </div>
+
+            {gradeInputMode === "scan" ? (
+              <div className="flex flex-col gap-3 py-2">
+                <p className={`text-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                  Carica uno screenshot dei voti dal registro elettronico: l'IA estrarrà voti, date e materie!
+                </p>
+
+                <input
+                  ref={gradeFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScanGradeFile}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  disabled={isScanningGrades}
+                  onClick={() => gradeFileInputRef.current?.click()}
+                  className={`w-full py-6 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${
+                    isDarkMode
+                      ? "border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-950/30 text-emerald-300"
+                      : "border-emerald-400 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800"
+                  }`}
+                >
+                  {isScanningGrades ? (
+                    <>
+                      <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="font-bold text-xs mt-1">Estrazione voti in corso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl">📷</span>
+                      <span className="font-bold text-sm">Carica Screenshot Voti</span>
+                      <span className="text-[11px] opacity-75">JPG, PNG, WebP supportati</span>
+                    </>
+                  )}
+                </button>
+
+                {scanGradeSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold text-center">
+                    {scanGradeSuccess}
+                  </div>
+                )}
+                {scanGradeError && (
+                  <div className="p-3 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-bold text-center">
+                    {scanGradeError}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleManualAddGrade} className="flex flex-col gap-3 py-1">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                    Materia
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Es: Matematica, Grammatica, Storia..."
+                    value={gradeSubject}
+                    onChange={(e) => setGradeSubject(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none ${
+                      isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                      Voto
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Es: 8, 7.5, 9-"
+                      value={gradeValue}
+                      onChange={(e) => setGradeValue(e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold text-emerald-500 outline-none ${
+                        isDarkMode ? "bg-[#202C33] border-[#2A3942]" : "bg-slate-50 border-slate-200"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                      Data
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Es: 2 Nov, 28 Ott"
+                      value={gradeDate}
+                      onChange={(e) => setGradeDate(e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none ${
+                        isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-75">
+                    Argomento / Tipo Verifica (opzionale)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Es: Equazioni, Interrogazione verbi, Cartine..."
+                    value={gradeTopic}
+                    onChange={(e) => setGradeTopic(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none ${
+                      isDarkMode ? "bg-[#202C33] border-[#2A3942] text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-[#111B21] font-bold text-sm shadow-md active:scale-98 transition-all cursor-pointer mt-1"
+                >
+                  Salva nella Bacheca Voti
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

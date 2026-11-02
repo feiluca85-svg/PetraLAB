@@ -10,7 +10,7 @@ import PwaRegistration from "@/components/PwaRegistration";
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#25D366" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0B141A" },
   ],
   width: "device-width",
