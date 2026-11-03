@@ -481,15 +481,19 @@ export default function Chat({
       const res = await parseNuvolaScreenshot(base64, file.type || "image/jpeg");
       const foundTasks = res.items || (res as any).agendaItems;
       if (foundTasks && foundTasks.length > 0) {
-        const newTasks = foundTasks.map((item: any, i: number) => ({
-          id: `task_${Date.now()}_${i}`,
-          subject: item.subject || "Studio",
-          task: item.task || "Compito da svolgere",
-          dueDate: item.dueDate || getCurrentDate(),
-          isCompleted: false,
-          type: item.type === "Verifica" ? "Verifica" : "Compito",
-          source: "scanner"
-        }));
+        const newTasks = foundTasks.map((item: any, i: number) => {
+          const desc = item.description || item.task || item.text || "Compito da svolgere";
+          return {
+            id: `task_${Date.now()}_${i}`,
+            subject: item.subject || "Studio",
+            description: desc,
+            task: desc,
+            dueDate: item.dueDate || getCurrentDate(),
+            isCompleted: false,
+            type: item.type === "Verifica" ? "Verifica" : "Compito",
+            source: "scanner"
+          };
+        });
         const updated = [...newTasks, ...agendaItems];
         setAgendaItems(updated);
         await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
@@ -513,10 +517,12 @@ export default function Chat({
   const handleManualAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskSubject.trim() || !taskDesc.trim()) return;
+    const desc = taskDesc.trim();
     const newTask = {
       id: `task_${Date.now()}`,
       subject: taskSubject.trim(),
-      task: taskDesc.trim(),
+      description: desc,
+      task: desc,
       dueDate: taskDueDate || getCurrentDate(),
       isCompleted: false,
       type: taskType,
@@ -931,6 +937,7 @@ export default function Chat({
         if (data.agendaItems && Array.isArray(data.agendaItems)) {
           const seenIds = new Set<string>();
           let hasDuplicates = false;
+          let hasMissingDesc = false;
           const cleaned = data.agendaItems.map((item: any, idx: number) => {
             let itemId = item.id;
             if (!itemId || itemId === 'id_random123' || itemId === 'id_1' || seenIds.has(itemId)) {
@@ -938,14 +945,20 @@ export default function Chat({
               hasDuplicates = true;
             }
             seenIds.add(itemId);
+            const desc = item.description || item.task || item.text || "";
+            if (!item.description && desc) {
+              hasMissingDesc = true;
+            }
             return {
               ...item,
               id: itemId,
+              description: desc,
+              task: desc,
               isCompleted: Boolean(item.isCompleted)
             };
           });
           setAgendaItems(cleaned);
-          if (hasDuplicates) {
+          if (hasDuplicates || hasMissingDesc) {
             setDoc(userRef, { agendaItems: cleaned }, { merge: true }).catch(console.error);
           }
         }
@@ -2406,7 +2419,7 @@ export default function Chat({
                                              ? (isDarkMode ? "text-gray-200" : "text-slate-700")
                                              : (isDarkMode ? "text-[#8696A0] line-clamp-1" : "text-slate-600 line-clamp-1")
                                          }`}>
-                                           {renderFormattedTaskText(item.description)}
+                                           {renderFormattedTaskText(item.description || item.task || item.text)}
                                          </div>
                                        </div>
                                        {expandedTasks[item.id || idx] && (
@@ -2424,7 +2437,7 @@ export default function Chat({
                                                    onClick={(e) => {
                                                      e.stopPropagation();
                                                      handleSelectTutor(matchingTutor);
-                                                     setInput(`Ciao ${matchingTutor.name}! Ho un dubbio su questo compito di ${item.subject}: "${item.description}". Mi aiuti a capirlo?`);
+                                                     setInput(`Ciao ${matchingTutor.name}! Ho un dubbio su questo compito di ${item.subject}: "${item.description || item.task || ''}". Mi aiuti a capirlo?`);
                                                    }}
                                                    className="px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:from-emerald-600 hover:to-teal-600 active:scale-95 transition-all"
                                                  >
