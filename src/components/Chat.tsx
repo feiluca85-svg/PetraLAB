@@ -118,6 +118,29 @@ const renderFormattedTaskText = (text: string) => {
   });
 };
 
+// Funzioni ausiliarie per deduplicazione e similarità compiti
+const stripSubPrefixForDedup = (str: string) =>
+  (str || "")
+    .replace(/^(aritmetica|geometria|algebra|grammatica|antologia|letteratura|epica|storia|geografia|scienze|inglese|francese|arte e immagine|arte|tecnologia|musica)\s*:\s*/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+const stringSimilarityPercent = (s1: string, s2: string): number => {
+  const longer = s1.length > s2.length ? s1 : s2;
+  if (longer.length === 0) return 1.0;
+  const m = s1.length, n = s2.length;
+  const d: number[][] = [];
+  for (let i = 0; i <= m; i++) d[i] = [i];
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+    }
+  }
+  return (longer.length - d[m][n]) / longer.length;
+};
+
 export function getBookCleanTitle(fileName: string): string {
   const clean = fileName.replace(/\.pdf$/i, "");
   if (clean === "Matematica_Aritmetica_1") return "Aritmetica 1";
@@ -481,7 +504,55 @@ export default function Chat({
       const res = await parseNuvolaScreenshot(base64, file.type || "image/jpeg");
       const foundTasks = res.items || (res as any).agendaItems;
       if (foundTasks && foundTasks.length > 0) {
-        const newTasks = foundTasks.map((item: any, i: number) => {
+        const baseAgenda = [...agendaItems];
+        let updatedExistingCount = 0;
+
+        const filteredNew = foundTasks.filter((newItem: any) => {
+          const normNewSub = (newItem.subject || "").toLowerCase().trim();
+          const normNewDate = (newItem.dueDate || "").trim();
+          const normNewDesc = stripSubPrefixForDedup(newItem.description || newItem.task || newItem.text || "");
+
+          const dupIndex = baseAgenda.findIndex((ex: any) => {
+            const normExSub = (ex.subject || "").toLowerCase().trim();
+            const normExDate = (ex.dueDate || "").trim();
+            const normExDesc = stripSubPrefixForDedup(ex.description || ex.task || ex.text || "");
+
+            // Materie diverse -> non duplicato
+            if (normNewSub && normExSub && !normNewSub.includes(normExSub) && !normExSub.includes(normNewSub)) {
+              return false;
+            }
+            // Date diverse -> non duplicato
+            if (normNewDate && normExDate && normNewDate !== normExDate) {
+              return false;
+            }
+
+            // Stessa materia e stessa data: controllo similarità o uguaglianza
+            if (normNewDesc && normExDesc) {
+              if (normNewDesc === normExDesc) return true;
+              if (normNewDesc.includes(normExDesc) || normExDesc.includes(normNewDesc)) return true;
+              const sim = stringSimilarityPercent(normNewDesc, normExDesc);
+              if (sim >= 0.75) return true;
+            }
+            return false;
+          });
+
+          if (dupIndex !== -1) {
+            const incomingDesc = newItem.description || newItem.task || newItem.text || "";
+            const existingDesc = baseAgenda[dupIndex].description || baseAgenda[dupIndex].task || "";
+            if (incomingDesc.length > existingDesc.length) {
+              baseAgenda[dupIndex] = {
+                ...baseAgenda[dupIndex],
+                description: incomingDesc,
+                task: incomingDesc
+              };
+              updatedExistingCount++;
+            }
+            return false;
+          }
+          return true;
+        });
+
+        const newTasks = filteredNew.map((item: any, i: number) => {
           const desc = item.description || item.task || item.text || "Compito da svolgere";
           return {
             id: `task_${Date.now()}_${i}`,
@@ -494,10 +565,16 @@ export default function Chat({
             source: "scanner"
           };
         });
-        const updated = [...newTasks, ...agendaItems];
+
+        const updated = [...newTasks, ...baseAgenda];
         setAgendaItems(updated);
         await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
-        setScanTaskSuccess(`Aggiunti ${newTasks.length} nuovi compiti con successo!`);
+        
+        if (newTasks.length > 0 || updatedExistingCount > 0) {
+          setScanTaskSuccess(`Aggiunti ${newTasks.length} nuovi compiti${updatedExistingCount > 0 ? ` e aggiornati ${updatedExistingCount}` : ""}!`);
+        } else {
+          setScanTaskSuccess("Tutti i compiti erano già presenti in agenda!");
+        }
         setTimeout(() => {
           setShowAddTaskModal(false);
           setScanTaskSuccess("");
@@ -905,6 +982,18 @@ export default function Chat({
     }
   };
 
+  const handleDeleteAgendaItem = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Vuoi eliminare questo compito dall'agenda?")) return;
+    try {
+      const updated = agendaItems.filter(item => item.id !== id);
+      setAgendaItems(updated);
+      await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+    } catch (err) {
+      console.error("Errore durante l'eliminazione del compito:", err);
+    }
+  };
+
   const handleUpdateTaskDate = async (e: React.MouseEvent, id: string, newDate: string) => {
     e.stopPropagation();
     try {
@@ -938,7 +1027,10 @@ export default function Chat({
           const seenIds = new Set<string>();
           let hasDuplicates = false;
           let hasMissingDesc = false;
-          const cleaned = data.agendaItems.map((item: any, idx: number) => {
+
+          // 1. Normalizza e rimuove ID duplicati/assenti
+          const normalizedList: any[] = [];
+          data.agendaItems.forEach((item: any, idx: number) => {
             let itemId = item.id;
             if (!itemId || itemId === 'id_random123' || itemId === 'id_1' || seenIds.has(itemId)) {
               itemId = `task_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
@@ -949,17 +1041,53 @@ export default function Chat({
             if (!item.description && desc) {
               hasMissingDesc = true;
             }
-            return {
+            normalizedList.push({
               ...item,
               id: itemId,
               description: desc,
               task: desc,
               isCompleted: Boolean(item.isCompleted)
-            };
+            });
           });
-          setAgendaItems(cleaned);
+
+          // 2. Rileva ed elimina eventuali duplicati di contenuto (stessa materia, stessa data, testo identico o >80% simile)
+          const deduplicated: any[] = [];
+          normalizedList.forEach((it) => {
+            const sub = (it.subject || "").toLowerCase().trim();
+            const date = (it.dueDate || "").trim();
+            const desc = stripSubPrefixForDedup(it.description || "");
+
+            const dupIdx = deduplicated.findIndex((existing) => {
+              const exSub = (existing.subject || "").toLowerCase().trim();
+              const exDate = (existing.dueDate || "").trim();
+              const exDesc = stripSubPrefixForDedup(existing.description || "");
+
+              if (sub && exSub && !sub.includes(exSub) && !exSub.includes(sub)) return false;
+              if (date && exDate && date !== exDate) return false;
+
+              if (desc && exDesc) {
+                if (desc === exDesc) return true;
+                if (desc.includes(exDesc) || exDesc.includes(desc)) return true;
+                const sim = stringSimilarityPercent(desc, exDesc);
+                if (sim >= 0.75) return true;
+              }
+              return false;
+            });
+
+            if (dupIdx !== -1) {
+              hasDuplicates = true;
+              // Se la versione attuale ha una descrizione più ricca/lunga, aggiorna la precedente
+              if ((it.description || "").length > (deduplicated[dupIdx].description || "").length) {
+                deduplicated[dupIdx] = it;
+              }
+            } else {
+              deduplicated.push(it);
+            }
+          });
+
+          setAgendaItems(deduplicated);
           if (hasDuplicates || hasMissingDesc) {
-            setDoc(userRef, { agendaItems: cleaned }, { merge: true }).catch(console.error);
+            setDoc(userRef, { agendaItems: deduplicated }, { merge: true }).catch(console.error);
           }
         }
       }
@@ -2466,6 +2594,18 @@ export default function Chat({
                                                <span>🚀</span> Sposta a Domani
                                              </button>
                                            )}
+                                           <button 
+                                             type="button"
+                                             onClick={(e) => handleDeleteAgendaItem(e, item.id)}
+                                             className={`text-xs font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all opacity-60 hover:opacity-100 active:scale-95 ${
+                                               isDarkMode 
+                                                 ? "text-red-400 hover:bg-red-950/40" 
+                                                 : "text-red-600 hover:bg-red-50"
+                                             }`}
+                                             title="Elimina compito"
+                                           >
+                                             <span>🗑️</span> Elimina
+                                           </button>
                                          </div>
                                        )}
                                      </div>
