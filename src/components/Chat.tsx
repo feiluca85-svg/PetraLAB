@@ -463,6 +463,7 @@ export default function Chat({
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [proactiveLog, setProactiveLog] = useState<Record<string, string>>({});
   const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, number>>({});
+  const initialWatermarksRef = useRef<Record<string, number>>({});
   const processedTriggersRef = useRef<Set<string>>(new Set());
 
   // Modali Aggiungi Compiti e Aggiungi Voti
@@ -1018,16 +1019,22 @@ export default function Chat({
   }, [selectedTutor, subjectsMemory]);
   // Effetto Badge OS (Pallino / Numerino rosso sull'icona dello smartphone o PWA)
   useEffect(() => {
-    // 1. Messaggi non letti dei tutor (quando l'ultimo messaggio è del tutor e non ancora aperto/letto)
+    // 1. Messaggi nuovi non letti dei tutor (somma esatta dei nuovi messaggi da leggere)
     let unreadChatsCount = 0;
     Object.keys(chatsByTutor).forEach((tId) => {
       const chat = chatsByTutor[tId];
       if (!chat || !chat.messages || chat.messages.length === 0) return;
       const lastMsg = chat.messages[chat.messages.length - 1];
-      if (lastMsg.role === "model") {
-        const lastMsgTime = lastMsg.timestamp || chat.lastUpdatedTimestamp || 0;
-        const lastRead = lastReadTimestamps[tId] || 0;
-        if (lastMsgTime > lastRead) {
+      if (lastMsg.role !== "model") return;
+
+      const lastRead = lastReadTimestamps[tId] || initialWatermarksRef.current[tId] || 0;
+      if (lastRead === 0) return;
+
+      for (let i = chat.messages.length - 1; i >= 0; i--) {
+        const m = chat.messages[i];
+        if (m.role !== "model") break;
+        const mTime = m.timestamp || chat.lastUpdatedTimestamp || 0;
+        if (mTime > lastRead) {
           unreadChatsCount++;
         }
       }
@@ -1150,8 +1157,22 @@ export default function Chat({
         if (data.proactiveLog) {
           setProactiveLog(data.proactiveLog);
         }
+        let incomingLastRead = data.lastReadTimestamps || {};
         if (data.lastReadTimestamps) {
           setLastReadTimestamps(data.lastReadTimestamps);
+        }
+        // Se ci sono chat esistenti senza un timestamp di lettura registrato,
+        // inizializziamo il watermark iniziale al timestamp dell'ultimo messaggio già presente,
+        // così i messaggi passati/saluti non vengono contati erroneamente come nuovi da leggere.
+        if (data.chatsByTutor && typeof data.chatsByTutor === "object") {
+          Object.keys(data.chatsByTutor).forEach((tId) => {
+            const chat = data.chatsByTutor[tId];
+            if (!incomingLastRead[tId] && !initialWatermarksRef.current[tId] && chat?.messages && chat.messages.length > 0) {
+              const lastM = chat.messages[chat.messages.length - 1];
+              const tTime = lastM?.timestamp || chat.lastUpdatedTimestamp || 0;
+              initialWatermarksRef.current[tId] = tTime;
+            }
+          });
         }
         if (data.agendaItems && Array.isArray(data.agendaItems)) {
           const seenIds = new Set<string>();
@@ -2391,14 +2412,25 @@ export default function Chat({
                 );
                 const tutorTraining = tutorVerifica ? getProgressiveTraining(tutorVerifica) : null;
 
-                // Calcolo messaggi non letti per il pallino verde stile WhatsApp
+                // Calcolo messaggi non letti per il pallino verde stile WhatsApp (solo i NUOVI da leggere)
                 let unreadCount = 0;
                 if (tutorChat?.messages && tutorChat.messages.length > 0) {
-                  const lastRead = lastReadTimestamps[tutor.id] || 0;
-                  // Conta i messaggi del tutor inviati dopo l'ultimo accesso
-                  unreadCount = tutorChat.messages.filter(
-                    (m) => m.role === "model" && ((m.timestamp || tutorChat.lastUpdatedTimestamp || 0) > lastRead)
-                  ).length;
+                  const lastMsgInChat = tutorChat.messages[tutorChat.messages.length - 1];
+                  // Se l'ultimo messaggio è dell'utente, l'utente ha già risposto (0 non letti)
+                  if (lastMsgInChat.role === "model") {
+                    const lastRead = lastReadTimestamps[tutor.id] || initialWatermarksRef.current[tutor.id] || 0;
+                    if (lastRead > 0) {
+                      // Conta solo i messaggi recenti del tutor non ancora letti in fondo alla conversazione
+                      for (let i = tutorChat.messages.length - 1; i >= 0; i--) {
+                        const m = tutorChat.messages[i];
+                        if (m.role !== "model") break;
+                        const mTime = m.timestamp || tutorChat.lastUpdatedTimestamp || 0;
+                        if (mTime > lastRead) {
+                          unreadCount++;
+                        }
+                      }
+                    }
+                  }
                 }
                 const hasUnread = unreadCount > 0;
 
