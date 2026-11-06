@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Tutor } from "@/lib/tutors";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
@@ -143,6 +143,82 @@ export default function CalendarView({
   const [newTaskSubject, setNewTaskSubject] = useState(DEFAULT_SUBJECTS[0]);
   const [newTaskDesc, setNewTaskDesc] = useState("");
   const [isSavingTask, setIsSavingTask] = useState(false);
+
+  // Modal "Modifica Argomenti Verifica / Compito" (Long Press o click su modifica)
+  const [editingTask, setEditingTask] = useState<any | null>(null);
+
+  // Gestione Pressione Prolungata (Long Press su caselle e compiti)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressActiveRef = useRef(false);
+
+  const startLongPress = (onTrigger: () => void) => {
+    isLongPressActiveRef.current = false;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressActiveRef.current = true;
+      try {
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate(60);
+        }
+      } catch {}
+      onTrigger();
+    }, 500);
+  };
+
+  const endLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleOpenEditTask = (task: any) => {
+    setEditingTask({
+      id: task.id,
+      subject: task.subject || DEFAULT_SUBJECTS[0],
+      dueDate: normalizeDateStr(task.dueDate) || todayISO,
+      description: task.description || task.task || "",
+      task: task.description || task.task || "",
+      type: task.type || "verifica",
+      isCompleted: Boolean(task.isCompleted),
+      source: task.source || "manual",
+    });
+  };
+
+  const handleSaveEditedTask = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingTask) return;
+    setIsSavingTask(true);
+    try {
+      const updated = items.map((item) =>
+        item.id === editingTask.id ? { ...editingTask } : item
+      );
+      setItems(updated);
+      await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+      setEditingTask(null);
+    } catch (err) {
+      console.error("Errore salvataggio modifica compito:", err);
+      alert("Impossibile salvare le modifiche. Riprova.");
+    } finally {
+      setIsSavingTask(false);
+    }
+  };
+
+  const handleDeleteEditedTask = async () => {
+    if (!editingTask) return;
+    if (!confirm(`Vuoi eliminare definitivamente questa ${editingTask.type === "verifica" ? "verifica" : "attività"} di ${editingTask.subject}?`)) return;
+    setIsSavingTask(true);
+    try {
+      const updated = items.filter((item) => item.id !== editingTask.id);
+      setItems(updated);
+      await setDoc(doc(db, "petralab_users", "studente_demo"), { agendaItems: updated }, { merge: true });
+      setEditingTask(null);
+    } catch (err) {
+      console.error("Errore eliminazione compito:", err);
+    } finally {
+      setIsSavingTask(false);
+    }
+  };
 
   // Stato compiti (con fallback e ascolto in tempo reale da Firestore)
   const [items, setItems] = useState<any[]>(agendaItems || []);
@@ -873,7 +949,46 @@ export default function CalendarView({
               return (
                 <div
                   key={idx}
-                  onClick={() => setSelectedDayISO(cell.dateISO)}
+                  onMouseDown={() => {
+                    startLongPress(() => {
+                      const ver = cell.tasks.find(
+                        (t) => (t.type || "").toLowerCase() === "verifica" || (t.type || "").toLowerCase() === "interrogazione"
+                      );
+                      if (ver) {
+                        handleOpenEditTask(ver);
+                      } else if (cell.tasks.length > 0) {
+                        handleOpenEditTask(cell.tasks[0]);
+                      } else {
+                        handleOpenAddTask(cell.dateISO, "verifica");
+                      }
+                    });
+                  }}
+                  onMouseUp={endLongPress}
+                  onMouseLeave={endLongPress}
+                  onTouchStart={() => {
+                    startLongPress(() => {
+                      const ver = cell.tasks.find(
+                        (t) => (t.type || "").toLowerCase() === "verifica" || (t.type || "").toLowerCase() === "interrogazione"
+                      );
+                      if (ver) {
+                        handleOpenEditTask(ver);
+                      } else if (cell.tasks.length > 0) {
+                        handleOpenEditTask(cell.tasks[0]);
+                      } else {
+                        handleOpenAddTask(cell.dateISO, "verifica");
+                      }
+                    });
+                  }}
+                  onTouchEnd={endLongPress}
+                  onTouchMove={endLongPress}
+                  onClick={(e) => {
+                    if (isLongPressActiveRef.current) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    setSelectedDayISO(cell.dateISO);
+                  }}
                   className={`relative flex flex-col p-1 sm:p-1.5 transition-all cursor-pointer overflow-hidden ${
                     !cell.isCurrentMonth
                       ? isDarkMode
@@ -956,7 +1071,24 @@ export default function CalendarView({
                       return (
                         <div
                           key={task.id || tIdx}
-                          className={`px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold truncate border ${
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            startLongPress(() => handleOpenEditTask(task));
+                          }}
+                          onMouseUp={endLongPress}
+                          onMouseLeave={endLongPress}
+                          onTouchStart={(e) => {
+                            e.stopPropagation();
+                            startLongPress(() => handleOpenEditTask(task));
+                          }}
+                          onTouchEnd={endLongPress}
+                          onTouchMove={endLongPress}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isLongPressActiveRef.current) return;
+                            handleOpenEditTask(task);
+                          }}
+                          className={`px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold truncate border cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
                             task.isCompleted ? "opacity-40 line-through" : ""
                           } ${
                             isVer
@@ -965,7 +1097,7 @@ export default function CalendarView({
                                 : "bg-red-100 border-red-300 text-red-800 font-bold"
                               : getSubjectColor(task.subject, isDarkMode)
                           }`}
-                          title={`${task.subject}: ${task.description || task.task || ""}`}
+                          title={`Tieni premuto per modificare argomenti: ${task.subject}: ${task.description || task.task || ""}`}
                         >
                           <span className="truncate">
                             {isVer ? "🚨 " : "• "}
@@ -1104,23 +1236,36 @@ export default function CalendarView({
                             </span>
                           </div>
 
-                          {tutor && !task.isCompleted && (
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               type="button"
-                              onClick={() =>
-                                onOpenTutorChat?.(
-                                  tutor,
-                                  `Ciao ${tutor.name}! Ho questo compito di ${task.subject}: "${
-                                    task.description || task.task || ""
-                                  }". Mi aiuti a svolgerlo?`
-                                )
-                              }
-                              className="text-[11px] font-bold text-emerald-500 hover:text-emerald-400 shrink-0 flex items-center gap-1"
+                              onClick={() => handleOpenEditTask(task)}
+                              className={`p-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                                isDarkMode ? "hover:bg-[#202C33] text-gray-300" : "hover:bg-slate-200 text-slate-600"
+                              }`}
+                              title="Modifica argomenti verifica"
                             >
-                              <span>Studia</span>
-                              <span>💬</span>
+                              ✏️
                             </button>
-                          )}
+
+                            {tutor && !task.isCompleted && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onOpenTutorChat?.(
+                                    tutor,
+                                    `Ciao ${tutor.name}! Ho questo compito di ${task.subject}: "${
+                                      task.description || task.task || ""
+                                    }". Mi aiuti a svolgerlo?`
+                                  )
+                                }
+                                className="text-[11px] font-bold text-emerald-500 hover:text-emerald-400 shrink-0 flex items-center gap-1"
+                              >
+                                <span>Studia</span>
+                                <span>💬</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -1303,6 +1448,20 @@ export default function CalendarView({
                           </span>
                         )}
                       </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditTask(item)}
+                          className={`px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 border ${
+                            isDarkMode ? "hover:bg-[#202C33] text-gray-300 border-white/10" : "hover:bg-slate-100 text-slate-600 border-slate-200"
+                          }`}
+                          title="Modifica argomenti verifica"
+                        >
+                          <span>✏️</span>
+                          <span className="text-[11px] font-semibold">Modifica</span>
+                        </button>
+                      </div>
                     </div>
 
                     <p className={`text-xs pl-8 leading-relaxed ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
@@ -1448,6 +1607,18 @@ export default function CalendarView({
                             </span>
                           )}
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditTask(item)}
+                          className={`px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 border shrink-0 ${
+                            isDarkMode ? "hover:bg-[#202C33] text-gray-300 border-white/10" : "hover:bg-slate-100 text-slate-600 border-slate-200"
+                          }`}
+                          title="Modifica argomenti verifica"
+                        >
+                          <span>✏️</span>
+                          <span className="text-[11px] font-semibold">Modifica</span>
+                        </button>
                       </div>
 
                       {/* Descrizione compito */}
@@ -1652,6 +1823,160 @@ export default function CalendarView({
               >
                 {isSavingTask ? "Salvataggio..." : "Salva in Agenda"}
               </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* 8. MODALE MODIFICA ARGOMENTI VERIFICA / COMPITO (LONG PRESS)   */}
+      {/* ============================================================== */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <form
+            onSubmit={handleSaveEditedTask}
+            className={`w-full max-w-md rounded-3xl p-5 shadow-2xl border flex flex-col gap-4 animate-in zoom-in-95 duration-150 ${
+              isDarkMode ? "bg-[#111B21] border-[#222E35] text-white" : "bg-white border-slate-200 text-slate-800"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b pb-3 border-inherit">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{editingTask.type === "verifica" ? "🚨" : "📝"}</span>
+                <div>
+                  <h3 className="font-bold text-base">
+                    {editingTask.type === "verifica" ? "Modifica Argomenti Verifica" : "Modifica Compito"}
+                  </h3>
+                  <p className={`text-xs ${isDarkMode ? "text-[#8696A0]" : "text-slate-500"}`}>
+                    Aggiorna cosa studiare o la data dell'evento
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTask(null)}
+                className="p-1 rounded-full opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Tipo */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold opacity-80">Tipo di Attività:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTask({ ...editingTask, type: "compito" })}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    editingTask.type === "compito"
+                      ? "bg-[#25D366] text-[#111B21] border-[#25D366] shadow-xs"
+                      : isDarkMode
+                      ? "bg-[#182229] border-[#2A3942] text-gray-300"
+                      : "bg-slate-100 border-slate-300 text-slate-700"
+                  }`}
+                >
+                  <span>📝</span>
+                  <span>Compito</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingTask({ ...editingTask, type: "verifica" })}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    editingTask.type === "verifica"
+                      ? "bg-red-500 text-white border-red-500 shadow-xs"
+                      : isDarkMode
+                      ? "bg-[#182229] border-[#2A3942] text-gray-300"
+                      : "bg-slate-100 border-slate-300 text-slate-700"
+                  }`}
+                >
+                  <span>🚨</span>
+                  <span>Verifica / Interrogazione</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Materia */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold opacity-80">Materia:</label>
+              <select
+                value={editingTask.subject}
+                onChange={(e) => setEditingTask({ ...editingTask, subject: e.target.value })}
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm font-semibold outline-none cursor-pointer ${
+                  isDarkMode
+                    ? "bg-[#182229] border-[#2A3942] text-white"
+                    : "bg-slate-50 border-slate-300 text-slate-800"
+                }`}
+              >
+                {DEFAULT_SUBJECTS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Data */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold opacity-80">Data di Scadenza / Evento:</label>
+              <input
+                type="date"
+                value={editingTask.dueDate}
+                onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
+                required
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm font-semibold outline-none ${
+                  isDarkMode
+                    ? "bg-[#182229] border-[#2A3942] text-white"
+                    : "bg-slate-50 border-slate-300 text-slate-800"
+                }`}
+              />
+            </div>
+
+            {/* Argomenti / Descrizione */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold opacity-80">
+                {editingTask.type === "verifica" ? "Argomenti della verifica / capitoli:" : "Descrizione del compito:"}
+              </label>
+              <textarea
+                value={editingTask.description}
+                onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value, task: e.target.value })}
+                rows={4}
+                required
+                placeholder="Modifica o specifica capitoli, pagine ed argomenti da studiare..."
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm font-normal outline-none resize-none ${
+                  isDarkMode
+                    ? "bg-[#182229] border-[#2A3942] text-white placeholder-gray-500"
+                    : "bg-slate-50 border-slate-300 text-slate-800 placeholder-slate-400"
+                }`}
+              />
+            </div>
+
+            {/* Bottoni Azioni */}
+            <div className="pt-2 border-t border-inherit flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={handleDeleteEditedTask}
+                className="px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+              >
+                🗑️ Elimina
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTask(null)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isDarkMode ? "hover:bg-[#182229] text-gray-300" : "hover:bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingTask || !editingTask.description.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] disabled:opacity-50 text-[#111B21] font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md"
+                >
+                  {isSavingTask ? "Salvataggio..." : "Salva Modifiche"}
+                </button>
+              </div>
             </div>
           </form>
         </div>
