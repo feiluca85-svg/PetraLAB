@@ -24,7 +24,7 @@ interface CalendarViewProps {
   onToggleTaskComplete?: (taskId: string, currentStatus: boolean) => void;
 }
 
-type CalendarViewMode = "month" | "week" | "day";
+type CalendarViewMode = "month" | "week";
 
 const WEEKDAYS = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 const WEEKDAYS_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
@@ -144,33 +144,8 @@ export default function CalendarView({
   const [newTaskDesc, setNewTaskDesc] = useState("");
   const [isSavingTask, setIsSavingTask] = useState(false);
 
-  // Modal "Modifica Argomenti Verifica / Compito" (Long Press o click su modifica)
+  // Modal "Modifica Argomenti Verifica / Compito" (click diretto sull'attività)
   const [editingTask, setEditingTask] = useState<any | null>(null);
-
-  // Gestione Pressione Prolungata (Long Press su caselle e compiti)
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isLongPressActiveRef = useRef(false);
-
-  const startLongPress = (onTrigger: () => void) => {
-    isLongPressActiveRef.current = false;
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressActiveRef.current = true;
-      try {
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-          navigator.vibrate(60);
-        }
-      } catch {}
-      onTrigger();
-    }, 500);
-  };
-
-  const endLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
 
   const handleOpenEditTask = (task: any) => {
     setEditingTask({
@@ -329,24 +304,20 @@ export default function CalendarView({
     return list.sort((a, b) => a.training.daysRemaining - b.training.daysRemaining);
   }, [items, todayISO]);
 
-  // Navigazione mese/settimana/giorno
+  // Navigazione mese/settimana
   const handlePrev = () => {
     if (viewMode === "month") {
       setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-    } else if (viewMode === "week") {
-      setCurrentDate(new Date(currentYear, currentMonth, currentDay - 7));
     } else {
-      setCurrentDate(new Date(currentYear, currentMonth, currentDay - 1));
+      setCurrentDate(new Date(currentYear, currentMonth, currentDay - 7));
     }
   };
 
   const handleNext = () => {
     if (viewMode === "month") {
       setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-    } else if (viewMode === "week") {
-      setCurrentDate(new Date(currentYear, currentMonth, currentDay + 7));
     } else {
-      setCurrentDate(new Date(currentYear, currentMonth, currentDay + 1));
+      setCurrentDate(new Date(currentYear, currentMonth, currentDay + 7));
     }
   };
 
@@ -475,24 +446,24 @@ export default function CalendarView({
     return days;
   }, [currentDate, tasksByDate, todayISO]);
 
-  // 3. Vista Giornaliera: compiti e info per il giorno selezionato
+  // 3. Compiti e info per il giorno selezionato
   const activeDayTasks = useMemo(() => {
-    const iso = viewMode === "day" ? currentDateISO : selectedDayISO || currentDateISO;
+    const iso = selectedDayISO || currentDateISO;
     return tasksByDate[iso] || [];
-  }, [viewMode, currentDateISO, selectedDayISO, tasksByDate]);
+  }, [currentDateISO, selectedDayISO, tasksByDate]);
 
   const activeDayHoliday = useMemo(() => {
-    const iso = viewMode === "day" ? currentDateISO : selectedDayISO || currentDateISO;
+    const iso = selectedDayISO || currentDateISO;
     return getHolidayInfo(iso);
-  }, [viewMode, currentDateISO, selectedDayISO]);
+  }, [currentDateISO, selectedDayISO]);
 
   const activeDayLabel = useMemo(() => {
-    const iso = viewMode === "day" ? currentDateISO : selectedDayISO || currentDateISO;
+    const iso = selectedDayISO || currentDateISO;
     const [y, m, d] = iso.split("-").map(Number);
     const dateObj = new Date(y, m - 1, d);
     const dayOfWeek = WEEKDAYS[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
     return `${dayOfWeek} ${d} ${MONTH_NAMES[m - 1]} ${y}`;
-  }, [viewMode, currentDateISO, selectedDayISO]);
+  }, [currentDateISO, selectedDayISO]);
 
   // Trova il tutor associato a una materia
   const findTutorForSubject = (subjectName: string) => {
@@ -510,16 +481,13 @@ export default function CalendarView({
     if (viewMode === "month") {
       return `${MONTH_NAMES[currentMonth]} ${currentYear}`;
     }
-    if (viewMode === "week") {
-      const first = weekDays[0];
-      const last = weekDays[6];
-      if (first.date.getMonth() === last.date.getMonth()) {
-        return `${first.dayNumber} - ${last.dayNumber} ${MONTH_NAMES[first.date.getMonth()]} ${first.date.getFullYear()}`;
-      }
-      return `${first.dayNumber} ${MONTH_NAMES[first.date.getMonth()]} - ${last.dayNumber} ${MONTH_NAMES[last.date.getMonth()]} ${last.date.getFullYear()}`;
+    const first = weekDays[0];
+    const last = weekDays[6];
+    if (first.date.getMonth() === last.date.getMonth()) {
+      return `${first.dayNumber} - ${last.dayNumber} ${MONTH_NAMES[first.date.getMonth()]} ${first.date.getFullYear()}`;
     }
-    return activeDayLabel;
-  }, [viewMode, currentMonth, currentYear, weekDays, activeDayLabel]);
+    return `${first.dayNumber} ${MONTH_NAMES[first.date.getMonth()]} - ${last.dayNumber} ${MONTH_NAMES[last.date.getMonth()]} ${last.date.getFullYear()}`;
+  }, [viewMode, currentMonth, currentYear, weekDays]);
 
   return (
     <div
@@ -730,7 +698,7 @@ export default function CalendarView({
           isDarkMode ? "bg-[#111B21] border-[#202C33]" : "bg-slate-50 border-slate-200"
         }`}
       >
-        {/* Toggle 3 Viste */}
+        {/* Toggle 2 Viste (Mese / Settimana) */}
         <div
           className={`flex items-center p-0.5 rounded-xl border ${
             isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-slate-200/80 border-slate-300"
@@ -739,7 +707,7 @@ export default function CalendarView({
           <button
             type="button"
             onClick={() => setViewMode("month")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === "month"
                 ? isDarkMode
                   ? "bg-[#25D366] text-[#111B21] shadow-xs"
@@ -754,7 +722,7 @@ export default function CalendarView({
           <button
             type="button"
             onClick={() => setViewMode("week")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === "week"
                 ? isDarkMode
                   ? "bg-[#25D366] text-[#111B21] shadow-xs"
@@ -765,21 +733,6 @@ export default function CalendarView({
             }`}
           >
             Settimana
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("day")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              viewMode === "day"
-                ? isDarkMode
-                  ? "bg-[#25D366] text-[#111B21] shadow-xs"
-                  : "bg-white text-emerald-800 shadow-xs"
-                : isDarkMode
-                ? "text-gray-400 hover:text-white"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Giorno
           </button>
         </div>
 
@@ -950,44 +903,7 @@ export default function CalendarView({
               return (
                 <div
                   key={idx}
-                  onMouseDown={() => {
-                    startLongPress(() => {
-                      const ver = cell.tasks.find(
-                        (t) => (t.type || "").toLowerCase() === "verifica" || (t.type || "").toLowerCase() === "interrogazione"
-                      );
-                      if (ver) {
-                        handleOpenEditTask(ver);
-                      } else if (cell.tasks.length > 0) {
-                        handleOpenEditTask(cell.tasks[0]);
-                      } else {
-                        handleOpenAddTask(cell.dateISO, "verifica");
-                      }
-                    });
-                  }}
-                  onMouseUp={endLongPress}
-                  onMouseLeave={endLongPress}
-                  onTouchStart={() => {
-                    startLongPress(() => {
-                      const ver = cell.tasks.find(
-                        (t) => (t.type || "").toLowerCase() === "verifica" || (t.type || "").toLowerCase() === "interrogazione"
-                      );
-                      if (ver) {
-                        handleOpenEditTask(ver);
-                      } else if (cell.tasks.length > 0) {
-                        handleOpenEditTask(cell.tasks[0]);
-                      } else {
-                        handleOpenAddTask(cell.dateISO, "verifica");
-                      }
-                    });
-                  }}
-                  onTouchEnd={endLongPress}
-                  onTouchMove={endLongPress}
-                  onClick={(e) => {
-                    if (isLongPressActiveRef.current) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
+                  onClick={() => {
                     setSelectedDayISO(cell.dateISO);
                   }}
                   className={`relative flex flex-col p-1 sm:p-1.5 transition-all cursor-pointer overflow-hidden ${
@@ -1072,21 +988,8 @@ export default function CalendarView({
                       return (
                         <div
                           key={task.id || tIdx}
-                          onMouseDown={(e) => {
-                            e.stopPropagation();
-                            startLongPress(() => handleOpenEditTask(task));
-                          }}
-                          onMouseUp={endLongPress}
-                          onMouseLeave={endLongPress}
-                          onTouchStart={(e) => {
-                            e.stopPropagation();
-                            startLongPress(() => handleOpenEditTask(task));
-                          }}
-                          onTouchEnd={endLongPress}
-                          onTouchMove={endLongPress}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isLongPressActiveRef.current) return;
                             handleOpenEditTask(task);
                           }}
                           className={`px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold truncate border cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
@@ -1098,7 +1001,7 @@ export default function CalendarView({
                                 : "bg-red-100 border-red-300 text-red-800 font-bold"
                               : getSubjectColor(task.subject, isDarkMode)
                           }`}
-                          title={`Tieni premuto per modificare argomenti: ${task.subject}: ${task.description || task.task || ""}`}
+                          title={`Tocca per modificare attività: ${task.subject}: ${task.description || task.task || ""}`}
                         >
                           <span className="truncate">
                             {isVer ? "🚨 " : "• "}
@@ -1206,7 +1109,8 @@ export default function CalendarView({
                       return (
                         <div
                           key={task.id || tIdx}
-                          className={`p-2 rounded-xl border flex items-center justify-between gap-2 ${
+                          onClick={() => handleOpenEditTask(task)}
+                          className={`p-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer hover:opacity-95 active:scale-[0.99] transition-all ${
                             task.isCompleted
                               ? "opacity-50 line-through bg-transparent border-inherit"
                               : isVer
@@ -1217,11 +1121,15 @@ export default function CalendarView({
                               ? "bg-[#182229] border-[#2A3942]"
                               : "bg-slate-50 border-slate-200"
                           }`}
+                          title={`Tocca per modificare: ${task.subject}: ${task.description || task.task || ""}`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <button
                               type="button"
-                              onClick={() => handleToggle(task.id, task.isCompleted)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggle(task.id, task.isCompleted);
+                              }}
                               className={`w-5 h-5 rounded-full flex items-center justify-center text-xs border shrink-0 ${
                                 task.isCompleted
                                   ? "bg-[#25D366] border-[#25D366] text-white"
@@ -1237,7 +1145,7 @@ export default function CalendarView({
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => handleOpenEditTask(task)}
@@ -1275,224 +1183,6 @@ export default function CalendarView({
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* ---------------- C) VISTA GIORNO ---------------- */}
-      {viewMode === "day" && (
-        <div className="flex-1 min-h-0 p-3 sm:p-4 overflow-y-auto flex flex-col gap-4">
-          {/* Festività Banner se presente */}
-          {activeDayHoliday.isHoliday && (
-            <div
-              className={`p-3 rounded-2xl border flex items-center gap-3 ${
-                isDarkMode ? "bg-red-950/50 border-red-800 text-red-200" : "bg-red-50 border-red-200 text-red-800"
-              }`}
-            >
-              <span className="text-2xl">🎉</span>
-              <div>
-                <h4 className="font-bold text-sm">Giorno Festivo: {activeDayHoliday.name}</h4>
-                <p className="text-xs opacity-80">Festività nazionale in Italia.</p>
-              </div>
-            </div>
-          )}
-
-          {/* Sezione Allenamento Progressivo per il giorno corrente se vi sono verifiche imminenti */}
-          {upcomingTrainings.length > 0 && (
-            <div
-              className={`p-4 rounded-3xl border flex flex-col gap-3 shadow-sm ${
-                isDarkMode ? "bg-[#182229] border-[#2A3942]" : "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🎯</span>
-                  <div>
-                    <h3 className="font-extrabold text-sm sm:text-base">
-                      Piano di Allenamento Progressivo
-                    </h3>
-                    <p className={`text-xs ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
-                      Preparazione guidata passo dopo passo verso la verifica
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2.5">
-                {upcomingTrainings.map(({ task, training }) => {
-                  const tutor = findTutorForSubject(task.subject);
-                  return (
-                    <div
-                      key={task.id}
-                      className={`p-3 rounded-2xl border flex flex-col gap-2 ${
-                        isDarkMode ? "bg-[#111B21] border-[#222E35]" : "bg-white border-amber-200 shadow-2xs"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-500 border border-amber-500/40">
-                            {training.badge}
-                          </span>
-                          <span className="font-bold text-sm">{task.subject}</span>
-                        </div>
-                        <span className="text-xs font-bold text-emerald-500">
-                          {training.progressPercent}% completato
-                        </span>
-                      </div>
-
-                      {/* Barra di avanzamento */}
-                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-amber-500 to-[#25D366] rounded-full transition-all duration-500"
-                          style={{ width: `${training.progressPercent}%` }}
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <p className="text-xs font-semibold">{training.phaseTitle}</p>
-                        <p className={`text-xs ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
-                          {training.description}
-                        </p>
-                      </div>
-
-                      {tutor && (
-                        <div className="pt-1 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => onOpenTutorChat?.(tutor, training.tutorPrompt)}
-                            className="px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-[#111B21] font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
-                          >
-                            <span>🚀</span>
-                            <span>{training.actionTitle} con {tutor.name}</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Elenco compiti del giorno */}
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base">Attività e Compiti del Giorno</h3>
-            <button
-              type="button"
-              onClick={() => handleOpenAddTask(currentDateISO)}
-              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#25D366] text-[#111B21] hover:bg-[#20ba59] transition-all cursor-pointer flex items-center gap-1 shadow-xs"
-            >
-              <span>+</span>
-              <span>Aggiungi per oggi</span>
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
-            {activeDayTasks.length === 0 ? (
-              <div
-                className={`p-8 rounded-3xl border text-center flex flex-col items-center justify-center ${
-                  isDarkMode ? "bg-[#111B21] border-[#222E35]" : "bg-slate-50 border-slate-200"
-                }`}
-              >
-                <span className="text-4xl mb-2">🎉</span>
-                <p className="font-bold text-sm">Nessuna attività programmata</p>
-                <p className={`text-xs mt-1 ${isDarkMode ? "text-gray-400" : "text-slate-500"}`}>
-                  Non ci sono compiti né verifiche per questa data.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleOpenAddTask(currentDateISO)}
-                  className="mt-4 px-4 py-2 rounded-xl bg-[#25D366] text-[#111B21] font-bold text-xs cursor-pointer active:scale-95"
-                >
-                  + Aggiungi il primo compito
-                </button>
-              </div>
-            ) : (
-              activeDayTasks.map((item, idx) => {
-                const isVer =
-                  (item.type || "").toLowerCase() === "verifica" ||
-                  (item.type || "").toLowerCase() === "interrogazione";
-                const tutor = findTutorForSubject(item.subject);
-
-                return (
-                  <div
-                    key={item.id || idx}
-                    className={`p-4 rounded-2xl border flex flex-col gap-2.5 transition-all ${
-                      item.isCompleted
-                        ? "opacity-50 line-through bg-transparent border-inherit"
-                        : isVer
-                        ? isDarkMode
-                          ? "bg-red-950/40 border-red-500/60"
-                          : "bg-red-50/80 border-red-200"
-                        : isDarkMode
-                        ? "bg-[#111B21] border-[#222E35]"
-                        : "bg-white border-slate-200 shadow-2xs"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggle(item.id, item.isCompleted)}
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border-2 shrink-0 ${
-                            item.isCompleted
-                              ? "bg-[#25D366] border-[#25D366] text-white"
-                              : "border-slate-400 text-transparent"
-                          }`}
-                        >
-                          ✓
-                        </button>
-                        <span className="text-lg">{isVer ? "🚨" : "📝"}</span>
-                        <span className="font-bold text-sm">{item.subject}</span>
-                        {isVer && (
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-red-500/20 text-red-400 border border-red-500/40 shrink-0">
-                            VERIFICA
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditTask(item)}
-                          className={`px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 border ${
-                            isDarkMode ? "hover:bg-[#202C33] text-gray-300 border-white/10" : "hover:bg-slate-100 text-slate-600 border-slate-200"
-                          }`}
-                          title="Modifica argomenti verifica"
-                        >
-                          <span>✏️</span>
-                          <span className="text-[11px] font-semibold">Modifica</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className={`text-xs pl-8 leading-relaxed ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
-                      {item.description || item.task}
-                    </p>
-
-                    {tutor && !item.isCompleted && (
-                      <div className="pl-8 pt-1 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onOpenTutorChat?.(
-                              tutor,
-                              `Ciao ${tutor.name}! Ho questo compito di ${item.subject}: "${
-                                item.description || item.task || ""
-                              }". Mi aiuti a svolgerlo?`
-                            )
-                          }
-                          className="text-xs font-bold text-[#25D366] hover:underline flex items-center gap-1.5"
-                        >
-                          <span>Studia con {tutor.name}</span>
-                          <span>💬</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
         </div>
       )}
 
@@ -1566,7 +1256,8 @@ export default function CalendarView({
                   return (
                     <div
                       key={item.id || idx}
-                      className={`p-3.5 rounded-2xl border flex flex-col gap-2 transition-all ${
+                      onClick={() => handleOpenEditTask(item)}
+                      className={`p-3.5 rounded-2xl border flex flex-col gap-2 transition-all cursor-pointer hover:opacity-95 active:scale-[0.99] ${
                         item.isCompleted
                           ? isDarkMode
                             ? "bg-[#182229]/60 border-[#2A3942] opacity-60"
@@ -1579,12 +1270,16 @@ export default function CalendarView({
                           ? "bg-[#182229] border-[#2A3942]"
                           : "bg-slate-50 border-slate-200"
                       }`}
+                      title={`Tocca per modificare: ${item.subject}: ${item.description || item.task || ""}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <button
                             type="button"
-                            onClick={() => handleToggle(item.id, item.isCompleted)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggle(item.id, item.isCompleted);
+                            }}
                             className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border-2 shrink-0 transition-all cursor-pointer ${
                               item.isCompleted
                                 ? "bg-[#25D366] border-[#25D366] text-white"
@@ -1609,17 +1304,19 @@ export default function CalendarView({
                           )}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditTask(item)}
-                          className={`px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 border shrink-0 ${
-                            isDarkMode ? "hover:bg-[#202C33] text-gray-300 border-white/10" : "hover:bg-slate-100 text-slate-600 border-slate-200"
-                          }`}
-                          title="Modifica argomenti verifica"
-                        >
-                          <span>✏️</span>
-                          <span className="text-[11px] font-semibold">Modifica</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTask(item)}
+                            className={`px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 border shrink-0 ${
+                              isDarkMode ? "hover:bg-[#202C33] text-gray-300 border-white/10" : "hover:bg-slate-100 text-slate-600 border-slate-200"
+                            }`}
+                            title="Modifica argomenti verifica"
+                          >
+                            <span>✏️</span>
+                            <span className="text-[11px] font-semibold">Modifica</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Descrizione compito */}
@@ -1633,7 +1330,7 @@ export default function CalendarView({
 
                       {/* Azione rapida: chiedi al tutor di questa materia */}
                       {matchingTutor && !item.isCompleted && (
-                        <div className="pl-8 pt-1 flex items-center justify-between">
+                        <div className="pl-8 pt-1 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={() => {
