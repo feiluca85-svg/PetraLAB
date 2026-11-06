@@ -17,8 +17,10 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import StudyPlanner from "@/components/StudyPlanner";
 import InteractiveStudyTools from "@/components/InteractiveStudyTools";
 import BookViewerModal from "@/components/BookViewerModal";
+import NotificationModal from "@/components/NotificationModal";
 import staticManifest from "@/data/books_manifest.json";
 import { getProgressiveTraining } from "@/lib/calendarUtils";
+import { updateAppBadge } from "@/lib/notifications";
 
 type UIMessage = {
   role: "user" | "model";
@@ -456,6 +458,7 @@ export default function Chat({
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showHomeMenu, setShowHomeMenu] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   // Modali Aggiungi Compiti e Aggiungi Voti
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -945,29 +948,32 @@ export default function Chat({
     const tr = getProgressiveTraining(match);
     return tr ? { task: match, training: tr } : null;
   }, [selectedTutor, agendaItems]);
-  // Effetto Badge OS
+  // Effetto Badge OS (Pallino / Numerino rosso sull'icona dello smartphone o PWA)
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
-      const urgentCount = agendaItems.filter(item => {
-        if (item.isCompleted) return false;
-        let d = item.dueDate || '';
-        const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (parts) d = `${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
-        
-        const dObj = new Date();
-        const todayStr = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
-        const tomObj = new Date();
-        tomObj.setDate(tomObj.getDate() + 1);
-        const tStr = `${tomObj.getFullYear()}-${String(tomObj.getMonth()+1).padStart(2,'0')}-${String(tomObj.getDate()).padStart(2,'0')}`;
-        return d === todayStr || d === tStr;
-      }).length;
+    const urgentCount = agendaItems.filter(item => {
+      if (item.isCompleted) return false;
+      let d = item.dueDate || '';
+      const parts = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (parts) d = `${parts[3]}-${parts[2].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
       
-      if (urgentCount > 0) {
-        (navigator as any).setAppBadge(urgentCount).catch(console.error);
-      } else {
-        (navigator as any).clearAppBadge().catch(console.error);
-      }
-    }
+      const dObj = new Date();
+      const todayStr = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
+      const tomObj = new Date();
+      tomObj.setDate(tomObj.getDate() + 1);
+      const tStr = `${tomObj.getFullYear()}-${String(tomObj.getMonth()+1).padStart(2,'0')}-${String(tomObj.getDate()).padStart(2,'0')}`;
+      return d === todayStr || d === tStr;
+    }).length;
+
+    const upcomingTestsCount = agendaItems.filter(item => {
+      if (item.isCompleted) return false;
+      const isTest = item.type?.toLowerCase() === "verifica" || item.type?.toLowerCase() === "interrogazione";
+      if (!isTest) return false;
+      const tr = getProgressiveTraining(item);
+      return tr && tr.daysRemaining <= 3;
+    }).length;
+
+    const totalBadge = urgentCount + upcomingTestsCount;
+    updateAppBadge(totalBadge);
   }, [agendaItems]);
   const handleToggleAgendaItem = async (e: React.MouseEvent, id: string, currentStatus: boolean) => {
     e.stopPropagation();
@@ -1974,6 +1980,22 @@ export default function Chat({
                             <span>Area Genitori</span>
                             <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
                               Sicurezza, PIN e compiti
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Notifiche & Badge Pallino Rosso */}
+                        <button 
+                          onClick={() => { setShowHomeMenu(false); setShowNotificationModal(true); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                            isDarkMode ? 'hover:bg-[#202C33] text-gray-200' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="text-xl">🔔</span>
+                          <div className="flex flex-col">
+                            <span>Notifiche & Badge App</span>
+                            <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                              Pallino rosso e avvisi tutor
                             </span>
                           </div>
                         </button>
@@ -3828,6 +3850,15 @@ export default function Chat({
           </div>
         </div>
       )}
+
+      {/* Modal Notifiche e Badge App */}
+      <NotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        isDarkMode={Boolean(isDarkMode)}
+        tutors={tutors}
+        pendingCount={agendaItems.filter(i => !i.isCompleted).length}
+      />
     </div>
   );
 }

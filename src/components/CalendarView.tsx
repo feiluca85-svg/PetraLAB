@@ -11,6 +11,7 @@ import {
   formatISO,
   TrainingStage,
 } from "@/lib/calendarUtils";
+import NotificationModal from "./NotificationModal";
 
 interface CalendarViewProps {
   agendaItems?: any[];
@@ -114,6 +115,7 @@ export default function CalendarView({
   onToggleTaskComplete,
 }: CalendarViewProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
 
@@ -525,6 +527,25 @@ export default function CalendarView({
                         <span>Area Genitori</span>
                         <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
                           Sicurezza, PIN e compiti
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowNotificationModal(true);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-[14px] font-semibold transition-colors text-left cursor-pointer ${
+                        isDarkMode ? "hover:bg-[#202C33] text-gray-200" : "hover:bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      <span className="text-xl">🔔</span>
+                      <div className="flex flex-col">
+                        <span>Notifiche & Badge App</span>
+                        <span className={`text-[10px] font-normal ${isDarkMode ? "text-[#8696A0]" : "text-slate-400"}`}>
+                          Pallino rosso e avvisi tutor
                         </span>
                       </div>
                     </button>
@@ -1635,6 +1656,15 @@ export default function CalendarView({
           </form>
         </div>
       )}
+
+      {/* Modal Notifiche e Badge App */}
+      <NotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        isDarkMode={isDarkMode}
+        tutors={tutors}
+        pendingCount={items.filter((i) => !i.isCompleted).length}
+      />
     </div>
   );
 }
