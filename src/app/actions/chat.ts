@@ -66,8 +66,31 @@ ISTRUZIONI DI PROATTIVITÀ PER TE:
 4. Riempi l'alunna di incoraggiamenti ed emoji positive quando risponde bene. Se ha un dubbio, guidala con un piccolo suggerimento divertente senza farla sentire a disagio.`;
             }
           } else {
-            dynamicInstruction += `\nOBIETTIVO PROATTIVO: Se la chat è appena iniziata o l'alunna ti saluta, chiedile esplicitamente se vuole iniziare a fare questi compiti. Rendilo coinvolgente e non stressante!`;
+            dynamicInstruction += `\nOBIETTIVO PROATTIVO PER I COMPITI:
+Se ci sono compiti per i prossimi giorni (anche se la scadenza è tra qualche giorno), invogliala con entusiasmo e dolcezza a portarsi avanti oggi stesso con soli 10 minuti di anticipo!
+Spiegale con frasi positive che iniziare il giorno stesso a piccoli passi le permetterà di arrivare al giorno della scadenza completamente libera e rilassata. Proponile ad esempio: "Ti va se leggiamo insieme la prima frase o facciamo il primo esercizio insieme in soli 5 minuti?".`;
           }
+        }
+      }
+
+      // Potenziamento Proattivo per materie con voti bassi o lacune
+      if (subjectMemory) {
+        const grades = subjectMemory.grades || [];
+        const weaknesses = subjectMemory.weaknesses || [];
+        const hasLowGrade = grades.some(g => {
+          const s = (g.grade || "").replace(",", ".");
+          const num = parseFloat(s);
+          return !isNaN(num) && num < 6.0;
+        });
+
+        if (hasLowGrade || weaknesses.length > 0) {
+          dynamicInstruction += `\n\n🎯 MODALITÀ SPECIALE POTENZIAMENTO & RECUPERO ATTIVA:
+In questa materia l'alunna ha riscontrato recenti difficoltà o voti bassi (ultimi voti: ${grades.map(g => `${g.grade} in '${g.topic}'`).join(", ")} | lacune: ${weaknesses.join(", ")}).
+IL TUO OBIETTIVO PEDAGOGICO:
+1. INVOGLIA AL POTENZIAMENTO: Stimola l'alunna a fare un piccolo potenziamento insieme. Rassicurala con affetto che chiunque può diventare bravissimo e che gli errori sono solo gradini verso il successo.
+2. PASSI SEMPLICISSIMI: Fai domande iniziali molto accessibili per farle sperimentare subito il successo e riaccendere la sua motivazione.
+3. COMPLIMENTI CALOROSI: Riempi l'alunna di elogi sinceri ad ogni passo corretto!
+4. Niente teoria pesante: usa esempi della vita reale, battute simpatiche e quiz a scelta multipla.`;
         }
       }
     }

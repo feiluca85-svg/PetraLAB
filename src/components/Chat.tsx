@@ -20,7 +20,8 @@ import BookViewerModal from "@/components/BookViewerModal";
 import NotificationModal from "@/components/NotificationModal";
 import staticManifest from "@/data/books_manifest.json";
 import { getProgressiveTraining } from "@/lib/calendarUtils";
-import { updateAppBadge } from "@/lib/notifications";
+import { updateAppBadge, sendTutorNotification } from "@/lib/notifications";
+import { evaluateProactiveTriggers, parseGradeValue } from "@/lib/proactiveTutors";
 
 type UIMessage = {
   role: "user" | "model";
@@ -459,6 +460,8 @@ export default function Chat({
   const [searchQuery, setSearchQuery] = useState("");
   const [showHomeMenu, setShowHomeMenu] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [proactiveLog, setProactiveLog] = useState<Record<string, string>>({});
+  const processedTriggersRef = useRef<Set<string>>(new Set());
 
   // Modali Aggiungi Compiti e Aggiungi Voti
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -570,6 +573,8 @@ export default function Chat({
             description: desc,
             task: desc,
             dueDate: item.dueDate || getCurrentDate(),
+            assignedDate: item.assignedDate || getCurrentDate(),
+            createdAt: new Date().toISOString(),
             isCompleted: false,
             type: item.type === "Verifica" ? "Verifica" : "Compito",
             source: "scanner"
@@ -611,6 +616,8 @@ export default function Chat({
       description: desc,
       task: desc,
       dueDate: taskDueDate || getCurrentDate(),
+      assignedDate: getCurrentDate(),
+      createdAt: new Date().toISOString(),
       isCompleted: false,
       type: taskType,
       source: "manual"
@@ -948,6 +955,56 @@ export default function Chat({
     const tr = getProgressiveTraining(match);
     return tr ? { task: match, training: tr } : null;
   }, [selectedTutor, agendaItems]);
+
+  // Proposta di Potenziamento per il tutor attualmente aperto in chat se ci sono voti bassi o lacune
+  const currentTutorReinforcement = useMemo(() => {
+    if (!selectedTutor) return null;
+    const memKey = Object.keys(subjectsMemory).find((k) => {
+      if (k.toLowerCase() === selectedTutor.id.toLowerCase()) return true;
+      const memObj = subjectsMemory[k];
+      const origSub = memObj?.grades?.[0]?.originalSubject?.toLowerCase();
+      const tSub = selectedTutor.subject.toLowerCase();
+      const tFirst = tSub.split(" ")[0];
+      if (origSub && (origSub.includes(tFirst) || tSub.includes(origSub))) return true;
+      return tSub.includes(k.toLowerCase()) || k.toLowerCase().includes(tFirst);
+    });
+
+    const mem = memKey ? subjectsMemory[memKey] : null;
+    if (!mem) return null;
+
+    const grades = mem.grades || [];
+    const numericGrades = grades
+      .map((g) => parseGradeValue(g.grade))
+      .filter((v): v is number => v !== null);
+
+    const latestGrade = numericGrades.length > 0 ? numericGrades[0] : null;
+    const avgGrade =
+      numericGrades.length > 0
+        ? numericGrades.reduce((a, b) => a + b, 0) / numericGrades.length
+        : null;
+
+    const hasLowGrades =
+      (latestGrade !== null && latestGrade < 6.0) || (avgGrade !== null && avgGrade < 6.5);
+    const hasWeaknesses = Boolean(mem.weaknesses && mem.weaknesses.length > 0);
+
+    if (!hasLowGrades && !hasWeaknesses) return null;
+
+    const lastTopic =
+      mem.lastTopic ||
+      (grades.length > 0 && grades[0].topic && grades[0].topic !== "Nessuna descrizione"
+        ? grades[0].topic
+        : "") ||
+      (mem.weaknesses && mem.weaknesses.length > 0 ? mem.weaknesses[0] : "") ||
+      "gli argomenti più impegnativi";
+
+    return {
+      title: hasLowGrades
+        ? `Media: ${avgGrade ? avgGrade.toFixed(1) : latestGrade} • Rilassati, facciamo un passo avanti!`
+        : `Consolidiamo i punti deboli a piccoli passi`,
+      description: `Ho preparato per te una micro-sessione antistress di 10 minuti su "${lastTopic}". Zero voti, solo 2 o 3 passaggi guidati per farti sentire subito sicura e serena!`,
+      prompt: `Ciao ${selectedTutor.name}! Vorrei fare con te la sessione di potenziamento di 10 minuti su "${lastTopic}" per ripassare con calma le cose più difficili a piccoli passi.`,
+    };
+  }, [selectedTutor, subjectsMemory]);
   // Effetto Badge OS (Pallino / Numerino rosso sull'icona dello smartphone o PWA)
   useEffect(() => {
     const urgentCount = agendaItems.filter(item => {
@@ -1062,6 +1119,9 @@ export default function Chat({
         if (data.chatsByTutor) {
           setChatsByTutor(data.chatsByTutor);
         }
+        if (data.proactiveLog) {
+          setProactiveLog(data.proactiveLog);
+        }
         if (data.agendaItems && Array.isArray(data.agendaItems)) {
           const seenIds = new Set<string>();
           let hasDuplicates = false;
@@ -1133,6 +1193,75 @@ export default function Chat({
     });
     return () => unsub();
   }, []);
+
+  // Motore di Proattività dei Tutor: invio automatico messaggi propositivi, notifiche e badge
+  useEffect(() => {
+    if (tutors.length === 0) return;
+
+    const todayISO = getCurrentDate();
+    const triggers = evaluateProactiveTriggers({
+      agendaItems,
+      subjectsMemory,
+      tutors,
+      todayISO,
+      alreadyTriggeredLog: proactiveLog,
+    });
+
+    const pending = triggers.filter(
+      (tr) => !processedTriggersRef.current.has(tr.metadata.logKey)
+    );
+    if (pending.length === 0) return;
+
+    // Registra subito le chiavi nel set in-memory per prevenire duplicazioni locali
+    pending.forEach((tr) => processedTriggersRef.current.add(tr.metadata.logKey));
+
+    const updatedChats: Record<string, SubjectChatData> = { ...chatsByTutor };
+    const updatedLog: Record<string, string> = { ...proactiveLog };
+    const nowTime = getCurrentTime();
+    const nowDate = getCurrentDate();
+    const nowTimestamp = Date.now();
+
+    pending.forEach((tr, i) => {
+      updatedLog[tr.metadata.logKey] = todayISO;
+      const exChat = updatedChats[tr.tutorId] || { messages: [] };
+      const newMsg: UIMessage = {
+        role: "model",
+        text: tr.messageText,
+        time: nowTime,
+        date: nowDate,
+        timestamp: nowTimestamp + i,
+      };
+      updatedChats[tr.tutorId] = {
+        ...exChat,
+        messages: [...exChat.messages, newMsg],
+        lastUpdated: nowTime,
+        lastUpdatedDate: nowDate,
+        lastUpdatedTimestamp: nowTimestamp + i,
+      };
+
+      // Notifica Push di sistema / Service Worker
+      sendTutorNotification({
+        tutorName: tr.tutorName,
+        title:
+          tr.reason === "reinforcement_needed"
+            ? "⚡ Proposta di Potenziamento"
+            : "📝 Compiti assegnati oggi",
+        body: tr.messageText,
+        url: "/#chat",
+      }).catch(console.error);
+    });
+
+    updateAppBadge(1).catch(console.error);
+    setChatsByTutor(updatedChats);
+    setProactiveLog(updatedLog);
+
+    const userRef = doc(db, "petralab_users", "studente_demo");
+    setDoc(
+      userRef,
+      { chatsByTutor: updatedChats, proactiveLog: updatedLog },
+      { merge: true }
+    ).catch(console.error);
+  }, [tutors, agendaItems, subjectsMemory, proactiveLog]);
 
   // I messaggi del tutor attualmente selezionato
   const currentMessages: UIMessage[] = selectedTutor 
@@ -2196,13 +2325,32 @@ export default function Chat({
                 ) : (
                   filteredTutors.map((tutor) => {
                 const tutorChat = chatsByTutor[tutor.id];
-                const mem = subjectsMemory[tutor.id];
+                const tutorMemKey = Object.keys(subjectsMemory).find((k) => {
+                  if (k.toLowerCase() === tutor.id.toLowerCase()) return true;
+                  const memObj = subjectsMemory[k];
+                  const origSub = memObj?.grades?.[0]?.originalSubject?.toLowerCase();
+                  const tSub = tutor.subject.toLowerCase();
+                  const tFirst = tSub.split(" ")[0];
+                  if (origSub && (origSub.includes(tFirst) || tSub.includes(origSub))) return true;
+                  return tSub.includes(k.toLowerCase()) || k.toLowerCase().includes(tFirst);
+                });
+                const mem = tutorMemKey ? subjectsMemory[tutorMemKey] : subjectsMemory[tutor.id];
                 const lastMsg = tutorChat?.messages && tutorChat.messages.length > 0 
                   ? tutorChat.messages[tutorChat.messages.length - 1] 
                   : null;
-                const lastGrade = mem?.grades && mem.grades.length > 0 
-                  ? mem.grades[mem.grades.length - 1] 
-                  : null;
+                const grades = mem?.grades || [];
+                const numericGrades = grades
+                  .map((g) => parseGradeValue(g.grade))
+                  .filter((v): v is number => v !== null);
+                const latestGrade = numericGrades.length > 0 ? numericGrades[0] : null;
+                const avgGrade =
+                  numericGrades.length > 0
+                    ? numericGrades.reduce((a, b) => a + b, 0) / numericGrades.length
+                    : null;
+                const tutorNeedsReinforcement =
+                  (latestGrade !== null && latestGrade < 6.0) ||
+                  (avgGrade !== null && avgGrade < 6.5) ||
+                  Boolean(mem?.weaknesses && mem.weaknesses.length > 0);
 
                 const tutorVerifica = agendaItems.find(item => 
                   !item.isCompleted && 
@@ -2220,11 +2368,13 @@ export default function Chat({
                       isDarkMode ? "active:bg-[#202C33]" : "active:bg-[#F5F6F6]"
                     }`}
                   >
-                    {/* Foto Profilo Circolare 52px con Anello di Stato Verde */}
+                    {/* Foto Profilo Circolare 52px con Anello di Stato Verde o Potenziamento */}
                     <div className="relative shrink-0">
                       <div className={`w-16 h-16 rounded-3xl shadow-sm flex items-center justify-center text-3xl border-2 ${
                         tutorChat?.lastUpdatedTimestamp && (Date.now() - tutorChat.lastUpdatedTimestamp < 180000)
                           ? "border-[#25D366] p-0.5" 
+                          : tutorNeedsReinforcement
+                          ? "border-rose-400/60 p-0.5"
                           : "border-transparent"
                       } ${isDarkMode ? "bg-gradient-to-br from-emerald-900/60 via-teal-800/60 to-cyan-900/60 shadow-sm border border-white/10" : "bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100 shadow-sm border border-white/50"}`}>
                         {tutor.avatar?.startsWith("/avatars/") ? <img src={tutor.avatar} alt="avatar" className="w-[85%] h-[85%] object-contain drop-shadow-md transform transition-transform hover:scale-110" /> : <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>}
@@ -2250,6 +2400,12 @@ export default function Chat({
                           {tutorTraining && (
                             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md shrink-0 bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
                               {tutorTraining.badge}
+                            </span>
+                          )}
+                          {tutorNeedsReinforcement && !tutorTraining && (
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md shrink-0 bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                              <span>⚡</span>
+                              <span>Potenziamento</span>
                             </span>
                           )}
                         </div>
@@ -3066,6 +3222,55 @@ export default function Chat({
                     >
                       <span>🚀</span>
                       <span>{currentTutorTraining.training.actionTitle}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Widget Proattivo di Potenziamento & Recupero */}
+            {currentTutorReinforcement && (
+              <div className="mb-4 mx-auto max-w-lg w-full">
+                <div
+                  className={`p-3.5 sm:p-4 rounded-3xl border shadow-lg flex flex-col gap-2.5 backdrop-blur-md transition-all ${
+                    isDarkMode
+                      ? "bg-[#111B21]/95 border-rose-500/40 text-white"
+                      : "bg-white/95 border-rose-200 text-slate-800"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl animate-pulse">⚡</span>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500 text-white shadow-xs">
+                            Potenziamento & Recupero
+                          </span>
+                          <span className="font-bold text-xs sm:text-sm">
+                            Sessione con {selectedTutor.name}
+                          </span>
+                        </div>
+                        <p className={`text-[11px] font-medium mt-0.5 ${isDarkMode ? "text-rose-300" : "text-rose-700"}`}>
+                          {currentTutorReinforcement.title}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className={`text-xs pl-7 leading-relaxed ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
+                    {currentTutorReinforcement.description}
+                  </p>
+
+                  <div className="pl-7 pt-1 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        executeSendMessage(currentTutorReinforcement.prompt, selectedTutor, null);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:opacity-90 active:scale-95 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all"
+                    >
+                      <span>⚡</span>
+                      <span>Inizia Potenziamento (10 min)</span>
                     </button>
                   </div>
                 </div>

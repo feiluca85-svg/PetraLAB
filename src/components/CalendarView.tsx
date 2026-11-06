@@ -281,6 +281,7 @@ export default function CalendarView({
         description: newTaskDesc.trim(),
         task: newTaskDesc.trim(),
         dueDate: newTaskDate,
+        assignedDate: todayISO,
         isCompleted: false,
         type: newTaskType,
         source: "manual",

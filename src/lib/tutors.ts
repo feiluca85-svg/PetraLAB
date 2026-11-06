@@ -2,6 +2,7 @@ export type GradeRecord = {
   grade: string;
   topic?: string;
   date: string;
+  originalSubject?: string;
 };
 
 export type SubjectMemory = {
