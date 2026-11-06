@@ -5,6 +5,7 @@ import { Content, Part } from "@google/generative-ai";
 import path from "path";
 import { buildTutorPrompt, SubjectMemory, Tutor } from "@/lib/tutors";
 import { getRelevantBookPage } from "@/lib/bookReader";
+import { getProgressiveTraining } from "@/lib/calendarUtils";
 
 const FALLBACK_MODELS = [
   "gemini-3.5-flash-lite", // 500 RPD
@@ -42,7 +43,31 @@ export async function sendMessage(
           relevantTasks.forEach(task => {
             dynamicInstruction += `- [${task.type.toUpperCase()}] Scadenza: ${task.dueDate} - ${task.description}\n`;
           });
-          dynamicInstruction += `\nOBIETTIVO PROATTIVO: Se la chat è appena iniziata o l'alunna ti saluta, chiedile esplicitamente se vuole iniziare a fare questi compiti/prepararsi per queste verifiche. Rendilo coinvolgente e non stressante, proponendo ad esempio di ripassare tramite quiz o sfide!`;
+
+          // Controlla se c'è un allenamento progressivo per una verifica/interrogazione imminente
+          const upcomingVerifica = relevantTasks.find(t => 
+            t.type?.toLowerCase() === "verifica" || 
+            t.type?.toLowerCase() === "interrogazione" ||
+            t.subject?.toLowerCase().includes("verifica")
+          );
+
+          if (upcomingVerifica) {
+            const training = getProgressiveTraining(upcomingVerifica);
+            if (training) {
+              dynamicInstruction += `\n🎯 MISSIONE PROATTIVA SPECIALE: ALLENAMENTO PROGRESSIVO PER LA VERIFICA/INTERROGAZIONE!
+La verifica di ${upcomingVerifica.subject} si terrà il ${upcomingVerifica.dueDate} (Argomenti: "${upcomingVerifica.description || upcomingVerifica.task || ""}").
+OGGI SIAMO NELLA: ${training.phaseTitle} (${training.badge}).
+OBIETTIVO DI OGGI: ${training.description} (${training.actionTitle}).
+
+ISTRUZIONI DI PROATTIVITÀ PER TE:
+1. Accogli l'alunna con grande affetto, calore ed entusiasmo. Falle capire che il conto alla rovescia è iniziato (${training.badge}) ma che con il vostro allenamento a tappe sarà super preparata e tranquilla.
+2. Stimola l'alunna a fare una sessione di allenamento oggi stesso per la fase corrente: proponi una mini-sfida, un quiz a risposta multipla, o 3 domande lampo per verificare i concetti chiave.
+3. Fai UNA SOLA domanda alla volta. Aspetta la sua risposta prima di procedere.
+4. Riempi l'alunna di incoraggiamenti ed emoji positive quando risponde bene. Se ha un dubbio, guidala con un piccolo suggerimento divertente senza farla sentire a disagio.`;
+            }
+          } else {
+            dynamicInstruction += `\nOBIETTIVO PROATTIVO: Se la chat è appena iniziata o l'alunna ti saluta, chiedile esplicitamente se vuole iniziare a fare questi compiti. Rendilo coinvolgente e non stressante!`;
+          }
         }
       }
     }

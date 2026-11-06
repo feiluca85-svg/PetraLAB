@@ -18,6 +18,7 @@ import StudyPlanner from "@/components/StudyPlanner";
 import InteractiveStudyTools from "@/components/InteractiveStudyTools";
 import BookViewerModal from "@/components/BookViewerModal";
 import staticManifest from "@/data/books_manifest.json";
+import { getProgressiveTraining } from "@/lib/calendarUtils";
 
 type UIMessage = {
   role: "user" | "model";
@@ -930,6 +931,20 @@ export default function Chat({
       return sub.includes(folder) || folder.includes(sub);
     }) || null;
   }, [selectedTutor]);
+
+  // Allenamento progressivo per il tutor attualmente aperto in chat
+  const currentTutorTraining = useMemo(() => {
+    if (!selectedTutor) return null;
+    const match = agendaItems.find(item => 
+      !item.isCompleted && 
+      (item.type?.toLowerCase() === "verifica" || item.type?.toLowerCase() === "interrogazione" || item.subject?.toLowerCase().includes("verifica")) &&
+      (selectedTutor.subject.toLowerCase().includes(item.subject.toLowerCase().split(' ')[0]) || 
+       item.subject.toLowerCase().includes(selectedTutor.subject.toLowerCase().split(' ')[0]))
+    );
+    if (!match) return null;
+    const tr = getProgressiveTraining(match);
+    return tr ? { task: match, training: tr } : null;
+  }, [selectedTutor, agendaItems]);
   // Effetto Badge OS
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
@@ -1132,7 +1147,19 @@ export default function Chat({
     if (!chatsByTutor[tutor.id] || chatsByTutor[tutor.id].messages.length === 0) {
       const mem = subjectsMemory[tutor.id];
       let greeting = tutor.greeting;
-      if (mem?.grades && mem.grades.length > 0) {
+
+      // Se c'è una verifica imminente, il tutor diventa proattivo fin dal primo saluto!
+      const matchingVerifica = agendaItems.find(item => 
+        !item.isCompleted && 
+        (item.type?.toLowerCase() === "verifica" || item.type?.toLowerCase() === "interrogazione" || item.subject?.toLowerCase().includes("verifica")) &&
+        (tutor.subject.toLowerCase().includes(item.subject.toLowerCase().split(' ')[0]) || 
+         item.subject.toLowerCase().includes(tutor.subject.toLowerCase().split(' ')[0]))
+      );
+      const training = matchingVerifica ? getProgressiveTraining(matchingVerifica) : null;
+
+      if (training) {
+        greeting = `Ciao! 🎯 Ti stavo aspettando: ${training.badge} per la prova di ${matchingVerifica.subject} del ${matchingVerifica.dueDate}! Oggi nel nostro piano di allenamento progressivo affrontiamo la fase "${training.actionTitle}". ${training.description} Sei pronta per una prima domanda o quiz veloce?`;
+      } else if (mem?.grades && mem.grades.length > 0) {
         const lastGrade = mem.grades[mem.grades.length - 1];
         greeting = `Bentornata! Ricordo che l'ultimo voto che mi hai detto era ${lastGrade.grade}${lastGrade.topic ? ` in '${lastGrade.topic}'` : ''}. Come stanno andando le lezioni in questi giorni? Ci sono novità o verifiche? Di cosa ci occupiamo oggi?`;
       }
@@ -2155,6 +2182,14 @@ export default function Chat({
                   ? mem.grades[mem.grades.length - 1] 
                   : null;
 
+                const tutorVerifica = agendaItems.find(item => 
+                  !item.isCompleted && 
+                  (item.type?.toLowerCase() === "verifica" || item.type?.toLowerCase() === "interrogazione" || item.subject?.toLowerCase().includes("verifica")) &&
+                  (tutor.subject.toLowerCase().includes(item.subject.toLowerCase().split(' ')[0]) || 
+                   item.subject.toLowerCase().includes(tutor.subject.toLowerCase().split(' ')[0]))
+                );
+                const tutorTraining = tutorVerifica ? getProgressiveTraining(tutorVerifica) : null;
+
                 return (
                   <div
                     key={tutor.id}
@@ -2179,7 +2214,7 @@ export default function Chat({
                     {/* Informazioni Contatto e Ultimo Messaggio */}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
                           <h2 className={`font-bold text-[17px] truncate ${
                             isDarkMode ? "text-[#E9EDEF]" : "text-slate-900"
                           }`}>
@@ -2190,6 +2225,11 @@ export default function Chat({
                           }`}>
                             {tutor.subject.split(" ")[0]}
                           </span>
+                          {tutorTraining && (
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md shrink-0 bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
+                              {tutorTraining.badge}
+                            </span>
+                          )}
                         </div>
                         <span className={`text-xs font-medium shrink-0 ml-2 ${
                           lastMsg?.role === "user" 
@@ -2958,6 +2998,58 @@ export default function Chat({
             className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 relative transition-colors duration-200"
             style={getChatWallpaperStyle(chatWallpaper, Boolean(isDarkMode))}
           >
+            {/* Widget Proattivo di Allenamento Progressivo per Verifica Imminente */}
+            {currentTutorTraining && (
+              <div className="mb-4 mx-auto max-w-lg w-full">
+                <div
+                  className={`p-3.5 sm:p-4 rounded-3xl border shadow-lg flex flex-col gap-2.5 backdrop-blur-md transition-all ${
+                    isDarkMode
+                      ? "bg-[#111B21]/95 border-amber-500/40 text-white"
+                      : "bg-white/95 border-amber-300 text-slate-800"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl animate-bounce">🎯</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500 text-white">
+                            {currentTutorTraining.training.badge}
+                          </span>
+                          <span className="font-bold text-xs sm:text-sm">
+                            Verifica di {currentTutorTraining.task.subject} ({currentTutorTraining.task.dueDate})
+                          </span>
+                        </div>
+                        <p className={`text-[11px] font-medium mt-0.5 ${isDarkMode ? "text-amber-300" : "text-amber-800"}`}>
+                          {currentTutorTraining.training.phaseTitle}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-500 shrink-0">
+                      {currentTutorTraining.training.progressPercent}%
+                    </span>
+                  </div>
+
+                  <p className={`text-xs pl-7 leading-relaxed ${isDarkMode ? "text-gray-300" : "text-slate-600"}`}>
+                    {currentTutorTraining.training.description}
+                  </p>
+
+                  <div className="pl-7 pt-1 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        executeSendMessage(currentTutorTraining.training.tutorPrompt, selectedTutor, null);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:opacity-90 active:scale-95 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all"
+                    >
+                      <span>🚀</span>
+                      <span>{currentTutorTraining.training.actionTitle}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {currentMessages.map((msg, idx) => {
               const prevMsg = idx > 0 ? currentMessages[idx - 1] : null;
               const msgDateStr = msg.date || (msg.timestamp ? new Date(msg.timestamp).toISOString().split('T')[0] : null);
