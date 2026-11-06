@@ -43,6 +43,7 @@ type SubjectChatData = {
   lastUpdated?: string;
   lastUpdatedDate?: string;
   lastUpdatedTimestamp?: number;
+  lastReadTimestamp?: number;
 };
 
 
@@ -461,6 +462,7 @@ export default function Chat({
   const [showHomeMenu, setShowHomeMenu] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [proactiveLog, setProactiveLog] = useState<Record<string, string>>({});
+  const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, number>>({});
   const processedTriggersRef = useRef<Set<string>>(new Set());
 
   // Modali Aggiungi Compiti e Aggiungi Voti
@@ -730,13 +732,22 @@ export default function Chat({
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, [selectedTutor]);
 
-  // Quando selezioniamo un tutor, aggiungiamo uno stato alla history
+  // Quando selezioniamo un tutor, aggiungiamo uno stato alla history e segnamo la chat come letta
   const handleSelectTutor = (tutor: Tutor) => {
     setSelectedTutor(tutor);
     if (tutor.voiceSpeed) {
       setVoiceSpeed(tutor.voiceSpeed);
     }
     window.location.hash = "chat";
+
+    // Aggiorna timestamp di lettura per azzerare il pallino verde
+    const now = Date.now();
+    setLastReadTimestamps((prev) => {
+      const updated = { ...prev, [tutor.id]: now };
+      const userRef = doc(db, "petralab_users", "studente_demo");
+      setDoc(userRef, { lastReadTimestamps: updated }, { merge: true }).catch(console.error);
+      return updated;
+    });
   };
 
 
@@ -1007,6 +1018,22 @@ export default function Chat({
   }, [selectedTutor, subjectsMemory]);
   // Effetto Badge OS (Pallino / Numerino rosso sull'icona dello smartphone o PWA)
   useEffect(() => {
+    // 1. Messaggi non letti dei tutor (quando l'ultimo messaggio è del tutor e non ancora aperto/letto)
+    let unreadChatsCount = 0;
+    Object.keys(chatsByTutor).forEach((tId) => {
+      const chat = chatsByTutor[tId];
+      if (!chat || !chat.messages || chat.messages.length === 0) return;
+      const lastMsg = chat.messages[chat.messages.length - 1];
+      if (lastMsg.role === "model") {
+        const lastMsgTime = lastMsg.timestamp || chat.lastUpdatedTimestamp || 0;
+        const lastRead = lastReadTimestamps[tId] || 0;
+        if (lastMsgTime > lastRead) {
+          unreadChatsCount++;
+        }
+      }
+    });
+
+    // 2. Compiti urgenti (scadenza oggi o domani)
     const urgentCount = agendaItems.filter(item => {
       if (item.isCompleted) return false;
       let d = item.dueDate || '';
@@ -1021,6 +1048,7 @@ export default function Chat({
       return d === todayStr || d === tStr;
     }).length;
 
+    // 3. Verifiche imminenti (entro 3 giorni)
     const upcomingTestsCount = agendaItems.filter(item => {
       if (item.isCompleted) return false;
       const isTest = item.type?.toLowerCase() === "verifica" || item.type?.toLowerCase() === "interrogazione";
@@ -1029,9 +1057,9 @@ export default function Chat({
       return tr && tr.daysRemaining <= 3;
     }).length;
 
-    const totalBadge = urgentCount + upcomingTestsCount;
+    const totalBadge = unreadChatsCount + urgentCount + upcomingTestsCount;
     updateAppBadge(totalBadge);
-  }, [agendaItems]);
+  }, [agendaItems, chatsByTutor, lastReadTimestamps]);
   const handleToggleAgendaItem = async (e: React.MouseEvent, id: string, currentStatus: boolean) => {
     e.stopPropagation();
     try {
@@ -1121,6 +1149,9 @@ export default function Chat({
         }
         if (data.proactiveLog) {
           setProactiveLog(data.proactiveLog);
+        }
+        if (data.lastReadTimestamps) {
+          setLastReadTimestamps(data.lastReadTimestamps);
         }
         if (data.agendaItems && Array.isArray(data.agendaItems)) {
           const seenIds = new Set<string>();
@@ -2360,6 +2391,17 @@ export default function Chat({
                 );
                 const tutorTraining = tutorVerifica ? getProgressiveTraining(tutorVerifica) : null;
 
+                // Calcolo messaggi non letti per il pallino verde stile WhatsApp
+                let unreadCount = 0;
+                if (tutorChat?.messages && tutorChat.messages.length > 0) {
+                  const lastRead = lastReadTimestamps[tutor.id] || 0;
+                  // Conta i messaggi del tutor inviati dopo l'ultimo accesso
+                  unreadCount = tutorChat.messages.filter(
+                    (m) => m.role === "model" && ((m.timestamp || tutorChat.lastUpdatedTimestamp || 0) > lastRead)
+                  ).length;
+                }
+                const hasUnread = unreadCount > 0;
+
                 return (
                   <div
                     key={tutor.id}
@@ -2368,10 +2410,12 @@ export default function Chat({
                       isDarkMode ? "active:bg-[#202C33]" : "active:bg-[#F5F6F6]"
                     }`}
                   >
-                    {/* Foto Profilo Circolare 52px con Anello di Stato Verde o Potenziamento */}
+                    {/* Foto Profilo Circolare con Anello di Stato Verde o Potenziamento */}
                     <div className="relative shrink-0">
                       <div className={`w-16 h-16 rounded-3xl shadow-sm flex items-center justify-center text-3xl border-2 ${
-                        tutorChat?.lastUpdatedTimestamp && (Date.now() - tutorChat.lastUpdatedTimestamp < 180000)
+                        hasUnread
+                          ? "border-[#25D366] p-0.5" 
+                          : tutorChat?.lastUpdatedTimestamp && (Date.now() - tutorChat.lastUpdatedTimestamp < 180000)
                           ? "border-[#25D366] p-0.5" 
                           : tutorNeedsReinforcement
                           ? "border-rose-400/60 p-0.5"
@@ -2380,7 +2424,13 @@ export default function Chat({
                         {tutor.avatar?.startsWith("/avatars/") ? <img src={tutor.avatar} alt="avatar" className="w-[85%] h-[85%] object-contain drop-shadow-md transform transition-transform hover:scale-110" /> : <span className="drop-shadow-md transform transition-transform hover:scale-110">{tutor.avatar}</span>}
                       </div>
 
-                      
+                      {/* Pallino Verde stile WhatsApp anche sull'avatar */}
+                      {hasUnread && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25D366] opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-[#25D366] border-2 border-white dark:border-[#111B21]"></span>
+                        </span>
+                      )}
                     </div>
 
                     {/* Informazioni Contatto e Ultimo Messaggio */}
@@ -2388,7 +2438,9 @@ export default function Chat({
                       <div className="flex justify-between items-baseline mb-1">
                         <div className="flex items-center gap-2 min-w-0 flex-wrap">
                           <h2 className={`font-bold text-[17px] truncate ${
-                            isDarkMode ? "text-[#E9EDEF]" : "text-slate-900"
+                            hasUnread
+                              ? (isDarkMode ? "text-white font-extrabold" : "text-slate-950 font-extrabold")
+                              : (isDarkMode ? "text-[#E9EDEF]" : "text-slate-900")
                           }`}>
                             {tutor.name}
                           </h2>
@@ -2410,7 +2462,9 @@ export default function Chat({
                           )}
                         </div>
                         <span className={`text-xs font-medium shrink-0 ml-2 ${
-                          lastMsg?.role === "user" 
+                          hasUnread
+                            ? "text-[#25D366] font-bold"
+                            : lastMsg?.role === "user" 
                             ? (isDarkMode ? "text-[#8696A0]" : "text-slate-400")
                             : "text-[#25D366] font-semibold"
                         }`}>
@@ -2420,7 +2474,9 @@ export default function Chat({
 
                       <div className="flex items-center justify-between gap-2">
                         <p className={`text-[14px] truncate flex items-center gap-1.5 ${
-                          isDarkMode ? "text-[#8696A0]" : "text-slate-500"
+                          hasUnread
+                            ? (isDarkMode ? "text-white font-semibold" : "text-slate-900 font-semibold")
+                            : (isDarkMode ? "text-[#8696A0]" : "text-slate-500")
                         }`}>
                           {lastMsg ? (
                             <>
@@ -2439,8 +2495,13 @@ export default function Chat({
                             </span>
                           )}
                         </p>
-                        
-                        
+
+                        {/* Pallino Verde Stile WhatsApp con conteggio messaggi non letti */}
+                        {hasUnread && (
+                          <div className="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#25D366] text-white text-[11px] font-black shadow-xs animate-in zoom-in-75 duration-150">
+                            {unreadCount}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
