@@ -425,7 +425,10 @@ export default function Chat({
   activeSubTab,
   onOpenParent,
   initialQuery,
-  onClearInitialQuery
+  onClearInitialQuery,
+  externalSelectedTutor,
+  initialMessageToTutor,
+  onClearExternalTutor
 }: { 
   tutors: Tutor[]; 
   isDarkMode?: boolean; 
@@ -436,6 +439,9 @@ export default function Chat({
   onOpenParent?: () => void;
   initialQuery?: string;
   onClearInitialQuery?: () => void;
+  externalSelectedTutor?: Tutor | null;
+  initialMessageToTutor?: string;
+  onClearExternalTutor?: () => void;
 }) {
   const { stats, awardXP, dbError } = useGamification();
   const levelInfo = getLevelInfo(stats.xp);
@@ -813,6 +819,18 @@ export default function Chat({
       if (onClearInitialQuery) onClearInitialQuery();
     }
   }, [initialQuery]);
+
+  useEffect(() => {
+    if (externalSelectedTutor) {
+      handleSelectTutor(externalSelectedTutor);
+      if (initialMessageToTutor) {
+        setInput(initialMessageToTutor);
+      }
+      if (onClearExternalTutor) {
+        onClearExternalTutor();
+      }
+    }
+  }, [externalSelectedTutor, initialMessageToTutor]);
 
   const handleTabChange = (newFilter: 'tutte'|'compiti'|'voti') => {
     if (listScrollRef.current) {

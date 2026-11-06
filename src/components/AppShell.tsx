@@ -5,15 +5,19 @@ import Chat from "./Chat";
 import TutorManager from "./TutorManager";
 import ParentDashboard from "./ParentDashboard";
 import Library from "./Library";
+import CalendarView from "./CalendarView";
 import { useTutors } from "@/hooks/useTutors";
+import { Tutor } from "@/lib/tutors";
 
 export default function AppShell() {
-  const [activeTab, setActiveTab] = useState<"chat" | "compiti" | "voti" | "library">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "compiti" | "calendar" | "voti" | "library">("chat");
   const [isParentOpen, setIsParentOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTutorManagerModalOpen, setIsTutorManagerModalOpen] = useState(false);
   const [pendingAIQuery, setPendingAIQuery] = useState<string>("");
+  const [selectedTutorForChat, setSelectedTutorForChat] = useState<Tutor | null>(null);
+  const [initialTutorMessage, setInitialTutorMessage] = useState<string>("");
   
   const { tutors, loading } = useTutors();
 
@@ -24,6 +28,9 @@ export default function AppShell() {
         setIsParentOpen(true);
       } else if (hash === "#compiti") {
         setActiveTab("compiti");
+        setIsParentOpen(false);
+      } else if (hash === "#calendar") {
+        setActiveTab("calendar");
         setIsParentOpen(false);
       } else if (hash === "#voti") {
         setActiveTab("voti");
@@ -45,7 +52,7 @@ export default function AppShell() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const changeTab = (tab: "chat" | "compiti" | "voti" | "library") => {
+  const changeTab = (tab: "chat" | "compiti" | "calendar" | "voti" | "library") => {
     setActiveTab(tab);
     setIsParentOpen(false);
     if (tab === "chat") {
@@ -134,6 +141,30 @@ export default function AppShell() {
             onOpenParent={openParent}
             initialQuery={pendingAIQuery}
             onClearInitialQuery={() => setPendingAIQuery("")}
+            externalSelectedTutor={selectedTutorForChat}
+            initialMessageToTutor={initialTutorMessage}
+            onClearExternalTutor={() => {
+              setSelectedTutorForChat(null);
+              setInitialTutorMessage("");
+            }}
+          />
+        )}
+
+        {activeTab === "calendar" && (
+          <CalendarView
+            tutors={tutors}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+            onOpenParent={openParent}
+            onAskAI={(query) => {
+              setPendingAIQuery(query);
+              changeTab("chat");
+            }}
+            onOpenTutorChat={(tutor, initialMsg) => {
+              setSelectedTutorForChat(tutor);
+              setInitialTutorMessage(initialMsg || "");
+              changeTab("chat");
+            }}
           />
         )}
 
@@ -248,7 +279,31 @@ export default function AppShell() {
             </span>
           </button>
 
-          {/* 3. Tab Voti */}
+          {/* 3. Tab Calendario (Nel mezzo) */}
+          <button 
+            type="button"
+            onClick={() => changeTab("calendar")}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-95 cursor-pointer"
+          >
+            <div className={`px-4 py-1 rounded-2xl shadow-sm transition-all flex items-center justify-center ${
+              activeTab === "calendar"
+                ? (isDarkMode ? "bg-[#0A291A] text-[#25D366]" : "bg-[#E7FCEB] text-[#118B44]")
+                : (isDarkMode ? "text-[#8696A0] hover:text-gray-200" : "text-slate-500 hover:text-slate-800")
+            }`}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M6.75 2.25A.75.75 0 0 1 7.5 3v1.5h9V3A.75.75 0 0 1 18 3v1.5h.75A2.25 2.25 0 0 1 21 6.75v10.5A2.25 2.25 0 0 1 18.75 19.5h-13.5A2.25 2.25 0 0 1 3 17.25V6.75A2.25 2.25 0 0 1 5.25 4.5H6V3a.75.75 0 0 1 .75-.75Zm12 6.75h-13.5v8.25c0 .414.336.75.75.75h12c.414 0 .75-.336.75-.75V9Z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className={`text-[11px] ${
+              activeTab === "calendar" 
+                ? (isDarkMode ? "font-bold text-[#25D366]" : "font-bold text-[#0A332C]") 
+                : (isDarkMode ? "font-medium text-[#8696A0]" : "font-medium text-slate-500")
+            }`}>
+              Calendario
+            </span>
+          </button>
+
+          {/* 4. Tab Voti */}
           <button 
             type="button"
             onClick={() => changeTab("voti")}
