@@ -988,10 +988,6 @@ export default function CalendarView({
                       return (
                         <div
                           key={task.id || tIdx}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditTask(task);
-                          }}
                           className={`px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold truncate border cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
                             task.isCompleted ? "opacity-40 line-through" : ""
                           } ${
@@ -1001,7 +997,7 @@ export default function CalendarView({
                                 : "bg-red-100 border-red-300 text-red-800 font-bold"
                               : getSubjectColor(task.subject, isDarkMode)
                           }`}
-                          title={`Tocca per modificare attività: ${task.subject}: ${task.description || task.task || ""}`}
+                          title={`${task.subject}: ${task.description || task.task || ""}`}
                         >
                           <span className="truncate">
                             {isVer ? "🚨 " : "• "}
@@ -1109,8 +1105,7 @@ export default function CalendarView({
                       return (
                         <div
                           key={task.id || tIdx}
-                          onClick={() => handleOpenEditTask(task)}
-                          className={`p-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer hover:opacity-95 active:scale-[0.99] transition-all ${
+                          className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
                             task.isCompleted
                               ? "opacity-50 line-through bg-transparent border-inherit"
                               : isVer
@@ -1121,20 +1116,20 @@ export default function CalendarView({
                               ? "bg-[#182229] border-[#2A3942]"
                               : "bg-slate-50 border-slate-200"
                           }`}
-                          title={`Tocca per modificare: ${task.subject}: ${task.description || task.task || ""}`}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleToggle(task.id, task.isCompleted);
                               }}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center text-xs border shrink-0 ${
+                              className={`w-5 h-5 rounded-full flex items-center justify-center text-xs border shrink-0 transition-all cursor-pointer ${
                                 task.isCompleted
                                   ? "bg-[#25D366] border-[#25D366] text-white"
-                                  : "border-slate-400 text-transparent"
+                                  : "border-slate-400 text-transparent hover:border-[#25D366]"
                               }`}
+                              title={task.isCompleted ? "Segna da fare" : "Segna completato"}
                             >
                               ✓
                             </button>
@@ -1149,12 +1144,13 @@ export default function CalendarView({
                             <button
                               type="button"
                               onClick={() => handleOpenEditTask(task)}
-                              className={`p-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                                isDarkMode ? "hover:bg-[#202C33] text-gray-300" : "hover:bg-slate-200 text-slate-600"
+                              className={`px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 border shrink-0 ${
+                                isDarkMode ? "hover:bg-[#202C33] text-gray-300 border-white/10" : "hover:bg-slate-200 text-slate-600 border-slate-200"
                               }`}
-                              title="Modifica argomenti verifica"
+                              title="Modifica attività"
                             >
-                              ✏️
+                              <span>✏️</span>
+                              <span className="text-[11px] font-semibold">Modifica</span>
                             </button>
 
                             {tutor && !task.isCompleted && (
@@ -1256,8 +1252,7 @@ export default function CalendarView({
                   return (
                     <div
                       key={item.id || idx}
-                      onClick={() => handleOpenEditTask(item)}
-                      className={`p-3.5 rounded-2xl border flex flex-col gap-2 transition-all cursor-pointer hover:opacity-95 active:scale-[0.99] ${
+                      className={`p-3.5 rounded-2xl border flex flex-col gap-2 transition-all ${
                         item.isCompleted
                           ? isDarkMode
                             ? "bg-[#182229]/60 border-[#2A3942] opacity-60"
@@ -1270,7 +1265,6 @@ export default function CalendarView({
                           ? "bg-[#182229] border-[#2A3942]"
                           : "bg-slate-50 border-slate-200"
                       }`}
-                      title={`Tocca per modificare: ${item.subject}: ${item.description || item.task || ""}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
